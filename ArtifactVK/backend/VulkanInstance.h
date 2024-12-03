@@ -22,6 +22,7 @@ class VulkanInstance
 {
 public:
 	VulkanInstance(const InstanceCreateInfo& createInfo);
+	~VulkanInstance();
 private:
 	VkInstance m_VKInstance;
 };

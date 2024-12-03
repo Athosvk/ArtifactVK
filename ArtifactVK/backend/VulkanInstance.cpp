@@ -1,6 +1,10 @@
 #include "VulkanInstance.h"
 
 #include <GLFW/glfw3.h>
+#include <iostream>
+#include <stdexcept>
+#include <vector>
+#include <set>
 
 const uint32_t Version::ToVulkanVersion() const
 {
@@ -30,6 +34,43 @@ VulkanInstance::VulkanInstance(const InstanceCreateInfo& createInfo)
 	instanceInfo.enabledLayerCount = 0;
 
 
-	VkResult result = vkCreateInstance(instanceInfo, nullptr, )
+	VkResult result = vkCreateInstance(&instanceInfo, nullptr, &m_VKInstance);
+	if (result != VK_SUCCESS)
+	{
+		throw std::runtime_error("Could not create vulkan instance");
+	}
+
+	uint32_t extensionCount = 0;
+	vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
+	std::vector<VkExtensionProperties> extensions(extensionCount);
+	vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, extensions.data());
+	for (const auto& extension : extensions)
+	{
+		std::cout << "\t" << extension.extensionName << "\n";
+	}
+
+
+	for (size_t i = 0; i < glfwExtensionCount; i++)
+	{
+		bool hasExtension = false;
+		for (const auto& extension : extensions)
+		{
+			if (strcmp(extension.extensionName, glfwExtensions[i]) != 0)
+			{
+				hasExtension = true;
+			}
+		}
+		if (!hasExtension)
+		{
+			std::cout << "Missing required glfw extension: " << glfwExtensions[i] << "\n";
+			throw std::runtime_error("Missing extension for GLFW");
+		}
+	}
+	std::cout << "Found all extensions to init GLFW";
+}
+
+VulkanInstance::~VulkanInstance()
+{
+	vkDestroyInstance(m_VKInstance, nullptr);
 }
 
