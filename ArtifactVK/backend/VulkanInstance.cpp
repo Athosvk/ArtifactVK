@@ -62,6 +62,7 @@ VulkanInstance::VulkanInstance(const InstanceCreateInfo& createInfo)
 		}
 		if (!hasExtension)
 		{
+			// TODO: Move verification to VK device creation
 			std::cout << "Missing required glfw extension: " << glfwExtensions[i] << "\n";
 			throw std::runtime_error("Missing extension for GLFW");
 		}
