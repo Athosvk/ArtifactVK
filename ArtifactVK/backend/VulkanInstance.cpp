@@ -5,6 +5,8 @@
 #include <stdexcept>
 #include <vector>
 #include <immintrin.h>
+#include <unordered_map>
+#include <string_view>
 
 #ifndef NDEBUG
 #define NDEBUG 0
@@ -55,34 +57,42 @@ VulkanInstance::VulkanInstance(const InstanceCreateInfo& createInfo)
 	instanceInfo.ppEnabledExtensionNames = glfwExtensions;
 	instanceInfo.enabledLayerCount = 0;
 
-
-
 	uint32_t extensionCount = 0;
 	vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
 	std::vector<VkExtensionProperties> extensions(extensionCount);
 	vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, extensions.data());
+
+	std::cout << "Available extensions: ";
 	for (const auto& extension : extensions)
 	{
 		std::cout << "\t" << extension.extensionName << "\n";
 	}
 
+	std::unordered_map<std::string_view, bool> foundRequestedExtensions;
 
 	for (size_t i = 0; i < glfwExtensionCount; i++)
 	{
-		bool hasExtension = false;
-		for (const auto& extension : extensions)
+		foundRequestedExtensions[std::string_view{ glfwExtensions[i] }] = false;
+	}
+
+	for (const auto& extension : extensions)
+	{
+		foundRequestedExtensions[std::string_view{ extension.extensionName }] = true;
+	}
+
+	bool anyNotFound = false;
+	for (const auto& [name, wasFound] : foundRequestedExtensions)
+	{
+		if (!wasFound)
 		{
-			if (strcmp(extension.extensionName, glfwExtensions[i]) == 0)
-			{
-				hasExtension = true;
-			}
-		}
-		if (!hasExtension)
-		{
+			anyNotFound = true;
 			// TODO: Have GLFW request its extensions instead
-			std::cout << "Missing required glfw extension: " << glfwExtensions[i] << "\n";
-			throw std::runtime_error("Missing extension for GLFW");
+			std::cout << "Missing requested glfw extension: " << name << "\n";
 		}
+	}
+	if (anyNotFound)
+	{
+		throw std::runtime_error("Missing extension for GLFW");
 	}
 	std::cout << "Found all extensions to init GLFW\n";
 
@@ -126,24 +136,32 @@ std::vector<const char*> VulkanInstance::CheckValidationLayers(const std::vector
 	uint32_t availableLayerCount;
 	vkEnumerateInstanceLayerProperties(&availableLayerCount, nullptr);
 
-	std::vector<VkLayerProperties> availableLayerProperties(availableLayerCount);
-	vkEnumerateInstanceLayerProperties(&availableLayerCount, availableLayerProperties.data());
+	std::vector<VkLayerProperties> availableLayers(availableLayerCount);
+	vkEnumerateInstanceLayerProperties(&availableLayerCount, availableLayers.data());
+
+	std::unordered_map<std::string_view, bool>  foundRequestedDebugLayers;
 
 	for (const auto& requestedLayerName : requestedLayers)
 	{
-		bool layerFound = false;
-		for (const auto& availableLayer : availableLayerProperties)
+		foundRequestedDebugLayers[std::string_view{ requestedLayerName }] = false;
+	}
+
+	for (const auto& availableLayer : availableLayers)
+	{
+		foundRequestedDebugLayers[std::string_view{ availableLayer.layerName }] = true;
+	}
+
+
+	std::vector<std::string> layers;
+	layers.reserve(foundRequestedDebugLayers.size());
+	for (const auto& [layerName, wasFound] : foundRequestedDebugLayers)
+	{
+		if (!wasFound)
 		{
-			if (strcmp(requestedLayerName, availableLayer.layerName) == 0)
-			{
-				layerFound = true;
-				break;
-			}
+			std::cout << "Missing layer " << layerName;
 		}
-		if (!layerFound)
-		{
-			std::cout << "Missing layer " << requestedLayerName;
-			return {};
+		else {
+			layers.emplace_back(layerName);
 		}
 	}
 	return requestedLayers;
