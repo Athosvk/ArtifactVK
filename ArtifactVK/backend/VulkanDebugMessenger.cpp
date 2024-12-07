@@ -44,7 +44,7 @@ VulkanDebugMessenger::~VulkanDebugMessenger()
 	destroyDebugManager(m_VulkanInstance, m_DebugMessenger, nullptr);
 }
 
-VkDebugUtilsMessengerEXT VulkanDebugMessenger::Create(VkInstance& vulkanInstance, const VulkanExtensionMapper& extensionMapper)
+VkDebugUtilsMessengerCreateInfoEXT VulkanDebugMessenger::CreateInfo()
 {
 	VkDebugUtilsMessengerCreateInfoEXT createInfo{};
 	createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
@@ -57,9 +57,15 @@ VkDebugUtilsMessengerEXT VulkanDebugMessenger::Create(VkInstance& vulkanInstance
 		VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
 	createInfo.pfnUserCallback = debugCallback;
 	createInfo.pUserData = nullptr;
+	return createInfo;
 
+}
+
+VkDebugUtilsMessengerEXT VulkanDebugMessenger::Create(VkInstance& vulkanInstance, const VulkanExtensionMapper& extensionMapper)
+{
 	auto createFunction = (PFN_vkCreateDebugUtilsMessengerEXT)extensionMapper.GetFunction(EExtensionFunction::VkCreateDebugUtilsMessengerExt);
 	VkDebugUtilsMessengerEXT debugMessenger;
+	auto createInfo = CreateInfo();
 	// TODO: Handle errors here
 	createFunction(vulkanInstance, &createInfo, nullptr, &debugMessenger);
 	return debugMessenger;

@@ -179,6 +179,9 @@ VkInstance VulkanInstance::Create(const InstanceCreateInfo& createInfo)
 		instanceInfo.ppEnabledLayerNames = requestedValidationLayers.data();
 		std::cout << "Enabled " << requestedValidationLayers.size() << " validation layers\n";
 	}
+	auto debugMessengerCreateInfo = VulkanDebugMessenger::CreateInfo();
+	// Create a temporary debug messenger for logging Vulkan instance creation issues
+	instanceInfo.pNext = &debugMessengerCreateInfo;
 	VkInstance vkInstance = nullptr;
 	VkResult result = vkCreateInstance(&instanceInfo, nullptr, &vkInstance);
 	if (result != VK_SUCCESS)

@@ -8,6 +8,9 @@ class VulkanDebugMessenger
 public:
 	VulkanDebugMessenger(VkInstance& vulkanInstance, const VulkanExtensionMapper& extensionMapper);
 	~VulkanDebugMessenger();
+	VulkanDebugMessenger(const VulkanDebugMessenger& other) = delete;
+
+	static VkDebugUtilsMessengerCreateInfoEXT CreateInfo();
 private:
 	static VkDebugUtilsMessengerEXT Create(VkInstance& vulkanInstance, const VulkanExtensionMapper& extensionMapper);
 

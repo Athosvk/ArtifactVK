@@ -56,6 +56,7 @@ public:
 	{
 		assert(!m_Inner.has_value() && "Manual scope not manually destroyed. Prefer using a RAII base mechanism instead");
 	}
+	ManualScope(const ManualScope&) = delete;
 
 	const T& operator*() const
 	{
@@ -81,7 +82,7 @@ public:
 	void ScopeBegin(Args&&... args) 
 	{
 		assert(!m_Inner.has_value() && "Scope value recreated");
-		m_Inner.emplace(T(std::forward<Args>(args)...));
+		m_Inner.emplace(std::forward<Args>(args)...);
 	}
 
 	void ScopeEnd()
