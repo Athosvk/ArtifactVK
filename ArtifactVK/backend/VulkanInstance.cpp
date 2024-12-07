@@ -12,6 +12,7 @@
 #define NDEBUG 0
 #endif // !NDEBUG
 
+
 std::vector<const char*> ValidationLayer::GetLayerNames() const
 {
 	std::vector<const char*> names;
@@ -35,87 +36,21 @@ const uint32_t Version::ToVulkanVersion() const
 	return VK_MAKE_API_VERSION(0, Major, Minor, Patch);
 }
 
-VulkanInstance::VulkanInstance(const InstanceCreateInfo& createInfo)
+VulkanInstance::VulkanInstance(const InstanceCreateInfo& createInfo) 
+	: m_VkInstance(Create(createInfo)),
+	m_ExtensionMapper(m_VkInstance)
 {
-	VkApplicationInfo appInfo {};
-	appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-	appInfo.pApplicationName = createInfo.Name.c_str();
-	appInfo.applicationVersion = createInfo.AppVersion.ToVulkanVersion();
-	appInfo.pEngineName = "Artifact";
-	appInfo.engineVersion = createInfo.EngineVersion.ToVulkanVersion();
-	appInfo.apiVersion = VK_API_VERSION_1_0;
-
-	VkInstanceCreateInfo instanceInfo{};
-	instanceInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-	instanceInfo.pApplicationInfo = &appInfo;
-
-	uint32_t glfwExtensionCount = 0;
-	const char** glfwExtensions = nullptr;
-
-	glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
-	instanceInfo.enabledExtensionCount = glfwExtensionCount;
-	instanceInfo.ppEnabledExtensionNames = glfwExtensions;
-	instanceInfo.enabledLayerCount = 0;
-
-	uint32_t extensionCount = 0;
-	vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
-	std::vector<VkExtensionProperties> extensions(extensionCount);
-	vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, extensions.data());
-
-	std::cout << "Available extensions: ";
-	for (const auto& extension : extensions)
-	{
-		std::cout << "\t" << extension.extensionName << "\n";
-	}
-
-	std::unordered_map<std::string_view, bool> foundRequestedExtensions;
-
-	for (size_t i = 0; i < glfwExtensionCount; i++)
-	{
-		foundRequestedExtensions[std::string_view{ glfwExtensions[i] }] = false;
-	}
-
-	for (const auto& extension : extensions)
-	{
-		foundRequestedExtensions[std::string_view{ extension.extensionName }] = true;
-	}
-
-	bool anyNotFound = false;
-	for (const auto& [name, wasFound] : foundRequestedExtensions)
-	{
-		if (!wasFound)
-		{
-			anyNotFound = true;
-			// TODO: Have GLFW request its extensions instead
-			std::cout << "Missing requested glfw extension: " << name << "\n";
-		}
-	}
-	if (anyNotFound)
-	{
-		throw std::runtime_error("Missing extension for GLFW");
-	}
-	std::cout << "Found all extensions to init GLFW\n";
-
-	auto requestedValidationLayers = CheckValidationLayers(createInfo.ValidationLayers);
-	if (!requestedValidationLayers.empty())
-	{
-		instanceInfo.enabledLayerCount = (uint32_t)requestedValidationLayers.size();
-		instanceInfo.ppEnabledLayerNames = requestedValidationLayers.data();
-		std::cout << "Enabled " << requestedValidationLayers.size() << " validation layers";
-	}
-	VkResult result = vkCreateInstance(&instanceInfo, nullptr, &m_VKInstance);
-	if (result != VK_SUCCESS)
-	{
-		throw std::runtime_error("Could not create vulkan instance");
-	}
+	m_VulkanDebugMessenger.ScopeBegin(m_VkInstance, m_ExtensionMapper);
 }
 
 VulkanInstance::~VulkanInstance()
 {
-	vkDestroyInstance(m_VKInstance, nullptr);
+	m_VulkanDebugMessenger.ScopeEnd();
+	vkDestroyInstance(m_VkInstance, nullptr);
 }
 
-std::vector<const char*> VulkanInstance::CheckValidationLayers(const std::vector<ValidationLayer>& validationLayers) const
+
+std::vector<const char*> VulkanInstance::CheckValidationLayers(const std::vector<ValidationLayer>& validationLayers)
 {
 	std::vector<const char*> requestedLayers;
 	for (const auto& validationLayer : validationLayers)
@@ -151,8 +86,7 @@ std::vector<const char*> VulkanInstance::CheckValidationLayers(const std::vector
 		foundRequestedDebugLayers[std::string_view{ availableLayer.layerName }] = true;
 	}
 
-
-	std::vector<std::string> layers;
+	std::vector<const char*> layers;
 	layers.reserve(foundRequestedDebugLayers.size());
 	for (const auto& [layerName, wasFound] : foundRequestedDebugLayers)
 	{
@@ -160,11 +94,99 @@ std::vector<const char*> VulkanInstance::CheckValidationLayers(const std::vector
 		{
 			std::cout << "Missing layer " << layerName;
 		}
-		else {
-			layers.emplace_back(layerName);
+		else
+		{
+			layers.emplace_back(layerName.data());
 		}
 	}
 	return requestedLayers;
+}
+
+VkInstance VulkanInstance::Create(const InstanceCreateInfo& createInfo)
+{
+	VkApplicationInfo appInfo {};
+	appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+	appInfo.pApplicationName = createInfo.Name.c_str();
+	appInfo.applicationVersion = createInfo.AppVersion.ToVulkanVersion();
+	appInfo.pEngineName = "Artifact";
+	appInfo.engineVersion = createInfo.EngineVersion.ToVulkanVersion();
+	appInfo.apiVersion = VK_API_VERSION_1_0;
+
+	VkInstanceCreateInfo instanceInfo{};
+	instanceInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+	instanceInfo.pApplicationInfo = &appInfo;
+
+	uint32_t glfwExtensionCount = 0;
+	const char** glfwExtensions = nullptr;
+
+	auto requestedValidationLayers = CheckValidationLayers(createInfo.ValidationLayers);
+
+	glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
+	std::vector<const char*> requestedExtensions(glfwExtensionCount);
+	for (size_t i = 0; i < glfwExtensionCount; i++)
+	{
+		requestedExtensions[i] = glfwExtensions[i];
+	}
+	if (!requestedValidationLayers.empty())
+	{
+		requestedExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+	}
+
+	uint32_t availableExtensionCount = 0;
+	vkEnumerateInstanceExtensionProperties(nullptr, &availableExtensionCount, nullptr);
+	std::vector<VkExtensionProperties> availableExtensions(availableExtensionCount);
+	vkEnumerateInstanceExtensionProperties(nullptr, &availableExtensionCount, availableExtensions.data());
+
+	std::cout << "Available extensions: ";
+	for (const auto& extension : availableExtensions)
+	{
+		std::cout << "\t" << extension.extensionName << "\n";
+	}
+
+	std::unordered_map<std::string_view, bool> foundRequestedExtensions;
+	for (const auto& extension : requestedExtensions)
+	{
+		foundRequestedExtensions[std::string_view { extension }] = false;
+	}
+
+	for (const auto& extension : availableExtensions)
+	{
+		foundRequestedExtensions[std::string_view{ extension.extensionName }] = true;
+	}
+
+	bool anyNotFound = false;
+	for (const auto& [name, wasFound] : foundRequestedExtensions)
+	{
+		if (!wasFound)
+		{
+			anyNotFound = true;
+			// TODO: Have GLFW request its extensions instead
+			std::cout << "Missing requested extension: " << name << "\n";
+		}
+	}
+	if (anyNotFound)
+	{
+		throw std::runtime_error("Missing extension");
+	}
+	std::cout << "Found all extensions to init Vulkan\n";
+
+	instanceInfo.enabledExtensionCount = static_cast<uint32_t>(requestedExtensions.size());
+	instanceInfo.ppEnabledExtensionNames = requestedExtensions.data();
+	instanceInfo.enabledLayerCount = 0;
+	if (!requestedValidationLayers.empty())
+	{
+		instanceInfo.enabledLayerCount = (uint32_t)requestedValidationLayers.size();
+		instanceInfo.ppEnabledLayerNames = requestedValidationLayers.data();
+		std::cout << "Enabled " << requestedValidationLayers.size() << " validation layers\n";
+	}
+	VkInstance vkInstance = nullptr;
+	VkResult result = vkCreateInstance(&instanceInfo, nullptr, &vkInstance);
+	if (result != VK_SUCCESS)
+	{
+		throw std::runtime_error("Could not create vulkan instance");
+	}
+
+	return vkInstance;
 }
 
 const std::array<EValidationLayer, 1> AvailableValidationLayers()

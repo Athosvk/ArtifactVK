@@ -3,6 +3,12 @@
 #include <array>
 #include <vector>
 #include <string>
+#include <optional>
+#include <unordered_map>
+#include <cassert>
+
+#include "VulkanExtensionMapper.h"
+#include "VulkanDebugMessenger.h"
 
 struct Version
 {
@@ -38,14 +44,67 @@ struct InstanceCreateInfo
 	std::vector<ValidationLayer> ValidationLayers;
 };
 
+// Goes against RAII, but needed to handle (un)init order correctly in some cases.
+// Alternatively we use optional/unique ptr, but this is a bit more specific.
+// This will only allow creation/destruction once
+template<typename T>
+class ManualScope
+{
+public:
+	ManualScope() = default;
+	~ManualScope()
+	{
+		assert(!m_Inner.has_value() && "Manual scope not manually destroyed. Prefer using a RAII base mechanism instead");
+	}
+
+	const T& operator*() const
+	{
+		return m_Inner;
+	}
+
+	T& operator*()
+	{
+		return m_Inner;
+	}
+
+	T* operator->()
+	{
+		return &m_Inner;
+	}
+
+	const T* operator->() const
+	{
+		return &m_Inner;
+	}
+
+	template<typename... Args>
+	void ScopeBegin(Args&&... args) 
+	{
+		assert(!m_Inner.has_value() && "Scope value recreated");
+		m_Inner.emplace(T(std::forward<Args>(args)...));
+	}
+
+	void ScopeEnd()
+	{
+		assert(m_Inner.has_value() && "Scope value not yet created or scope ended multiple times");
+		m_Inner = std::nullopt;
+	}
+private:
+	std::optional<T> m_Inner;
+};
+
 class VulkanInstance
 {
 public:
 	VulkanInstance(const InstanceCreateInfo& createInfo);
 	~VulkanInstance();
 private:
-	std::vector<const char*> CheckValidationLayers(const std::vector<ValidationLayer>& validationLayers) const;
+	static std::vector<const char*> CheckValidationLayers(const std::vector<ValidationLayer>& validationLayers);
+	VkDebugUtilsMessengerEXT CreateDebugMessenger() const;
+	static VkInstance Create(const InstanceCreateInfo& createInfo);
 
-	VkInstance m_VKInstance;
+	VkInstance m_VkInstance;
+	VulkanExtensionMapper m_ExtensionMapper;
+	ManualScope<VulkanDebugMessenger> m_VulkanDebugMessenger;
 };
 
