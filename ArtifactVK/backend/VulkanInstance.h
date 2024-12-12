@@ -105,6 +105,9 @@ public:
 
 	const QueueFamilyIndices& GetQueueFamilies() const;
 	bool IsValid() const;
+	const VkPhysicalDeviceProperties& GetProperties() const;
+	const VkPhysicalDeviceFeatures& GetFeatures() const;
+	const VkPhysicalDevice& GetInternal() const;
 private:
 	bool Validate() const;
 	QueueFamilyIndices FindQueueFamilies() const;
@@ -126,7 +129,7 @@ public:
 private:
 	static std::vector<const char*> CheckValidationLayers(const std::vector<ValidationLayer>& validationLayers);
 	VkDebugUtilsMessengerEXT CreateDebugMessenger() const;
-	static VkInstance CreateInstance(const InstanceCreateInfo& createInfo);
+	VkInstance CreateInstance(const InstanceCreateInfo& createInfo);
 	VulkanDevice CreatePhysicalDevice() const;
 	VkDevice CreateLogicalDevice(const VulkanDevice& physicalDevice) const;
 
@@ -135,5 +138,6 @@ private:
 	ManualScope<VulkanDebugMessenger> m_VulkanDebugMessenger;
 	VulkanDevice m_ActiveDevice;
 	VkDevice m_ActiveLogicalDevice;
+	std::vector<const char*> m_ValidationLayers;
 };
 

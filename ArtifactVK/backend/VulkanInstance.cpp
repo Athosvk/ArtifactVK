@@ -122,7 +122,7 @@ VkInstance VulkanInstance::CreateInstance(const InstanceCreateInfo& createInfo)
 	uint32_t glfwExtensionCount = 0;
 	const char** glfwExtensions = nullptr;
 
-	auto requestedValidationLayers = CheckValidationLayers(createInfo.ValidationLayers);
+	m_ValidationLayers = CheckValidationLayers(createInfo.ValidationLayers);
 
 	glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
 	std::vector<const char*> requestedExtensions(glfwExtensionCount);
@@ -130,7 +130,7 @@ VkInstance VulkanInstance::CreateInstance(const InstanceCreateInfo& createInfo)
 	{
 		requestedExtensions[i] = glfwExtensions[i];
 	}
-	if (!requestedValidationLayers.empty())
+	if (!m_ValidationLayers.empty())
 	{
 		requestedExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 	}
@@ -176,11 +176,11 @@ VkInstance VulkanInstance::CreateInstance(const InstanceCreateInfo& createInfo)
 	instanceInfo.enabledExtensionCount = static_cast<uint32_t>(requestedExtensions.size());
 	instanceInfo.ppEnabledExtensionNames = requestedExtensions.data();
 	instanceInfo.enabledLayerCount = 0;
-	if (!requestedValidationLayers.empty())
+	if (!m_ValidationLayers.empty())
 	{
-		instanceInfo.enabledLayerCount = (uint32_t)requestedValidationLayers.size();
-		instanceInfo.ppEnabledLayerNames = requestedValidationLayers.data();
-		std::cout << "Enabled " << requestedValidationLayers.size() << " validation layers\n";
+		instanceInfo.enabledLayerCount = (uint32_t)m_ValidationLayers.size();
+		instanceInfo.ppEnabledLayerNames = m_ValidationLayers.data();
+		std::cout << "Enabled " << m_ValidationLayers.size() << " validation layers\n";
 	}
 	auto debugMessengerCreateInfo = VulkanDebugMessenger::CreateInfo();
 	// Create a temporary debug messenger for logging Vulkan instance creation issues
@@ -267,7 +267,30 @@ VkDevice VulkanInstance::CreateLogicalDevice(const VulkanDevice& physicalDevice)
 	queueCreateInfo.queueCount = 1;
 	float priority = 1.0f;
 	queueCreateInfo.pQueuePriorities = &priority;
-	return VkDevice {};
+
+	VkDeviceCreateInfo deviceCreateInfo{};
+	deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+	deviceCreateInfo.pQueueCreateInfos = &queueCreateInfo;
+	deviceCreateInfo.queueCreateInfoCount = 1;
+	// Also specify here for backwards compatability with old vulkan implementations.
+	// This shouldn't functionally change the enabled validation layers
+	if (!m_ValidationLayers.empty())
+	{
+		deviceCreateInfo.enabledLayerCount = (uint32_t)m_ValidationLayers.size();
+		deviceCreateInfo.ppEnabledLayerNames = m_ValidationLayers.data();
+	} 
+	else 
+	{
+		deviceCreateInfo.enabledLayerCount = 0;
+	}
+	deviceCreateInfo.pEnabledFeatures = &physicalDevice.GetFeatures();
+	
+	VkDevice device;
+	if (vkCreateDevice(physicalDevice.GetInternal(), &deviceCreateInfo, nullptr, &device) != VK_SUCCESS)
+	{
+		throw std::runtime_error("Could not create logical device");
+	}
+	return device;
 }
 
 
@@ -280,7 +303,8 @@ VulkanDevice::VulkanDevice(VkPhysicalDevice physicalDevice) :
 	m_PhysicalDevice(physicalDevice),
 	m_QueueFamilies(FindQueueFamilies()),
 	m_Properties(QueryDeviceProperties()),
-	m_Features(QueryDeviceFeatures())
+	m_Features(QueryDeviceFeatures()),
+	m_Valid(Validate())
 {
 }
 
@@ -293,6 +317,21 @@ bool VulkanDevice::IsValid() const
 const QueueFamilyIndices& VulkanDevice::GetQueueFamilies() const
 {
 	return m_QueueFamilies;
+}
+
+const VkPhysicalDeviceProperties& VulkanDevice::GetProperties() const
+{
+	return m_Properties;
+}
+
+const VkPhysicalDeviceFeatures& VulkanDevice::GetFeatures() const
+{
+	return m_Features;
+}
+
+const VkPhysicalDevice& VulkanDevice::GetInternal() const
+{
+	return m_PhysicalDevice;
 }
 
 VkPhysicalDeviceProperties VulkanDevice::QueryDeviceProperties() const
