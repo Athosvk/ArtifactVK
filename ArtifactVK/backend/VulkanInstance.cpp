@@ -214,6 +214,7 @@ VulkanDevice VulkanInstance::CreatePhysicalDevice() const
 	devices.reserve(physicalDevices.size());
 	for (auto& physicalDevice : physicalDevices)
 	{
+		// TODO: Early exit if we find the first suitable one?
 		devices.emplace_back(VulkanDevice(
 			std::move(physicalDevice)));
 	}
@@ -230,13 +231,25 @@ VulkanDevice VulkanInstance::CreatePhysicalDevice() const
 	return *firstValid;
 }
 
+bool VulkanDevice::Validate() const
+{
+	VkPhysicalDeviceProperties properties;
+	vkGetPhysicalDeviceProperties(m_PhysicalDevice, &properties);
+	VkPhysicalDeviceFeatures features;
+	vkGetPhysicalDeviceFeatures(m_PhysicalDevice, &features);
+	return (properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU ||
+		properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU) &&
+		features.geometryShader &&
+	m_QueueFamilies.GraphicsFamily.has_value();
+}
+
 QueueFamilyIndices VulkanDevice::FindQueueFamilies() const
 {
 	QueueFamilyIndices indices;
 	uint32_t queueFamilyCount = 0;
-	vkGetPhysicalDeviceQueueFamilyProperties(PhysicalDevice, &queueFamilyCount, nullptr);
+	vkGetPhysicalDeviceQueueFamilyProperties(m_PhysicalDevice, &queueFamilyCount, nullptr);
 	std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
-	vkGetPhysicalDeviceQueueFamilyProperties(PhysicalDevice, &queueFamilyCount, queueFamilies.data());
+	vkGetPhysicalDeviceQueueFamilyProperties(m_PhysicalDevice, &queueFamilyCount, queueFamilies.data());
 	
 	for (uint32_t i = 0; i < queueFamilyCount; i++)
 	{
@@ -254,9 +267,13 @@ VkDevice VulkanInstance::CreateLogicalDevice(const VulkanDevice& physicalDevice)
 	VkDeviceQueueCreateInfo queueCreateInfo{};
 	assert(physicalDevice.IsValid() && "Not a valid device to create a logical device from");
 	queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-	
+	queueCreateInfo.queueFamilyIndex = physicalDevice.GetQueueFamilies().GraphicsFamily.value();
+	queueCreateInfo.queueCount = 1;
+	float priority = 1.0f;
+	queueCreateInfo.pQueuePriorities = &priority;
 	return VkDevice {};
 }
+
 
 const std::array<EValidationLayer, 1> AvailableValidationLayers()
 {
@@ -264,23 +281,18 @@ const std::array<EValidationLayer, 1> AvailableValidationLayers()
 }
 
 VulkanDevice::VulkanDevice(VkPhysicalDevice physicalDevice) :
-	PhysicalDevice(physicalDevice),
-	QueueFamilies(FindQueueFamilies())
+	m_PhysicalDevice(physicalDevice),
+	m_QueueFamilies(FindQueueFamilies())
 {
 }
 
 bool VulkanDevice::IsValid() const
 {
-	return QueueFamilies.GraphicsFamily.has_value();
-
-	/*VkPhysicalDeviceProperties properties;
-	vkGetPhysicalDeviceProperties(physicalDevice, &properties);
-	VkPhysicalDeviceFeatures features;
-	vkGetPhysicalDeviceFeatures(physicalDevice, &features);
-	return (properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU ||
-		properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) &&
-		features.geometryShader;
-		*/
-;
+	return m_Valid;
 }
 
+
+const QueueFamilyIndices& VulkanDevice::GetQueueFamilies() const
+{
+	return m_QueueFamilies;
+}

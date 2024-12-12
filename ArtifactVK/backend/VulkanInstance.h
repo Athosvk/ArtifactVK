@@ -98,17 +98,20 @@ private:
 	std::optional<T> m_Inner;
 };
 
-struct VulkanDevice
+class VulkanDevice
 {
+public:
 	VulkanDevice(VkPhysicalDevice physicalDevice);
+
+	const QueueFamilyIndices& GetQueueFamilies() const;
 	bool IsValid() const;
 private:
+	bool Validate() const;
 	QueueFamilyIndices FindQueueFamilies() const;
 
-public:
-	VkPhysicalDevice PhysicalDevice;
-	QueueFamilyIndices QueueFamilies;
-
+	VkPhysicalDevice m_PhysicalDevice;
+	QueueFamilyIndices m_QueueFamilies;
+	bool m_Valid;
 };
 
 class VulkanInstance
