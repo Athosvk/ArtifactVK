@@ -108,9 +108,13 @@ public:
 private:
 	bool Validate() const;
 	QueueFamilyIndices FindQueueFamilies() const;
+	VkPhysicalDeviceProperties QueryDeviceProperties() const;
+	VkPhysicalDeviceFeatures QueryDeviceFeatures() const;
 
 	VkPhysicalDevice m_PhysicalDevice;
 	QueueFamilyIndices m_QueueFamilies;
+	VkPhysicalDeviceProperties m_Properties;
+	VkPhysicalDeviceFeatures m_Features;
 	bool m_Valid;
 };
 
