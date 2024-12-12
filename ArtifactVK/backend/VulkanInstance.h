@@ -19,6 +19,10 @@ struct Version
 	const uint32_t ToVulkanVersion() const;
 };
 
+struct QueueFamilyIndices
+{
+	std::optional<uint32_t> GraphicsFamily;
+};
 
 enum class EValidationLayer : uint32_t
 {
@@ -94,6 +98,19 @@ private:
 	std::optional<T> m_Inner;
 };
 
+struct VulkanDevice
+{
+	VulkanDevice(VkPhysicalDevice physicalDevice);
+	bool IsValid() const;
+private:
+	QueueFamilyIndices FindQueueFamilies() const;
+
+public:
+	VkPhysicalDevice PhysicalDevice;
+	QueueFamilyIndices QueueFamilies;
+
+};
+
 class VulkanInstance
 {
 public:
@@ -102,10 +119,14 @@ public:
 private:
 	static std::vector<const char*> CheckValidationLayers(const std::vector<ValidationLayer>& validationLayers);
 	VkDebugUtilsMessengerEXT CreateDebugMessenger() const;
-	static VkInstance Create(const InstanceCreateInfo& createInfo);
+	static VkInstance CreateInstance(const InstanceCreateInfo& createInfo);
+	VulkanDevice CreatePhysicalDevice() const;
+	VkDevice CreateLogicalDevice(const VulkanDevice& physicalDevice) const;
 
 	VkInstance m_VkInstance;
 	VulkanExtensionMapper m_ExtensionMapper;
 	ManualScope<VulkanDebugMessenger> m_VulkanDebugMessenger;
+	VulkanDevice m_ActiveDevice;
+	VkDevice m_ActiveLogicalDevice;
 };
 

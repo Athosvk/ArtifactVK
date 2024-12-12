@@ -11,7 +11,7 @@ enum class EExtensionFunction
 class VulkanExtensionMapper
 {
 public:
-	VulkanExtensionMapper(const VkInstance& vkInstance);
+	explicit VulkanExtensionMapper(const VkInstance& vkInstance);
 	std::unordered_map<EExtensionFunction, const char*> CreateExtensionNameMapping() const;
 	std::unordered_map<EExtensionFunction, PFN_vkVoidFunction> CreateExtensionMapping(const std::unordered_map<EExtensionFunction, const char*>& extensionNameMapping) const;
 	PFN_vkVoidFunction GetFunction(EExtensionFunction function) const;

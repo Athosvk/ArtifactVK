@@ -37,9 +37,12 @@ const uint32_t Version::ToVulkanVersion() const
 }
 
 VulkanInstance::VulkanInstance(const InstanceCreateInfo& createInfo) 
-	: m_VkInstance(Create(createInfo)),
-	m_ExtensionMapper(m_VkInstance)
+	: m_VkInstance(CreateInstance(createInfo)),
+	m_ExtensionMapper(VulkanExtensionMapper(m_VkInstance)),
+	m_ActiveDevice(CreatePhysicalDevice()),
+	m_ActiveLogicalDevice(CreateLogicalDevice(m_ActiveDevice))
 {
+	// TODO: Move to initializer list so that debug messenges are not delayed
 	m_VulkanDebugMessenger.ScopeBegin(m_VkInstance, m_ExtensionMapper);
 }
 
@@ -102,7 +105,7 @@ std::vector<const char*> VulkanInstance::CheckValidationLayers(const std::vector
 	return requestedLayers;
 }
 
-VkInstance VulkanInstance::Create(const InstanceCreateInfo& createInfo)
+VkInstance VulkanInstance::CreateInstance(const InstanceCreateInfo& createInfo)
 {
 	VkApplicationInfo appInfo {};
 	appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -192,7 +195,92 @@ VkInstance VulkanInstance::Create(const InstanceCreateInfo& createInfo)
 	return vkInstance;
 }
 
+VulkanDevice VulkanInstance::CreatePhysicalDevice() const
+{
+	VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
+	uint32_t count = 0;
+	vkEnumeratePhysicalDevices(m_VkInstance, &count, nullptr);
+
+	if (count == 0)
+	{
+		throw std::runtime_error("No available VK devices found");
+	}
+
+	std::vector<VkPhysicalDevice> physicalDevices(count);
+
+	vkEnumeratePhysicalDevices(m_VkInstance, &count, physicalDevices.data());
+
+	std::vector<VulkanDevice> devices;
+	devices.reserve(physicalDevices.size());
+	for (auto& physicalDevice : physicalDevices)
+	{
+		devices.emplace_back(VulkanDevice(
+			std::move(physicalDevice)));
+	}
+
+	// Score device or get preference from somwhere
+	auto firstValid = std::find_if(devices.begin(), devices.end(), [this](const VulkanDevice& device)
+		{
+			return device.IsValid();
+		});
+	if (firstValid == devices.end())
+	{
+		throw std::runtime_error("No suitable VK devices found");
+	}
+	return *firstValid;
+}
+
+QueueFamilyIndices VulkanDevice::FindQueueFamilies() const
+{
+	QueueFamilyIndices indices;
+	uint32_t queueFamilyCount = 0;
+	vkGetPhysicalDeviceQueueFamilyProperties(PhysicalDevice, &queueFamilyCount, nullptr);
+	std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
+	vkGetPhysicalDeviceQueueFamilyProperties(PhysicalDevice, &queueFamilyCount, queueFamilies.data());
+	
+	for (uint32_t i = 0; i < queueFamilyCount; i++)
+	{
+		if ((queueFamilies[static_cast<size_t>(i)].queueFlags & VK_QUEUE_GRAPHICS_BIT) == 1)
+		{
+			indices.GraphicsFamily = i;
+			break;
+		}
+	}
+	return indices;
+}
+
+VkDevice VulkanInstance::CreateLogicalDevice(const VulkanDevice& physicalDevice) const 
+{
+	VkDeviceQueueCreateInfo queueCreateInfo{};
+	assert(physicalDevice.IsValid() && "Not a valid device to create a logical device from");
+	queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+	
+	return VkDevice {};
+}
+
 const std::array<EValidationLayer, 1> AvailableValidationLayers()
 {
 	return { EValidationLayer::KhronosValidation };
 }
+
+VulkanDevice::VulkanDevice(VkPhysicalDevice physicalDevice) :
+	PhysicalDevice(physicalDevice),
+	QueueFamilies(FindQueueFamilies())
+{
+}
+
+bool VulkanDevice::IsValid() const
+{
+	return QueueFamilies.GraphicsFamily.has_value();
+
+	/*VkPhysicalDeviceProperties properties;
+	vkGetPhysicalDeviceProperties(physicalDevice, &properties);
+	VkPhysicalDeviceFeatures features;
+	vkGetPhysicalDeviceFeatures(physicalDevice, &features);
+	return (properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU ||
+		properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) &&
+		features.geometryShader;
+		*/
+;
+}
+
