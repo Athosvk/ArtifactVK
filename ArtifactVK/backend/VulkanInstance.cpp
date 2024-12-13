@@ -39,16 +39,17 @@ const uint32_t Version::ToVulkanVersion() const
 VulkanInstance::VulkanInstance(const InstanceCreateInfo& createInfo) 
 	: m_VkInstance(CreateInstance(createInfo)),
 	m_ExtensionMapper(VulkanExtensionMapper(m_VkInstance)),
-	m_ActiveDevice(CreatePhysicalDevice()),
-	m_ActiveLogicalDevice(CreateLogicalDevice(m_ActiveDevice))
+	m_ActiveDevice(CreatePhysicalDevice())
 {
 	// TODO: Move to initializer list so that debug messenges are not delayed
 	m_VulkanDebugMessenger.ScopeBegin(m_VkInstance, m_ExtensionMapper);
+	m_ActiveLogicalDevice.ScopeBegin(m_ActiveDevice, m_ValidationLayers);
 }
 
 VulkanInstance::~VulkanInstance()
 {
 	m_VulkanDebugMessenger.ScopeEnd();
+	m_ActiveLogicalDevice.ScopeEnd();
 	vkDestroyInstance(m_VkInstance, nullptr);
 }
 
@@ -346,4 +347,42 @@ VkPhysicalDeviceFeatures VulkanDevice::QueryDeviceFeatures() const
 	VkPhysicalDeviceFeatures features;
 	vkGetPhysicalDeviceFeatures(m_PhysicalDevice, &features);
 	return features;
+}
+
+LogicalVulkanDevice::LogicalVulkanDevice(const VulkanDevice& physicalDevice, const std::vector<const char*>& validationLayers)
+{
+	VkDeviceQueueCreateInfo queueCreateInfo{};
+	assert(physicalDevice.IsValid() && "Not a valid device to create a logical device from");
+	queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+	queueCreateInfo.queueFamilyIndex = physicalDevice.GetQueueFamilies().GraphicsFamily.value();
+	queueCreateInfo.queueCount = 1;
+	float priority = 1.0f;
+	queueCreateInfo.pQueuePriorities = &priority;
+
+	VkDeviceCreateInfo deviceCreateInfo{};
+	deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+	deviceCreateInfo.pQueueCreateInfos = &queueCreateInfo;
+	deviceCreateInfo.queueCreateInfoCount = 1;
+	// Also specify here for backwards compatability with old vulkan implementations.
+	// This shouldn't functionally change the enabled validation layers
+	if (!validationLayers.empty())
+	{
+		deviceCreateInfo.enabledLayerCount = (uint32_t)validationLayers.size();
+		deviceCreateInfo.ppEnabledLayerNames = validationLayers.data();
+	} 
+	else 
+	{
+		deviceCreateInfo.enabledLayerCount = 0;
+	}
+	deviceCreateInfo.pEnabledFeatures = &physicalDevice.GetFeatures();
+	
+	if (vkCreateDevice(physicalDevice.GetInternal(), &deviceCreateInfo, nullptr, &m_Device) != VK_SUCCESS)
+	{
+		throw std::runtime_error("Could not create logical device");
+	}
+}
+
+LogicalVulkanDevice::~LogicalVulkanDevice()
+{
+	vkDestroyDevice(m_Device, nullptr);
 }

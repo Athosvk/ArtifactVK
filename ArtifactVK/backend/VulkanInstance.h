@@ -121,6 +121,15 @@ private:
 	bool m_Valid;
 };
 
+class LogicalVulkanDevice
+{
+public: 
+	LogicalVulkanDevice(const VulkanDevice& physicalDevice, const std::vector<const char*>& validationLayers);
+	~LogicalVulkanDevice();
+private:
+	VkDevice m_Device;
+};
+
 class VulkanInstance
 {
 public:
@@ -137,7 +146,7 @@ private:
 	VulkanExtensionMapper m_ExtensionMapper;
 	ManualScope<VulkanDebugMessenger> m_VulkanDebugMessenger;
 	VulkanDevice m_ActiveDevice;
-	VkDevice m_ActiveLogicalDevice;
+	ManualScope<LogicalVulkanDevice> m_ActiveLogicalDevice;
 	std::vector<const char*> m_ValidationLayers;
 };
 
