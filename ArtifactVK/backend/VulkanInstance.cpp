@@ -377,11 +377,13 @@ LogicalVulkanDevice::LogicalVulkanDevice(const VulkanDevice& physicalDevice, con
 		deviceCreateInfo.enabledLayerCount = 0;
 	}
 	deviceCreateInfo.pEnabledFeatures = &physicalDevice.GetFeatures();
-	
+
 	if (vkCreateDevice(physicalDevice.GetInternal(), &deviceCreateInfo, nullptr, &m_Device) != VK_SUCCESS)
 	{
 		throw std::runtime_error("Could not create logical device");
 	}
+	// Assertion: physical device has a graphics family queue
+	vkGetDeviceQueue(m_Device, physicalDevice.GetQueueFamilies().GraphicsFamily.value(), 0, &m_GraphicsQueue);
 }
 
 LogicalVulkanDevice::~LogicalVulkanDevice()
