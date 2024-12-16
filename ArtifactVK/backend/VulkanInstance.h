@@ -128,6 +128,7 @@ public:
 	~LogicalVulkanDevice();
 private:
 	VkDevice m_Device;
+	VkQueue m_GraphicsQueue;
 };
 
 class VulkanInstance

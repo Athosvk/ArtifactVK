@@ -7,6 +7,8 @@
 #include <immintrin.h>
 #include <unordered_map>
 #include <string_view>
+#include <thread>
+#include <condition_variable>
 
 #ifndef NDEBUG
 #define NDEBUG 0
@@ -384,5 +386,22 @@ LogicalVulkanDevice::LogicalVulkanDevice(const VulkanDevice& physicalDevice, con
 
 LogicalVulkanDevice::~LogicalVulkanDevice()
 {
+	std::condition_variable destroyed;
+	std::mutex destroyMutex;
+	std::thread destroyThread([this, &destroyed, &destroyMutex] {
+		std::unique_lock lock(destroyMutex);
+		vkDeviceWaitIdle(m_Device);
+		destroyed.notify_one();
+	});
+	std::unique_lock lock(destroyMutex);
+	if (destroyed.wait_for(lock, std::chrono::milliseconds(500)) == std::cv_status::timeout) {
+		std::cout << "ERROR: Waited for > 500 ms for queue operations to finish. Forcibly deleting device";
+		// Detach, not going to wait for a blocking call. We already announced we're forcefully
+		// deleting the device here.
+		destroyThread.detach();
+	}
+	else {
+		destroyThread.join();
+	}
 	vkDestroyDevice(m_Device, nullptr);
 }
