@@ -75,13 +75,8 @@ VulkanSurface::~VulkanSurface()
 
 VkSurfaceKHR VulkanSurface::CreateSurface(const VkInstance& instance, GLFWwindow& internalWindow)
 {
-	VkWin32SurfaceCreateInfoKHR createSurfaceInfo{};
-	createSurfaceInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
-	createSurfaceInfo.hwnd = glfwGetWin32Window(&internalWindow);
-	createSurfaceInfo.hinstance = GetModuleHandle(nullptr);
-
 	VkSurfaceKHR surface;
-	if (vkCreateWin32SurfaceKHR(instance, &createSurfaceInfo, nullptr, &surface))
+	if (glfwCreateWindowSurface(instance, &internalWindow, nullptr, &surface) != VK_SUCCESS)
 	{
 		throw std::runtime_error("Could not create surface for rendering");
 	}
