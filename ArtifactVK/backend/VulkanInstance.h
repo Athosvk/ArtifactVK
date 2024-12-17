@@ -6,6 +6,7 @@
 #include <optional>
 #include <unordered_map>
 #include <cassert>
+#include <set>
 
 #include "VulkanExtensionMapper.h"
 #include "VulkanDebugMessenger.h"
@@ -25,6 +26,8 @@ struct QueueFamilyIndices
 {
 	std::optional<uint32_t> GraphicsFamily;
 	std::optional<uint32_t> PresentFamily;
+
+	std::set<uint32_t> GetUniqueQueues() const;
 };
 
 enum class EValidationLayer : uint32_t
@@ -151,8 +154,11 @@ public:
 	LogicalVulkanDevice(LogicalVulkanDevice&& other) = delete;
 	~LogicalVulkanDevice();
 private:
+	static std::vector<VkDeviceQueueCreateInfo> GetQueueCreateInfos(const VulkanDevice& physicalDevice);
+
 	VkDevice m_Device;
 	VkQueue m_GraphicsQueue;
+	VkQueue m_PresentQueue;
 };
 
 class VulkanInstance
