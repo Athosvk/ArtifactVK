@@ -16,7 +16,7 @@ public:
 
 	void RunRenderLoop();
 private:
-	VulkanInstance m_VulkanInstance;
 	Window m_Window;
+	VulkanInstance m_VulkanInstance;
 };
 

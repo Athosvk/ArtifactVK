@@ -10,6 +10,8 @@
 #include "VulkanExtensionMapper.h"
 #include "VulkanDebugMessenger.h"
 
+struct GLFWwindow;
+
 struct Version
 {
 	uint16_t Patch;
@@ -134,11 +136,14 @@ private:
 class VulkanInstance
 {
 public:
-	VulkanInstance(const InstanceCreateInfo& createInfo);
+	VulkanInstance(const InstanceCreateInfo& createInfo, GLFWwindow& window);
 	~VulkanInstance();
+	VulkanInstance(const VulkanInstance& other) = delete;
+	VulkanInstance(VulkanInstance&& other) = default;
 private:
 	static std::vector<const char*> CheckValidationLayers(const std::vector<ValidationLayer>& validationLayers);
 	VkDebugUtilsMessengerEXT CreateDebugMessenger() const;
+	VkSurfaceKHR CreateSurface(GLFWwindow& window) const;
 	VkInstance CreateInstance(const InstanceCreateInfo& createInfo);
 	VulkanDevice CreatePhysicalDevice() const;
 	VkDevice CreateLogicalDevice(const VulkanDevice& physicalDevice) const;
@@ -146,6 +151,7 @@ private:
 	VkInstance m_VkInstance;
 	VulkanExtensionMapper m_ExtensionMapper;
 	ManualScope<VulkanDebugMessenger> m_VulkanDebugMessenger;
+	ManualScope<VkSurfaceKHR> m_Surface;
 	VulkanDevice m_ActiveDevice;
 	ManualScope<LogicalVulkanDevice> m_ActiveLogicalDevice;
 	std::vector<const char*> m_ValidationLayers;

@@ -25,3 +25,8 @@ void Window::PollEvents() const
 {
 	glfwPollEvents();
 }
+
+VulkanInstance Window::CreateVulkanInstance(const InstanceCreateInfo& createInfo)
+{
+	return VulkanInstance(createInfo, *m_InternalWindow);
+}

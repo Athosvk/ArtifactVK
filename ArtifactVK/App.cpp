@@ -13,8 +13,8 @@ const InstanceCreateInfo DefaultCreateInfo()
 }
 
 App::App() : 
-	m_VulkanInstance(DefaultCreateInfo()),
-	m_Window(WindowCreateInfo{ 800, 600, "ArtifactVK" })
+	m_Window(WindowCreateInfo{ 800, 600, "ArtifactVK" }),
+	m_VulkanInstance(m_Window.CreateVulkanInstance(DefaultCreateInfo()))
 {
 }
 

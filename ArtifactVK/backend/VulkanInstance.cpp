@@ -1,6 +1,10 @@
+#define VK_USE_PLATFORM_WIN32_KHR
+#define GLFW_INCLUDE_VULKAN
+#define GLFW_EXPOSE_NATIVE_WIN32
 #include "VulkanInstance.h"
 
 #include <GLFW/glfw3.h>
+#include <GLFW/glfw3native.h>
 #include <iostream>
 #include <stdexcept>
 #include <vector>
@@ -38,14 +42,16 @@ const uint32_t Version::ToVulkanVersion() const
 	return VK_MAKE_API_VERSION(0, Major, Minor, Patch);
 }
 
-VulkanInstance::VulkanInstance(const InstanceCreateInfo& createInfo) 
+VulkanInstance::VulkanInstance(const InstanceCreateInfo& createInfo, GLFWwindow& window) 
 	: m_VkInstance(CreateInstance(createInfo)),
 	m_ExtensionMapper(VulkanExtensionMapper(m_VkInstance)),
 	m_ActiveDevice(CreatePhysicalDevice())
 {
+	m_Surface.ScopeBegin(CreateSurface(window));
 	// TODO: Move to initializer list so that debug messenges are not delayed
 	m_VulkanDebugMessenger.ScopeBegin(m_VkInstance, m_ExtensionMapper);
 	m_ActiveLogicalDevice.ScopeBegin(m_ActiveDevice, m_ValidationLayers);
+
 }
 
 VulkanInstance::~VulkanInstance()
@@ -55,6 +61,20 @@ VulkanInstance::~VulkanInstance()
 	vkDestroyInstance(m_VkInstance, nullptr);
 }
 
+VkSurfaceKHR VulkanInstance::CreateSurface(GLFWwindow& window) const
+{
+	VkWin32SurfaceCreateInfoKHR createSurfaceInfo{};
+	createSurfaceInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
+	createSurfaceInfo.hwnd = glfwGetWin32Window(&window);
+	createSurfaceInfo.hinstance = GetModuleHandle(nullptr);
+
+	VkSurfaceKHR surface;
+	if (vkCreateWin32SurfaceKHR(m_VkInstance, &createSurfaceInfo, nullptr, &surface))
+	{
+		throw std::runtime_error("Could not create surface for rendering");
+	}
+	return surface;
+}
 
 std::vector<const char*> VulkanInstance::CheckValidationLayers(const std::vector<ValidationLayer>& validationLayers)
 {

@@ -1,5 +1,6 @@
 #pragma once
 #include <string>
+#include "VulkanInstance.h"
 
 struct WindowCreateInfo
 {
@@ -17,6 +18,7 @@ public:
 	~Window();
 	bool ShouldClose() const;
 	void PollEvents() const;
+	VulkanInstance CreateVulkanInstance(const InstanceCreateInfo& createInfo);
 private:
 	GLFWwindow* m_InternalWindow;
 };
