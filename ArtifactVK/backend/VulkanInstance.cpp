@@ -47,7 +47,7 @@ VulkanInstance::VulkanInstance(const InstanceCreateInfo& createInfo, GLFWwindow&
 	m_ExtensionMapper(VulkanExtensionMapper(m_VkInstance)),
 	m_ActiveDevice(CreatePhysicalDevice())
 {
-	m_Surface.ScopeBegin(CreateSurface(window));
+	m_Surface.ScopeBegin(m_VkInstance, window);
 	// TODO: Move to initializer list so that debug messenges are not delayed
 	m_VulkanDebugMessenger.ScopeBegin(m_VkInstance, m_ExtensionMapper);
 	m_ActiveLogicalDevice.ScopeBegin(m_ActiveDevice, m_ValidationLayers);
@@ -58,18 +58,30 @@ VulkanInstance::~VulkanInstance()
 {
 	m_VulkanDebugMessenger.ScopeEnd();
 	m_ActiveLogicalDevice.ScopeEnd();
+	m_Surface.ScopeEnd();
 	vkDestroyInstance(m_VkInstance, nullptr);
 }
 
-VkSurfaceKHR VulkanInstance::CreateSurface(GLFWwindow& window) const
+VulkanSurface::VulkanSurface(const VkInstance& instance, GLFWwindow& internalWindow) :
+	m_Surface(CreateSurface(instance, internalWindow)),
+	m_VkInstance(instance)
+{
+}
+
+VulkanSurface::~VulkanSurface()
+{
+	vkDestroySurfaceKHR(m_VkInstance, m_Surface, nullptr);
+}
+
+VkSurfaceKHR VulkanSurface::CreateSurface(const VkInstance& instance, GLFWwindow& internalWindow)
 {
 	VkWin32SurfaceCreateInfoKHR createSurfaceInfo{};
 	createSurfaceInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
-	createSurfaceInfo.hwnd = glfwGetWin32Window(&window);
+	createSurfaceInfo.hwnd = glfwGetWin32Window(&internalWindow);
 	createSurfaceInfo.hinstance = GetModuleHandle(nullptr);
 
 	VkSurfaceKHR surface;
-	if (vkCreateWin32SurfaceKHR(m_VkInstance, &createSurfaceInfo, nullptr, &surface))
+	if (vkCreateWin32SurfaceKHR(instance, &createSurfaceInfo, nullptr, &surface))
 	{
 		throw std::runtime_error("Could not create surface for rendering");
 	}
@@ -251,7 +263,7 @@ VulkanDevice VulkanInstance::CreatePhysicalDevice() const
 	{
 		throw std::runtime_error("No suitable VK devices found");
 	}
-	return *firstValid;
+	return std::move(*firstValid);
 }
 
 bool VulkanDevice::Validate() const

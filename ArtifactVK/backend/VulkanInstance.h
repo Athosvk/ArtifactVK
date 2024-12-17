@@ -104,6 +104,8 @@ class VulkanDevice
 {
 public:
 	VulkanDevice(VkPhysicalDevice physicalDevice);
+	VulkanDevice(const VulkanDevice& other) = delete;
+	VulkanDevice(VulkanDevice&& other) = default;
 
 	const QueueFamilyIndices& GetQueueFamilies() const;
 	bool IsValid() const;
@@ -127,10 +129,26 @@ class LogicalVulkanDevice
 {
 public: 
 	LogicalVulkanDevice(const VulkanDevice& physicalDevice, const std::vector<const char*>& validationLayers);
+	LogicalVulkanDevice(const LogicalVulkanDevice& other) = delete;
+	LogicalVulkanDevice(LogicalVulkanDevice&& other) = delete;
 	~LogicalVulkanDevice();
 private:
 	VkDevice m_Device;
 	VkQueue m_GraphicsQueue;
+};
+
+class VulkanSurface
+{
+public:
+	VulkanSurface(const VkInstance& instance, GLFWwindow& internalWindow);
+	VulkanSurface(const VulkanSurface& other) = delete;
+	VulkanSurface(VulkanSurface&& other) = delete;
+	~VulkanSurface();
+private:
+	static VkSurfaceKHR CreateSurface(const VkInstance& instance, GLFWwindow& internalWindow);
+
+	VkSurfaceKHR m_Surface;
+	const VkInstance& m_VkInstance;
 };
 
 class VulkanInstance
@@ -143,7 +161,6 @@ public:
 private:
 	static std::vector<const char*> CheckValidationLayers(const std::vector<ValidationLayer>& validationLayers);
 	VkDebugUtilsMessengerEXT CreateDebugMessenger() const;
-	VkSurfaceKHR CreateSurface(GLFWwindow& window) const;
 	VkInstance CreateInstance(const InstanceCreateInfo& createInfo);
 	VulkanDevice CreatePhysicalDevice() const;
 	VkDevice CreateLogicalDevice(const VulkanDevice& physicalDevice) const;
@@ -151,7 +168,7 @@ private:
 	VkInstance m_VkInstance;
 	VulkanExtensionMapper m_ExtensionMapper;
 	ManualScope<VulkanDebugMessenger> m_VulkanDebugMessenger;
-	ManualScope<VkSurfaceKHR> m_Surface;
+	ManualScope<VulkanSurface> m_Surface;
 	VulkanDevice m_ActiveDevice;
 	ManualScope<LogicalVulkanDevice> m_ActiveLogicalDevice;
 	std::vector<const char*> m_ValidationLayers;
