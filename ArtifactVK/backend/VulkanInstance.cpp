@@ -420,6 +420,7 @@ LogicalVulkanDevice::LogicalVulkanDevice(const VulkanDevice& physicalDevice, con
 	}
 	// Assertion: physical device has a graphics family queue
 	vkGetDeviceQueue(m_Device, physicalDevice.GetQueueFamilies().GraphicsFamily.value(), 0, &m_GraphicsQueue);
+	vkGetDeviceQueue(m_Device, physicalDevice.GetQueueFamilies().PresentFamily.value(), 1, &m_PresentQueue);
 	
 }
 
