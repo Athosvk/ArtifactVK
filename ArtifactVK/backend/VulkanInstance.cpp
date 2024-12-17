@@ -52,6 +52,7 @@ VulkanInstance::VulkanInstance(const InstanceCreateInfo& createInfo, GLFWwindow&
 	m_Surface.ScopeBegin(m_VkInstance, window);
 	m_ActiveDevice.ScopeBegin(CreatePhysicalDevice(*m_Surface));
 	m_ActiveLogicalDevice.ScopeBegin(*m_ActiveDevice, m_ValidationLayers);
+	
 
 }
 
@@ -269,13 +270,18 @@ VulkanDevice VulkanInstance::CreatePhysicalDevice(const VulkanSurface& targetSur
 	return std::move(*firstValid);
 }
 
-bool VulkanDevice::Validate() const
+bool VulkanDevice::Validate(std::span<EDeviceExtension> requestedExtensions) const
 {
 	return (m_Properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU ||
 		m_Properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU) &&
 		m_Features.geometryShader &&
 		m_QueueFamilies.GraphicsFamily.has_value() &&
 		m_QueueFamilies.PresentFamily.has_value();
+}
+
+bool VulkanDevice::SupportsExtension(EDeviceExtension deviceExtension) const
+{
+	return false;
 }
 
 QueueFamilyIndices VulkanDevice::FindQueueFamilies(const VulkanSurface& surface) const

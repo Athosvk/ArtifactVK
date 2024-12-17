@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <cassert>
 #include <set>
+#include <span>
 
 #include "VulkanExtensionMapper.h"
 #include "VulkanDebugMessenger.h"
@@ -46,12 +47,19 @@ public:
 	std::vector<const char*> GetLayerNames() const;
 };
 
+enum EDeviceExtension
+{
+	VkSwapchain
+};
+
 struct InstanceCreateInfo
 {	
 	std::string Name;
 	Version AppVersion;
 	Version EngineVersion;
 	std::vector<ValidationLayer> ValidationLayers;
+	std::vector<EDeviceExtension> RequiredExtensions;
+	std::vector<EDeviceExtension> OptionalExtensions;
 };
 
 class VulkanSurface
@@ -134,7 +142,8 @@ public:
 	const VkPhysicalDeviceFeatures& GetFeatures() const;
 	const VkPhysicalDevice& GetInternal() const;
 private:
-	bool Validate() const;
+	bool Validate(std::span<EDeviceExtension> requestedExtensions) const;
+	bool SupportsExtension(EDeviceExtension deviceExtension) const;
 	QueueFamilyIndices FindQueueFamilies(const VulkanSurface& surface) const;
 	VkPhysicalDeviceProperties QueryDeviceProperties() const;
 	VkPhysicalDeviceFeatures QueryDeviceFeatures() const;
