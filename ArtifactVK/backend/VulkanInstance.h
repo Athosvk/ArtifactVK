@@ -24,6 +24,7 @@ struct Version
 struct QueueFamilyIndices
 {
 	std::optional<uint32_t> GraphicsFamily;
+	std::optional<uint32_t> PresentFamily;
 };
 
 enum class EValidationLayer : uint32_t
@@ -50,6 +51,23 @@ struct InstanceCreateInfo
 	std::vector<ValidationLayer> ValidationLayers;
 };
 
+class VulkanSurface
+{
+public:
+	VulkanSurface(const VkInstance& instance, GLFWwindow& internalWindow);
+	VulkanSurface(const VulkanSurface& other) = delete;
+	VulkanSurface(VulkanSurface&& other) = delete;
+	~VulkanSurface();
+
+	bool IsSupportedOnQueue(const VkPhysicalDevice& device, uint32_t queueIndex) const;
+private:
+	static VkSurfaceKHR CreateSurface(const VkInstance& instance, GLFWwindow& internalWindow);
+
+	VkSurfaceKHR m_Surface;
+	const VkInstance& m_VkInstance;
+};
+
+
 // Goes against RAII, but needed to handle (un)init order correctly in some cases.
 // Alternatively we use optional/unique ptr, but this is a bit more specific.
 // This will only allow creation/destruction once
@@ -66,22 +84,22 @@ public:
 
 	const T& operator*() const
 	{
-		return m_Inner;
+		return m_Inner.value();
 	}
 
 	T& operator*()
 	{
-		return m_Inner;
+		return m_Inner.value();
 	}
 
 	T* operator->()
 	{
-		return &m_Inner;
+		return &m_Inner.value();
 	}
 
 	const T* operator->() const
 	{
-		return &m_Inner;
+		return &m_Inner.value();
 	}
 
 	template<typename... Args>
@@ -103,7 +121,7 @@ private:
 class VulkanDevice
 {
 public:
-	VulkanDevice(VkPhysicalDevice physicalDevice);
+	VulkanDevice(VkPhysicalDevice physicalDevice, const VulkanSurface& targetSurface);
 	VulkanDevice(const VulkanDevice& other) = delete;
 	VulkanDevice(VulkanDevice&& other) = default;
 
@@ -114,7 +132,7 @@ public:
 	const VkPhysicalDevice& GetInternal() const;
 private:
 	bool Validate() const;
-	QueueFamilyIndices FindQueueFamilies() const;
+	QueueFamilyIndices FindQueueFamilies(const VulkanSurface& surface) const;
 	VkPhysicalDeviceProperties QueryDeviceProperties() const;
 	VkPhysicalDeviceFeatures QueryDeviceFeatures() const;
 
@@ -137,20 +155,6 @@ private:
 	VkQueue m_GraphicsQueue;
 };
 
-class VulkanSurface
-{
-public:
-	VulkanSurface(const VkInstance& instance, GLFWwindow& internalWindow);
-	VulkanSurface(const VulkanSurface& other) = delete;
-	VulkanSurface(VulkanSurface&& other) = delete;
-	~VulkanSurface();
-private:
-	static VkSurfaceKHR CreateSurface(const VkInstance& instance, GLFWwindow& internalWindow);
-
-	VkSurfaceKHR m_Surface;
-	const VkInstance& m_VkInstance;
-};
-
 class VulkanInstance
 {
 public:
@@ -162,14 +166,16 @@ private:
 	static std::vector<const char*> CheckValidationLayers(const std::vector<ValidationLayer>& validationLayers);
 	VkDebugUtilsMessengerEXT CreateDebugMessenger() const;
 	VkInstance CreateInstance(const InstanceCreateInfo& createInfo);
-	VulkanDevice CreatePhysicalDevice() const;
+	VulkanDevice CreatePhysicalDevice(const VulkanSurface& targetSurface) const;
 	VkDevice CreateLogicalDevice(const VulkanDevice& physicalDevice) const;
 
 	VkInstance m_VkInstance;
 	VulkanExtensionMapper m_ExtensionMapper;
 	ManualScope<VulkanDebugMessenger> m_VulkanDebugMessenger;
 	ManualScope<VulkanSurface> m_Surface;
-	VulkanDevice m_ActiveDevice;
+	// TODO: Technically does't need to be wrapped in a ManualScope, but
+	// has a dependency on m_Surface
+	ManualScope<VulkanDevice> m_ActiveDevice;
 	ManualScope<LogicalVulkanDevice> m_ActiveLogicalDevice;
 	std::vector<const char*> m_ValidationLayers;
 };

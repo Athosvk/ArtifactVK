@@ -42,15 +42,15 @@ const uint32_t Version::ToVulkanVersion() const
 	return VK_MAKE_API_VERSION(0, Major, Minor, Patch);
 }
 
-VulkanInstance::VulkanInstance(const InstanceCreateInfo& createInfo, GLFWwindow& window) 
-	: m_VkInstance(CreateInstance(createInfo)),
-	m_ExtensionMapper(VulkanExtensionMapper(m_VkInstance)),
-	m_ActiveDevice(CreatePhysicalDevice())
+VulkanInstance::VulkanInstance(const InstanceCreateInfo& createInfo, GLFWwindow& window) : 
+	m_VkInstance(CreateInstance(createInfo)),
+	m_ExtensionMapper(VulkanExtensionMapper(m_VkInstance))
 {
-	m_Surface.ScopeBegin(m_VkInstance, window);
-	// TODO: Move to initializer list so that debug messenges are not delayed
 	m_VulkanDebugMessenger.ScopeBegin(m_VkInstance, m_ExtensionMapper);
-	m_ActiveLogicalDevice.ScopeBegin(m_ActiveDevice, m_ValidationLayers);
+
+	m_Surface.ScopeBegin(m_VkInstance, window);
+	m_ActiveDevice.ScopeBegin(CreatePhysicalDevice(*m_Surface));
+	m_ActiveLogicalDevice.ScopeBegin(*m_ActiveDevice, m_ValidationLayers);
 
 }
 
@@ -58,6 +58,7 @@ VulkanInstance::~VulkanInstance()
 {
 	m_VulkanDebugMessenger.ScopeEnd();
 	m_ActiveLogicalDevice.ScopeEnd();
+	m_ActiveDevice.ScopeEnd();
 	m_Surface.ScopeEnd();
 	vkDestroyInstance(m_VkInstance, nullptr);
 }
@@ -71,6 +72,13 @@ VulkanSurface::VulkanSurface(const VkInstance& instance, GLFWwindow& internalWin
 VulkanSurface::~VulkanSurface()
 {
 	vkDestroySurfaceKHR(m_VkInstance, m_Surface, nullptr);
+}
+
+bool VulkanSurface::IsSupportedOnQueue(const VkPhysicalDevice& device, uint32_t queueIndex) const
+{
+	VkBool32 isSupported;
+	vkGetPhysicalDeviceSurfaceSupportKHR(device, queueIndex, m_Surface, &isSupported);
+	return isSupported == VK_TRUE;
 }
 
 VkSurfaceKHR VulkanSurface::CreateSurface(const VkInstance& instance, GLFWwindow& internalWindow)
@@ -225,7 +233,7 @@ VkInstance VulkanInstance::CreateInstance(const InstanceCreateInfo& createInfo)
 	return vkInstance;
 }
 
-VulkanDevice VulkanInstance::CreatePhysicalDevice() const
+VulkanDevice VulkanInstance::CreatePhysicalDevice(const VulkanSurface& targetSurface) const
 {
 	VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
 	uint32_t count = 0;
@@ -245,8 +253,7 @@ VulkanDevice VulkanInstance::CreatePhysicalDevice() const
 	for (auto& physicalDevice : physicalDevices)
 	{
 		// TODO: Early exit if we find the first suitable one?
-		devices.emplace_back(VulkanDevice(
-			std::move(physicalDevice)));
+		devices.emplace_back(std::move(physicalDevice), targetSurface);
 	}
 
 	// Score device or get preference from somwhere
@@ -266,10 +273,11 @@ bool VulkanDevice::Validate() const
 	return (m_Properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU ||
 		m_Properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU) &&
 		m_Features.geometryShader &&
-	m_QueueFamilies.GraphicsFamily.has_value();
+		m_QueueFamilies.GraphicsFamily.has_value() &&
+		m_QueueFamilies.PresentFamily.has_value();
 }
 
-QueueFamilyIndices VulkanDevice::FindQueueFamilies() const
+QueueFamilyIndices VulkanDevice::FindQueueFamilies(const VulkanSurface& surface) const
 {
 	QueueFamilyIndices indices;
 	uint32_t queueFamilyCount = 0;
@@ -282,9 +290,13 @@ QueueFamilyIndices VulkanDevice::FindQueueFamilies() const
 		if ((queueFamilies[static_cast<size_t>(i)].queueFlags & VK_QUEUE_GRAPHICS_BIT) == 1)
 		{
 			indices.GraphicsFamily = i;
-			break;
+		} 
+		if (!indices.PresentFamily.has_value() && surface.IsSupportedOnQueue(m_PhysicalDevice, i))
+		{
+			indices.PresentFamily = i;
 		}
 	}
+
 	return indices;
 }
 
@@ -329,9 +341,9 @@ const std::array<EValidationLayer, 1> AvailableValidationLayers()
 	return { EValidationLayer::KhronosValidation };
 }
 
-VulkanDevice::VulkanDevice(VkPhysicalDevice physicalDevice) :
+VulkanDevice::VulkanDevice(VkPhysicalDevice physicalDevice, const VulkanSurface& targetSurface) :
 	m_PhysicalDevice(physicalDevice),
-	m_QueueFamilies(FindQueueFamilies()),
+	m_QueueFamilies(FindQueueFamilies(targetSurface)),
 	m_Properties(QueryDeviceProperties()),
 	m_Features(QueryDeviceFeatures()),
 	m_Valid(Validate())
