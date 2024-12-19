@@ -16,6 +16,26 @@ struct QueueFamilyIndices
 	std::set<uint32_t> GetUniqueQueues() const;
 };
 
+class VulkanDevice;
+
+class LogicalVulkanDevice
+{
+public: 
+	LogicalVulkanDevice(const VulkanDevice& physicalDevice, const VkPhysicalDevice& physicalDeviceHandle, 
+		const std::vector<const char*>& validationLayers, std::vector<EDeviceExtension> extensions);
+	LogicalVulkanDevice(const LogicalVulkanDevice& other) = delete;
+	LogicalVulkanDevice(LogicalVulkanDevice&& other) = default;
+	~LogicalVulkanDevice();
+private:
+	static std::vector<VkDeviceQueueCreateInfo> GetQueueCreateInfos(const VulkanDevice& physicalDevice);
+
+	VkDevice m_Device;
+	VkQueue m_GraphicsQueue;
+	VkQueue m_PresentQueue;
+	std::vector<EDeviceExtension> m_Extensions;
+};
+
+
 class VulkanDevice
 {
 public:
@@ -28,7 +48,8 @@ public:
 	bool IsValid() const;
 	const VkPhysicalDeviceProperties& GetProperties() const;
 	const VkPhysicalDeviceFeatures& GetFeatures() const;
-	const VkPhysicalDevice& GetInternal() const;
+	std::vector<EDeviceExtension> FilterAvailableExtensions(std::span<const EDeviceExtension> desiredExtensions) const;
+	LogicalVulkanDevice CreateLogicalDevice(const std::vector<const char*>& validationLayers, std::vector<EDeviceExtension> extensions);
 private:
 	bool Validate(std::span<const EDeviceExtension> requiredExtensions) const;
 	bool AllExtensionsAvailable(std::span<const EDeviceExtension> extensions) const;

@@ -1,6 +1,12 @@
 #include "VulkanDevice.h"
 
-#include "VulkanSurface.h"
+#include <cassert>
+#include <stdexcept>
+#include <thread>
+#include <condition_variable>
+#include <iostream>
+
+#include "VulkanSurface.h" 
 
 VulkanDevice::VulkanDevice(VkPhysicalDevice physicalDevice, const VulkanSurface& targetSurface, const DeviceExtensionMapping& extensionMapping, 
 	std::span<const EDeviceExtension> requestedExtensions) :
@@ -33,9 +39,20 @@ const VkPhysicalDeviceFeatures& VulkanDevice::GetFeatures() const
 	return m_Features;
 }
 
-const VkPhysicalDevice& VulkanDevice::GetInternal() const
+std::vector<EDeviceExtension> VulkanDevice::FilterAvailableExtensions(std::span<const EDeviceExtension> desiredExtensions) const
 {
-	return m_PhysicalDevice;
+	std::vector<EDeviceExtension> desiredAvailableExtensions;
+	desiredAvailableExtensions.reserve(desiredExtensions.size());
+	for (EDeviceExtension extension : desiredExtensions)
+	{
+		desiredAvailableExtensions.emplace_back(extension);
+	}
+	return desiredAvailableExtensions;
+}
+
+LogicalVulkanDevice VulkanDevice::CreateLogicalDevice(const std::vector<const char*>& validationLayers, std::vector<EDeviceExtension> extensions)
+{
+	return LogicalVulkanDevice(*this, m_PhysicalDevice, validationLayers, extensions);
 }
 
 VkPhysicalDeviceProperties VulkanDevice::QueryDeviceProperties() const
@@ -111,3 +128,81 @@ QueueFamilyIndices VulkanDevice::FindQueueFamilies(const VulkanSurface& surface)
 	return indices;
 }
 
+LogicalVulkanDevice::LogicalVulkanDevice(const VulkanDevice& device, const VkPhysicalDevice& physicalDeviceHandle, 
+	const std::vector<const char*>& validationLayers, std::vector<EDeviceExtension> extensions) :
+	m_Extensions(std::move(extensions))
+{
+	assert(device.IsValid() && "Need a valid physical device");
+
+	std::vector<VkDeviceQueueCreateInfo> queueCreateInfos = GetQueueCreateInfos(device);
+
+	VkDeviceCreateInfo deviceCreateInfo{};
+	deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+	deviceCreateInfo.pQueueCreateInfos = queueCreateInfos.data();
+	deviceCreateInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
+	// Also specify here for backwards compatability with old vulkan implementations.
+	// This shouldn't functionally change the enabled validation layers
+	if (!validationLayers.empty())
+	{
+		deviceCreateInfo.enabledLayerCount = (uint32_t)validationLayers.size();
+		deviceCreateInfo.ppEnabledLayerNames = validationLayers.data();
+	} 
+	else 
+	{
+		deviceCreateInfo.enabledLayerCount = 0;
+	}
+	deviceCreateInfo.pEnabledFeatures = &device.GetFeatures();
+
+	if (vkCreateDevice(physicalDeviceHandle, &deviceCreateInfo, nullptr, &m_Device) != VK_SUCCESS)
+	{
+		throw std::runtime_error("Could not create logical device");
+	}
+	// Assertion: physical device has a graphics family queue
+	vkGetDeviceQueue(m_Device, device.GetQueueFamilies().GraphicsFamily.value(), 0, &m_GraphicsQueue);
+	vkGetDeviceQueue(m_Device, device.GetQueueFamilies().PresentFamily.value(), 0, &m_PresentQueue);
+}
+
+LogicalVulkanDevice::~LogicalVulkanDevice()
+{
+	std::condition_variable destroyed;
+	std::mutex destroyMutex;
+	std::thread destroyThread([this, &destroyed, &destroyMutex] {
+		std::unique_lock lock(destroyMutex);
+		vkDeviceWaitIdle(m_Device);
+		destroyed.notify_one();
+	});
+	std::unique_lock lock(destroyMutex);
+	if (destroyed.wait_for(lock, std::chrono::milliseconds(500)) == std::cv_status::timeout) {
+		std::cout << "ERROR: Waited for > 500 ms for queue operations to finish. Forcibly deleting device";
+		// Detach, not going to wait for a blocking call. We already announced we're forcefully
+		// deleting the device here.
+		destroyThread.detach();
+	}
+	else {
+		destroyThread.join();
+	}
+	vkDestroyDevice(m_Device, nullptr);
+}
+
+std::vector<VkDeviceQueueCreateInfo> LogicalVulkanDevice::GetQueueCreateInfos(const VulkanDevice& physicalDevice)
+{
+	std::set<uint32_t> uniqueQueueIndices = physicalDevice.GetQueueFamilies().GetUniqueQueues();
+
+	std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
+	queueCreateInfos.reserve(uniqueQueueIndices.size());
+	for (uint32_t queueIndex : uniqueQueueIndices) {
+		VkDeviceQueueCreateInfo graphicsQueueCreateInfo{};
+		graphicsQueueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+		graphicsQueueCreateInfo.queueFamilyIndex = queueIndex;
+		graphicsQueueCreateInfo.queueCount = 1;
+		float priority = 1.0f;
+		graphicsQueueCreateInfo.pQueuePriorities = &priority;
+		queueCreateInfos.emplace_back(graphicsQueueCreateInfo);
+	}
+	return queueCreateInfos;
+}
+
+std::set<uint32_t> QueueFamilyIndices::GetUniqueQueues() const
+{
+	return { GraphicsFamily.value(), PresentFamily.value() };
+}

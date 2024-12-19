@@ -51,7 +51,8 @@ VulkanInstance::VulkanInstance(const InstanceCreateInfo& createInfo, GLFWwindow&
 
 	m_Surface.ScopeBegin(m_VkInstance, window);
 	m_ActiveDevice.ScopeBegin(CreatePhysicalDevice(*m_Surface, std::span { createInfo.RequiredExtensions }));
-	m_ActiveLogicalDevice.ScopeBegin(*m_ActiveDevice, m_ValidationLayers);
+
+	m_ActiveLogicalDevice.ScopeBegin(m_ActiveDevice->CreateLogicalDevice(m_ValidationLayers, createInfo.RequiredExtensions));
 }
 
 VulkanInstance::~VulkanInstance()
@@ -62,7 +63,6 @@ VulkanInstance::~VulkanInstance()
 	m_Surface.ScopeEnd();
 	vkDestroyInstance(m_VkInstance, nullptr);
 }
-
 
 std::vector<const char*> VulkanInstance::CheckValidationLayers(const std::vector<ValidationLayer>& validationLayers)
 {
@@ -248,121 +248,7 @@ VulkanDevice VulkanInstance::CreatePhysicalDevice(const VulkanSurface& targetSur
 	return std::move(*firstValid);
 }
 
-
-VkDevice VulkanInstance::CreateLogicalDevice(const VulkanDevice& physicalDevice) const 
-{
-	VkDeviceQueueCreateInfo queueCreateInfo{};
-	assert(physicalDevice.IsValid() && "Not a valid device to create a logical device from");
-	queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-	queueCreateInfo.queueFamilyIndex = physicalDevice.GetQueueFamilies().GraphicsFamily.value();
-	queueCreateInfo.queueCount = 1;
-	float priority = 1.0f;
-	queueCreateInfo.pQueuePriorities = &priority;
-
-	VkDeviceCreateInfo deviceCreateInfo{};
-	deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-	deviceCreateInfo.pQueueCreateInfos = &queueCreateInfo;
-	deviceCreateInfo.queueCreateInfoCount = 1;
-	// Also specify here for backwards compatability with old vulkan implementations.
-	// This shouldn't functionally change the enabled validation layers
-	if (!m_ValidationLayers.empty())
-	{
-		deviceCreateInfo.enabledLayerCount = (uint32_t)m_ValidationLayers.size();
-		deviceCreateInfo.ppEnabledLayerNames = m_ValidationLayers.data();
-	} 
-	else 
-	{
-		deviceCreateInfo.enabledLayerCount = 0;
-	}
-	deviceCreateInfo.pEnabledFeatures = &physicalDevice.GetFeatures();
-	
-	VkDevice device;
-	if (vkCreateDevice(physicalDevice.GetInternal(), &deviceCreateInfo, nullptr, &device) != VK_SUCCESS)
-	{
-		throw std::runtime_error("Could not create logical device");
-	}
-	return device;
-}
-
-
 const std::array<EValidationLayer, 1> AvailableValidationLayers()
 {
 	return { EValidationLayer::KhronosValidation };
-}
-
-LogicalVulkanDevice::LogicalVulkanDevice(const VulkanDevice& physicalDevice, const std::vector<const char*>& validationLayers)
-{
-	assert(physicalDevice.IsValid() && "Need a valid physical device");
-
-	std::vector<VkDeviceQueueCreateInfo> queueCreateInfos = GetQueueCreateInfos(physicalDevice);
-
-	VkDeviceCreateInfo deviceCreateInfo{};
-	deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-	deviceCreateInfo.pQueueCreateInfos = queueCreateInfos.data();
-	deviceCreateInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
-	// Also specify here for backwards compatability with old vulkan implementations.
-	// This shouldn't functionally change the enabled validation layers
-	if (!validationLayers.empty())
-	{
-		deviceCreateInfo.enabledLayerCount = (uint32_t)validationLayers.size();
-		deviceCreateInfo.ppEnabledLayerNames = validationLayers.data();
-	} 
-	else 
-	{
-		deviceCreateInfo.enabledLayerCount = 0;
-	}
-	deviceCreateInfo.pEnabledFeatures = &physicalDevice.GetFeatures();
-
-	if (vkCreateDevice(physicalDevice.GetInternal(), &deviceCreateInfo, nullptr, &m_Device) != VK_SUCCESS)
-	{
-		throw std::runtime_error("Could not create logical device");
-	}
-	// Assertion: physical device has a graphics family queue
-	vkGetDeviceQueue(m_Device, physicalDevice.GetQueueFamilies().GraphicsFamily.value(), 0, &m_GraphicsQueue);
-	vkGetDeviceQueue(m_Device, physicalDevice.GetQueueFamilies().PresentFamily.value(), 0, &m_PresentQueue);
-}
-
-LogicalVulkanDevice::~LogicalVulkanDevice()
-{
-	std::condition_variable destroyed;
-	std::mutex destroyMutex;
-	std::thread destroyThread([this, &destroyed, &destroyMutex] {
-		std::unique_lock lock(destroyMutex);
-		vkDeviceWaitIdle(m_Device);
-		destroyed.notify_one();
-	});
-	std::unique_lock lock(destroyMutex);
-	if (destroyed.wait_for(lock, std::chrono::milliseconds(500)) == std::cv_status::timeout) {
-		std::cout << "ERROR: Waited for > 500 ms for queue operations to finish. Forcibly deleting device";
-		// Detach, not going to wait for a blocking call. We already announced we're forcefully
-		// deleting the device here.
-		destroyThread.detach();
-	}
-	else {
-		destroyThread.join();
-	}
-	vkDestroyDevice(m_Device, nullptr);
-}
-
-std::vector<VkDeviceQueueCreateInfo> LogicalVulkanDevice::GetQueueCreateInfos(const VulkanDevice& physicalDevice)
-{
-	std::set<uint32_t> uniqueQueueIndices = physicalDevice.GetQueueFamilies().GetUniqueQueues();
-
-	std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
-	queueCreateInfos.reserve(uniqueQueueIndices.size());
-	for (uint32_t queueIndex : uniqueQueueIndices) {
-		VkDeviceQueueCreateInfo graphicsQueueCreateInfo{};
-		graphicsQueueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-		graphicsQueueCreateInfo.queueFamilyIndex = queueIndex;
-		graphicsQueueCreateInfo.queueCount = 1;
-		float priority = 1.0f;
-		graphicsQueueCreateInfo.pQueuePriorities = &priority;
-		queueCreateInfos.emplace_back(graphicsQueueCreateInfo);
-	}
-	return queueCreateInfos;
-}
-
-std::set<uint32_t> QueueFamilyIndices::GetUniqueQueues() const
-{
-	return { GraphicsFamily.value(), PresentFamily.value() };
 }

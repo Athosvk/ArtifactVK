@@ -29,7 +29,7 @@ struct Version
 
 enum class EValidationLayer : uint32_t
 {
-	KhronosValidation = 0x0,
+	KhronosValidation = 0x1,
 };
 
 const static std::array<EValidationLayer, 1> AvailableValidationLayers();
@@ -103,21 +103,6 @@ private:
 	std::optional<T> m_Inner;
 };
 
-class LogicalVulkanDevice
-{
-public: 
-	LogicalVulkanDevice(const VulkanDevice& physicalDevice, const std::vector<const char*>& validationLayers);
-	LogicalVulkanDevice(const LogicalVulkanDevice& other) = delete;
-	LogicalVulkanDevice(LogicalVulkanDevice&& other) = delete;
-	~LogicalVulkanDevice();
-private:
-	static std::vector<VkDeviceQueueCreateInfo> GetQueueCreateInfos(const VulkanDevice& physicalDevice);
-
-	VkDevice m_Device;
-	VkQueue m_GraphicsQueue;
-	VkQueue m_PresentQueue;
-};
-
 class VulkanInstance
 {
 public:
@@ -125,12 +110,12 @@ public:
 	~VulkanInstance();
 	VulkanInstance(const VulkanInstance& other) = delete;
 	VulkanInstance(VulkanInstance&& other) = default;
+
 private:
 	static std::vector<const char*> CheckValidationLayers(const std::vector<ValidationLayer>& validationLayers);
 	VkDebugUtilsMessengerEXT CreateDebugMessenger() const;
 	VkInstance CreateInstance(const InstanceCreateInfo& createInfo);
 	VulkanDevice CreatePhysicalDevice(const VulkanSurface& targetSurface, std::span<const EDeviceExtension> deviceExtensions) const;
-	VkDevice CreateLogicalDevice(const VulkanDevice& physicalDevice) const;
 
 	VkInstance m_VkInstance;
 	ExtensionFunctionMapping m_ExtensionMapper;
