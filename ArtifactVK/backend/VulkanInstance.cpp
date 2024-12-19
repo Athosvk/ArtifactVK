@@ -225,19 +225,26 @@ VulkanDevice VulkanInstance::CreatePhysicalDevice(const VulkanSurface& targetSur
 	devices.reserve(physicalDevices.size());
 	for (auto& physicalDevice : physicalDevices)
 	{
-		// TODO: Early exit if we find the first suitable one?
+		// TODO: Early exit if we find the first suitable one, depending on
+		// preference function.
 		devices.emplace_back(std::move(physicalDevice), targetSurface, m_DeviceExtensionMapper, requestedExtensions);
 	}
 
-	// TODO: Score device or get preference from somewhere
-	auto firstValid = std::find_if(devices.begin(), devices.end(), [this](const VulkanDevice& device)
+	auto firstValid = devices.end();
+	uint32_t numValidDevices = 0;
+	for (auto iter = devices.begin(); iter != devices.end(); iter++)
+	{
+		if (iter->IsValid())
 		{
-			return device.IsValid();
-		});
+			firstValid = iter;
+			numValidDevices++;
+		}
+	}
 	if (firstValid == devices.end())
 	{
 		throw std::runtime_error("No suitable VK devices found");
 	}
+	std::cout << "Found " << numValidDevices << " suitable physical devices\n";
 	return std::move(*firstValid);
 }
 
