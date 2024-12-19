@@ -45,15 +45,13 @@ const uint32_t Version::ToVulkanVersion() const
 
 VulkanInstance::VulkanInstance(const InstanceCreateInfo& createInfo, GLFWwindow& window) : 
 	m_VkInstance(CreateInstance(createInfo)),
-	m_ExtensionMapper(VulkanExtensionMapper(m_VkInstance))
+	m_ExtensionMapper(ExtensionFunctionMapping(m_VkInstance))
 {
 	m_VulkanDebugMessenger.ScopeBegin(m_VkInstance, m_ExtensionMapper);
 
 	m_Surface.ScopeBegin(m_VkInstance, window);
 	m_ActiveDevice.ScopeBegin(CreatePhysicalDevice(*m_Surface));
 	m_ActiveLogicalDevice.ScopeBegin(*m_ActiveDevice, m_ValidationLayers);
-	
-
 }
 
 VulkanInstance::~VulkanInstance()
@@ -65,33 +63,6 @@ VulkanInstance::~VulkanInstance()
 	vkDestroyInstance(m_VkInstance, nullptr);
 }
 
-VulkanSurface::VulkanSurface(const VkInstance& instance, GLFWwindow& internalWindow) :
-	m_Surface(CreateSurface(instance, internalWindow)),
-	m_VkInstance(instance)
-{
-}
-
-VulkanSurface::~VulkanSurface()
-{
-	vkDestroySurfaceKHR(m_VkInstance, m_Surface, nullptr);
-}
-
-bool VulkanSurface::IsSupportedOnQueue(const VkPhysicalDevice& device, uint32_t queueIndex) const
-{
-	VkBool32 isSupported;
-	vkGetPhysicalDeviceSurfaceSupportKHR(device, queueIndex, m_Surface, &isSupported);
-	return isSupported == VK_TRUE;
-}
-
-VkSurfaceKHR VulkanSurface::CreateSurface(const VkInstance& instance, GLFWwindow& internalWindow)
-{
-	VkSurfaceKHR surface;
-	if (glfwCreateWindowSurface(instance, &internalWindow, nullptr, &surface) != VK_SUCCESS)
-	{
-		throw std::runtime_error("Could not create surface for rendering");
-	}
-	return surface;
-}
 
 std::vector<const char*> VulkanInstance::CheckValidationLayers(const std::vector<ValidationLayer>& validationLayers)
 {
@@ -255,7 +226,7 @@ VulkanDevice VulkanInstance::CreatePhysicalDevice(const VulkanSurface& targetSur
 	for (auto& physicalDevice : physicalDevices)
 	{
 		// TODO: Early exit if we find the first suitable one?
-		devices.emplace_back(std::move(physicalDevice), targetSurface);
+		devices.emplace_back(std::move(physicalDevice), targetSurface, m_DeviceExtensionMapper);
 	}
 
 	// Score device or get preference from somwhere
@@ -270,42 +241,6 @@ VulkanDevice VulkanInstance::CreatePhysicalDevice(const VulkanSurface& targetSur
 	return std::move(*firstValid);
 }
 
-bool VulkanDevice::Validate(std::span<EDeviceExtension> requestedExtensions) const
-{
-	return (m_Properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU ||
-		m_Properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU) &&
-		m_Features.geometryShader &&
-		m_QueueFamilies.GraphicsFamily.has_value() &&
-		m_QueueFamilies.PresentFamily.has_value();
-}
-
-bool VulkanDevice::SupportsExtension(EDeviceExtension deviceExtension) const
-{
-	return false;
-}
-
-QueueFamilyIndices VulkanDevice::FindQueueFamilies(const VulkanSurface& surface) const
-{
-	QueueFamilyIndices indices;
-	uint32_t queueFamilyCount = 0;
-	vkGetPhysicalDeviceQueueFamilyProperties(m_PhysicalDevice, &queueFamilyCount, nullptr);
-	std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
-	vkGetPhysicalDeviceQueueFamilyProperties(m_PhysicalDevice, &queueFamilyCount, queueFamilies.data());
-	
-	for (uint32_t i = 0; i < queueFamilyCount; i++)
-	{
-		if ((queueFamilies[static_cast<size_t>(i)].queueFlags & VK_QUEUE_GRAPHICS_BIT) == 1)
-		{
-			indices.GraphicsFamily = i;
-		} 
-		if (!indices.PresentFamily.has_value() && surface.IsSupportedOnQueue(m_PhysicalDevice, i))
-		{
-			indices.PresentFamily = i;
-		}
-	}
-
-	return indices;
-}
 
 VkDevice VulkanInstance::CreateLogicalDevice(const VulkanDevice& physicalDevice) const 
 {
@@ -348,55 +283,6 @@ const std::array<EValidationLayer, 1> AvailableValidationLayers()
 	return { EValidationLayer::KhronosValidation };
 }
 
-VulkanDevice::VulkanDevice(VkPhysicalDevice physicalDevice, const VulkanSurface& targetSurface) :
-	m_PhysicalDevice(physicalDevice),
-	m_QueueFamilies(FindQueueFamilies(targetSurface)),
-	m_Properties(QueryDeviceProperties()),
-	m_Features(QueryDeviceFeatures()),
-	m_Valid(Validate())
-{
-}
-
-bool VulkanDevice::IsValid() const
-{
-	return m_Valid;
-}
-
-
-const QueueFamilyIndices& VulkanDevice::GetQueueFamilies() const
-{
-	return m_QueueFamilies;
-}
-
-const VkPhysicalDeviceProperties& VulkanDevice::GetProperties() const
-{
-	return m_Properties;
-}
-
-const VkPhysicalDeviceFeatures& VulkanDevice::GetFeatures() const
-{
-	return m_Features;
-}
-
-const VkPhysicalDevice& VulkanDevice::GetInternal() const
-{
-	return m_PhysicalDevice;
-}
-
-VkPhysicalDeviceProperties VulkanDevice::QueryDeviceProperties() const
-{
-	VkPhysicalDeviceProperties properties;
-	vkGetPhysicalDeviceProperties(m_PhysicalDevice, &properties);
-	return properties;
-}
-
-VkPhysicalDeviceFeatures VulkanDevice::QueryDeviceFeatures() const
-{
-	VkPhysicalDeviceFeatures features;
-	vkGetPhysicalDeviceFeatures(m_PhysicalDevice, &features);
-	return features;
-}
-
 LogicalVulkanDevice::LogicalVulkanDevice(const VulkanDevice& physicalDevice, const std::vector<const char*>& validationLayers)
 {
 	assert(physicalDevice.IsValid() && "Need a valid physical device");
@@ -424,10 +310,9 @@ LogicalVulkanDevice::LogicalVulkanDevice(const VulkanDevice& physicalDevice, con
 	{
 		throw std::runtime_error("Could not create logical device");
 	}
-	// Assertion: physical device has a graphics family queue
+	// Assertion: physical device has a graphics family queu
 	vkGetDeviceQueue(m_Device, physicalDevice.GetQueueFamilies().GraphicsFamily.value(), 0, &m_GraphicsQueue);
 	vkGetDeviceQueue(m_Device, physicalDevice.GetQueueFamilies().PresentFamily.value(), 1, &m_PresentQueue);
-	
 }
 
 LogicalVulkanDevice::~LogicalVulkanDevice()

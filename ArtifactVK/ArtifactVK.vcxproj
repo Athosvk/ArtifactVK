@@ -87,18 +87,24 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="App.cpp" />
+    <ClCompile Include="backend\DeviceExtensionMapping.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="backend\Window.cpp" />
     <ClCompile Include="backend\VulkanInstance.cpp" />
     <ClCompile Include="backend\VulkanDebugMessenger.cpp" />
-    <ClCompile Include="backend\VulkanExtensionMapper.cpp" />
+    <ClCompile Include="backend\ExtensionFunctionMapping.cpp" />
+    <ClCompile Include="backend\VulkanDevice.cpp" />
+    <ClCompile Include="backend\VulkanSurface.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="App.h" />
     <ClInclude Include="backend\Window.h" />
     <ClInclude Include="backend\VulkanInstance.h" />
     <ClInclude Include="backend\VulkanDebugMessenger.h" />
-    <ClInclude Include="backend\VulkanExtensionMapper.h" />
+    <ClInclude Include="backend\ExtensionFunctionMapping.h" />
+    <ClInclude Include="backend\DeviceExtensionMapping.h" />
+    <ClInclude Include="backend\VulkanDevice.h" />
+    <ClInclude Include="backend\VulkanSurface.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

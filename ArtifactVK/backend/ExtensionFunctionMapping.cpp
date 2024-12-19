@@ -1,13 +1,13 @@
-#include "VulkanExtensionMapper.h"
+#include "ExtensionFunctionMapping.h"
 
-VulkanExtensionMapper::VulkanExtensionMapper(const VkInstance& vkInstance) :
+ExtensionFunctionMapping::ExtensionFunctionMapping(const VkInstance& vkInstance) :
 	m_VkInstance(vkInstance),
 	m_ExtensionFunctionMapping(CreateFunctionMapping(CreateFunctionNameMapping()))
 {
 
 }
 
-std::unordered_map<EExtensionFunction, const char*> VulkanExtensionMapper::CreateFunctionNameMapping() const
+std::unordered_map<EExtensionFunction, const char*> ExtensionFunctionMapping::CreateFunctionNameMapping() const
 {
 	std::unordered_map<EExtensionFunction, const char*> nameMapping;
 	nameMapping.insert({ EExtensionFunction::VkCreateDebugUtilsMessengerExt, "vkCreateDebugUtilsMessengerEXT" });
@@ -15,7 +15,7 @@ std::unordered_map<EExtensionFunction, const char*> VulkanExtensionMapper::Creat
 	return nameMapping;
 }
 
-std::unordered_map<EExtensionFunction, PFN_vkVoidFunction> VulkanExtensionMapper::CreateFunctionMapping(const std::unordered_map<EExtensionFunction, const char*>& extensionNameMapping) const
+std::unordered_map<EExtensionFunction, PFN_vkVoidFunction> ExtensionFunctionMapping::CreateFunctionMapping(const std::unordered_map<EExtensionFunction, const char*>& extensionNameMapping) const
 {
 	std::unordered_map<EExtensionFunction, PFN_vkVoidFunction> functionMapping;
 	functionMapping.reserve(extensionNameMapping.size());
@@ -30,7 +30,7 @@ std::unordered_map<EExtensionFunction, PFN_vkVoidFunction> VulkanExtensionMapper
 	return functionMapping;
 }
 
-PFN_vkVoidFunction VulkanExtensionMapper::GetFunction(EExtensionFunction function) const
+PFN_vkVoidFunction ExtensionFunctionMapping::GetFunction(EExtensionFunction function) const
 {
 	// TODO: Graceful hndling of extensions that aren't available
 	return m_ExtensionFunctionMapping.at(function);

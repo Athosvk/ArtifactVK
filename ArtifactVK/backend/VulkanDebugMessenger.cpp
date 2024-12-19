@@ -3,7 +3,7 @@
 #include <vulkan/vulkan.h>
 #include <iostream>
 
-#include "VulkanExtensionMapper.h"
+#include "ExtensionFunctionMapping.h"
 
 static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
 	VkDebugUtilsMessageTypeFlagsEXT messageType,
@@ -35,7 +35,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityF
 	return VK_FALSE;
 }
 
-VulkanDebugMessenger::VulkanDebugMessenger(VkInstance& vulkanInstance, const VulkanExtensionMapper& extensionMapper) :
+VulkanDebugMessenger::VulkanDebugMessenger(VkInstance& vulkanInstance, const ExtensionFunctionMapping& extensionMapper) :
 	m_VulkanInstance(vulkanInstance),
 	m_ExtensionMapper(extensionMapper),
 	m_DebugMessenger(Create(m_VulkanInstance, m_ExtensionMapper))
@@ -65,7 +65,7 @@ VkDebugUtilsMessengerCreateInfoEXT VulkanDebugMessenger::CreateInfo()
 
 }
 
-VkDebugUtilsMessengerEXT VulkanDebugMessenger::Create(VkInstance& vulkanInstance, const VulkanExtensionMapper& extensionMapper)
+VkDebugUtilsMessengerEXT VulkanDebugMessenger::Create(VkInstance& vulkanInstance, const ExtensionFunctionMapping& extensionMapper)
 {
 	auto createFunction = (PFN_vkCreateDebugUtilsMessengerEXT)extensionMapper.GetFunction(EExtensionFunction::VkCreateDebugUtilsMessengerExt);
 	VkDebugUtilsMessengerEXT debugMessenger;
