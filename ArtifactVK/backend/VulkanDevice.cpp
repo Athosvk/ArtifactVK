@@ -171,11 +171,10 @@ LogicalVulkanDevice::LogicalVulkanDevice(const VulkanDevice& device, const VkPhy
 
 LogicalVulkanDevice::LogicalVulkanDevice(LogicalVulkanDevice&& other)
 {
-	m_Device = other.m_Device;
+	m_Device = std::exchange(other.m_Device, VK_NULL_HANDLE);
 	m_GraphicsQueue = other.m_GraphicsQueue;
 	m_PresentQueue = other.m_PresentQueue;
 	m_Extensions = std::move(other.m_Extensions);
-	other.m_Device = VK_NULL_HANDLE;
 }
 
 LogicalVulkanDevice::~LogicalVulkanDevice()
