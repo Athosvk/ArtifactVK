@@ -19,7 +19,8 @@ struct QueueFamilyIndices
 class VulkanDevice
 {
 public:
-	VulkanDevice(VkPhysicalDevice physicalDevice, const VulkanSurface& targetSurface, const DeviceExtensionMapping& extensionMapping);
+	VulkanDevice(VkPhysicalDevice physicalDevice, const VulkanSurface& targetSurface, const DeviceExtensionMapping& extensionMapping, 
+		std::span<const EDeviceExtension> requestedExtensions);
 	VulkanDevice(const VulkanDevice& other) = delete;
 	VulkanDevice(VulkanDevice&& other) = default;
 
@@ -29,7 +30,8 @@ public:
 	const VkPhysicalDeviceFeatures& GetFeatures() const;
 	const VkPhysicalDevice& GetInternal() const;
 private:
-	bool Validate(std::span<EDeviceExtension> requestedExtensions) const;
+	bool Validate(std::span<const EDeviceExtension> requiredExtensions) const;
+	bool AllExtensionsAvailable(std::span<const EDeviceExtension> extensions) const;
 	std::set<EDeviceExtension> QueryExtensions(const DeviceExtensionMapping& extensionMapping) const;
 	QueueFamilyIndices FindQueueFamilies(const VulkanSurface& surface) const;
 	VkPhysicalDeviceProperties QueryDeviceProperties() const;

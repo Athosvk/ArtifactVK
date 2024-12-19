@@ -49,8 +49,8 @@ struct InstanceCreateInfo
 	Version AppVersion;
 	Version EngineVersion;
 	std::vector<ValidationLayer> ValidationLayers;
-	std::set<EDeviceExtension> RequiredExtensions;
-	std::set<EDeviceExtension> OptionalExtensions;
+	std::vector<EDeviceExtension> RequiredExtensions;
+	std::vector<EDeviceExtension> OptionalExtensions;
 };
 
 // Goes against RAII, but needed to handle (un)init order correctly in some cases.
@@ -129,7 +129,7 @@ private:
 	static std::vector<const char*> CheckValidationLayers(const std::vector<ValidationLayer>& validationLayers);
 	VkDebugUtilsMessengerEXT CreateDebugMessenger() const;
 	VkInstance CreateInstance(const InstanceCreateInfo& createInfo);
-	VulkanDevice CreatePhysicalDevice(const VulkanSurface& targetSurface) const;
+	VulkanDevice CreatePhysicalDevice(const VulkanSurface& targetSurface, std::span<const EDeviceExtension> deviceExtensions) const;
 	VkDevice CreateLogicalDevice(const VulkanDevice& physicalDevice) const;
 
 	VkInstance m_VkInstance;

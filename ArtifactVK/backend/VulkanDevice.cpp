@@ -2,13 +2,14 @@
 
 #include "VulkanSurface.h"
 
-VulkanDevice::VulkanDevice(VkPhysicalDevice physicalDevice, const VulkanSurface& targetSurface, const DeviceExtensionMapping& extensionMapping) :
+VulkanDevice::VulkanDevice(VkPhysicalDevice physicalDevice, const VulkanSurface& targetSurface, const DeviceExtensionMapping& extensionMapping, 
+	std::span<const EDeviceExtension> requestedExtensions) :
 	m_PhysicalDevice(physicalDevice),
 	m_QueueFamilies(FindQueueFamilies(targetSurface)),
 	m_Properties(QueryDeviceProperties()),
 	m_Features(QueryDeviceFeatures()),
 	m_AvailableExtensions(QueryExtensions(extensionMapping)),
-	m_Valid(Validate())
+	m_Valid(Validate(requestedExtensions))
 {
 }
 
@@ -51,13 +52,24 @@ VkPhysicalDeviceFeatures VulkanDevice::QueryDeviceFeatures() const
 	return features;
 }
 
-bool VulkanDevice::Validate(std::span<EDeviceExtension> requiredExtensions) const
+bool VulkanDevice::Validate(std::span<const EDeviceExtension> requiredExtensions) const
 {
 	return (m_Properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU ||
 		m_Properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU) &&
 		m_Features.geometryShader &&
 		m_QueueFamilies.GraphicsFamily.has_value() &&
-		m_QueueFamilies.PresentFamily.has_value();
+		m_QueueFamilies.PresentFamily.has_value() &&
+		AllExtensionsAvailable(requiredExtensions);
+}
+
+bool VulkanDevice::AllExtensionsAvailable(std::span<const EDeviceExtension> extensions) const
+{
+	bool allPresent = true;
+	for (auto extension : extensions)
+	{
+		allPresent = allPresent && m_AvailableExtensions.find(extension) != m_AvailableExtensions.end();
+	}
+	return allPresent;
 }
 
 std::set<EDeviceExtension> VulkanDevice::QueryExtensions(const DeviceExtensionMapping& extensionMapping) const

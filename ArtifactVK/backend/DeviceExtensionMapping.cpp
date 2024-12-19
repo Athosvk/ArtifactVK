@@ -9,8 +9,9 @@ DeviceExtensionMapping::DeviceExtensionMapping() :
 
 EDeviceExtension DeviceExtensionMapping::At(std::string_view extensionName) const
 {
-	return m_NameMapping.at(extensionName);
-}
+	auto findIter = m_NameMapping.find(extensionName);
+	return findIter != m_NameMapping.end() ? findIter->second : EDeviceExtension::Unknown;
+}	
 
 std::unordered_map<std::string_view, EDeviceExtension> DeviceExtensionMapping::CreateNameMapping()
 {

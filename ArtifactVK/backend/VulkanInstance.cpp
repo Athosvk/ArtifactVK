@@ -50,7 +50,7 @@ VulkanInstance::VulkanInstance(const InstanceCreateInfo& createInfo, GLFWwindow&
 	m_VulkanDebugMessenger.ScopeBegin(m_VkInstance, m_ExtensionMapper);
 
 	m_Surface.ScopeBegin(m_VkInstance, window);
-	m_ActiveDevice.ScopeBegin(CreatePhysicalDevice(*m_Surface));
+	m_ActiveDevice.ScopeBegin(CreatePhysicalDevice(*m_Surface, std::span { createInfo.RequiredExtensions }));
 	m_ActiveLogicalDevice.ScopeBegin(*m_ActiveDevice, m_ValidationLayers);
 }
 
@@ -206,7 +206,7 @@ VkInstance VulkanInstance::CreateInstance(const InstanceCreateInfo& createInfo)
 	return vkInstance;
 }
 
-VulkanDevice VulkanInstance::CreatePhysicalDevice(const VulkanSurface& targetSurface) const
+VulkanDevice VulkanInstance::CreatePhysicalDevice(const VulkanSurface& targetSurface, std::span<const EDeviceExtension> requestedExtensions) const
 {
 	VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
 	uint32_t count = 0;
@@ -226,10 +226,10 @@ VulkanDevice VulkanInstance::CreatePhysicalDevice(const VulkanSurface& targetSur
 	for (auto& physicalDevice : physicalDevices)
 	{
 		// TODO: Early exit if we find the first suitable one?
-		devices.emplace_back(std::move(physicalDevice), targetSurface, m_DeviceExtensionMapper);
+		devices.emplace_back(std::move(physicalDevice), targetSurface, m_DeviceExtensionMapper, requestedExtensions);
 	}
 
-	// Score device or get preference from somwhere
+	// TODO: Score device or get preference from somewhere
 	auto firstValid = std::find_if(devices.begin(), devices.end(), [this](const VulkanDevice& device)
 		{
 			return device.IsValid();
@@ -310,9 +310,9 @@ LogicalVulkanDevice::LogicalVulkanDevice(const VulkanDevice& physicalDevice, con
 	{
 		throw std::runtime_error("Could not create logical device");
 	}
-	// Assertion: physical device has a graphics family queu
+	// Assertion: physical device has a graphics family queue
 	vkGetDeviceQueue(m_Device, physicalDevice.GetQueueFamilies().GraphicsFamily.value(), 0, &m_GraphicsQueue);
-	vkGetDeviceQueue(m_Device, physicalDevice.GetQueueFamilies().PresentFamily.value(), 1, &m_PresentQueue);
+	vkGetDeviceQueue(m_Device, physicalDevice.GetQueueFamilies().PresentFamily.value(), 0, &m_PresentQueue);
 }
 
 LogicalVulkanDevice::~LogicalVulkanDevice()

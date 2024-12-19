@@ -2,9 +2,10 @@
 #include <unordered_map>
 #include <string_view>
 
-enum EDeviceExtension
+enum class EDeviceExtension
 {
-	VkSwapchain
+	VkSwapchain,
+	Unknown
 };
 
 class DeviceExtensionMapping
