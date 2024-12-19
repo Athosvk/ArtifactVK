@@ -26,7 +26,7 @@ public:
 		const DeviceExtensionMapping& deviceExtensionMapping
 		);
 	LogicalVulkanDevice(const LogicalVulkanDevice& other) = delete;
-	LogicalVulkanDevice(LogicalVulkanDevice&& other) = default;
+	LogicalVulkanDevice(LogicalVulkanDevice&& other);
 	~LogicalVulkanDevice();
 private:
 	static std::vector<VkDeviceQueueCreateInfo> GetQueueCreateInfos(const VulkanDevice& physicalDevice);
@@ -60,8 +60,8 @@ private:
 	VkPhysicalDeviceProperties QueryDeviceProperties() const;
 	VkPhysicalDeviceFeatures QueryDeviceFeatures() const;
 
-	const DeviceExtensionMapping& m_ExtensionMapping;
 	VkPhysicalDevice m_PhysicalDevice;
+	const DeviceExtensionMapping& m_ExtensionMapping;
 	QueueFamilyIndices m_QueueFamilies;
 	VkPhysicalDeviceProperties m_Properties;
 	VkPhysicalDeviceFeatures m_Features;

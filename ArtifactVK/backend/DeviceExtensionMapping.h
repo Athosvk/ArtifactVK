@@ -15,7 +15,7 @@ public:
 	DeviceExtensionMapping();
 
 	EDeviceExtension At(std::string_view extensionName) const;
-	const char* ReverseMap(std::span<const EDeviceExtension> extensions) const;
+	std::vector<const char*> ReverseMap(std::span<const EDeviceExtension> extensions) const;
 private:
 	static std::unordered_map<std::string_view, EDeviceExtension> CreateNameMapping();
 

@@ -9,7 +9,6 @@ std::unordered_map<TValue, TKey> InvertUnorderedMap(const std::unordered_map<TKe
 	inverted.reserve(original.size());
 	for (auto [key, value] : original)
 	{
-		//inverted.insert(value, key);
 		inverted.insert(std::make_pair(value, key));
 	}
 	return inverted;
@@ -27,9 +26,17 @@ EDeviceExtension DeviceExtensionMapping::At(std::string_view extensionName) cons
 	return findIter != m_NameMapping.end() ? findIter->second : EDeviceExtension::Unknown;
 }
 
-const char* DeviceExtensionMapping::ReverseMap(std::span<const EDeviceExtension> extensions) const
+std::vector<const char*> DeviceExtensionMapping::ReverseMap(std::span<const EDeviceExtension> extensions) const
 {
-	return nullptr;
+	std::vector<const char*> extensionNames;
+	extensionNames.reserve(extensions.size());
+	for (auto extension : extensions)
+	{
+		// Assertion: all requested extensions are already mapped
+		// Safe to convert std::string_view to char*, 
+		extensionNames.emplace_back(m_ReverseMapping.at(extension).data());
+	}
+	return extensionNames;
 }
 
 

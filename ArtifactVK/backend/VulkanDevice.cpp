@@ -131,8 +131,7 @@ QueueFamilyIndices VulkanDevice::FindQueueFamilies(const VulkanSurface& surface)
 
 LogicalVulkanDevice::LogicalVulkanDevice(const VulkanDevice& device, const VkPhysicalDevice& physicalDeviceHandle, 
 	const std::vector<const char*>& validationLayers, std::vector<EDeviceExtension> extensions,
-	const DeviceExtensionMapping& deviceExtensionMapping
-	) :
+	const DeviceExtensionMapping& deviceExtensionMapping) :
 	m_Extensions(std::move(extensions))
 {
 	assert(device.IsValid() && "Need a valid physical device");
@@ -154,8 +153,10 @@ LogicalVulkanDevice::LogicalVulkanDevice(const VulkanDevice& device, const VkPhy
 	{
 		deviceCreateInfo.enabledLayerCount = 0;
 	}
+	auto extensionNames = deviceExtensionMapping.ReverseMap(std::span<EDeviceExtension> { extensions});
 	deviceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
-	//deviceCreateInfo.ppEnabledExtensionNames = 
+
+	deviceCreateInfo.ppEnabledExtensionNames = extensionNames.data();
 
 	deviceCreateInfo.pEnabledFeatures = &device.GetFeatures();
 
@@ -168,8 +169,20 @@ LogicalVulkanDevice::LogicalVulkanDevice(const VulkanDevice& device, const VkPhy
 	vkGetDeviceQueue(m_Device, device.GetQueueFamilies().PresentFamily.value(), 0, &m_PresentQueue);
 }
 
+LogicalVulkanDevice::LogicalVulkanDevice(LogicalVulkanDevice&& other)
+{
+	m_Device = other.m_Device;
+	m_GraphicsQueue = other.m_GraphicsQueue;
+	m_PresentQueue = other.m_PresentQueue;
+	m_Extensions = std::move(other.m_Extensions);
+	other.m_Device = VK_NULL_HANDLE;
+}
+
 LogicalVulkanDevice::~LogicalVulkanDevice()
 {
+	if (m_Device == VK_NULL_HANDLE) {
+		return;
+	}
 	std::condition_variable destroyed;
 	std::mutex destroyMutex;
 	std::thread destroyThread([this, &destroyed, &destroyMutex] {
