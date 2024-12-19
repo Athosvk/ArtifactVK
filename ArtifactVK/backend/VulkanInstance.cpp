@@ -165,7 +165,7 @@ VkInstance VulkanInstance::CreateInstance(const InstanceCreateInfo& createInfo)
 
 	for (const auto& extension : availableExtensions)
 	{
-		foundRequestedExtensions[std::string_view{ extension.extensionName }] = true;
+		foundRequestedExtensions[std::string_view { extension.extensionName }] = true;
 	}
 
 	bool anyNotFound = false;

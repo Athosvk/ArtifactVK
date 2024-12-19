@@ -10,6 +10,7 @@
 
 VulkanDevice::VulkanDevice(VkPhysicalDevice physicalDevice, const VulkanSurface& targetSurface, const DeviceExtensionMapping& extensionMapping, 
 	std::span<const EDeviceExtension> requestedExtensions) :
+	m_ExtensionMapping(extensionMapping),
 	m_PhysicalDevice(physicalDevice),
 	m_QueueFamilies(FindQueueFamilies(targetSurface)),
 	m_Properties(QueryDeviceProperties()),
@@ -52,7 +53,7 @@ std::vector<EDeviceExtension> VulkanDevice::FilterAvailableExtensions(std::span<
 
 LogicalVulkanDevice VulkanDevice::CreateLogicalDevice(const std::vector<const char*>& validationLayers, std::vector<EDeviceExtension> extensions)
 {
-	return LogicalVulkanDevice(*this, m_PhysicalDevice, validationLayers, extensions);
+	return LogicalVulkanDevice(*this, m_PhysicalDevice, validationLayers, extensions, m_ExtensionMapping);
 }
 
 VkPhysicalDeviceProperties VulkanDevice::QueryDeviceProperties() const
@@ -129,7 +130,9 @@ QueueFamilyIndices VulkanDevice::FindQueueFamilies(const VulkanSurface& surface)
 }
 
 LogicalVulkanDevice::LogicalVulkanDevice(const VulkanDevice& device, const VkPhysicalDevice& physicalDeviceHandle, 
-	const std::vector<const char*>& validationLayers, std::vector<EDeviceExtension> extensions) :
+	const std::vector<const char*>& validationLayers, std::vector<EDeviceExtension> extensions,
+	const DeviceExtensionMapping& deviceExtensionMapping
+	) :
 	m_Extensions(std::move(extensions))
 {
 	assert(device.IsValid() && "Need a valid physical device");
@@ -151,6 +154,9 @@ LogicalVulkanDevice::LogicalVulkanDevice(const VulkanDevice& device, const VkPhy
 	{
 		deviceCreateInfo.enabledLayerCount = 0;
 	}
+	deviceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
+	//deviceCreateInfo.ppEnabledExtensionNames = 
+
 	deviceCreateInfo.pEnabledFeatures = &device.GetFeatures();
 
 	if (vkCreateDevice(physicalDeviceHandle, &deviceCreateInfo, nullptr, &m_Device) != VK_SUCCESS)

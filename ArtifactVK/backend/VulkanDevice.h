@@ -22,7 +22,9 @@ class LogicalVulkanDevice
 {
 public: 
 	LogicalVulkanDevice(const VulkanDevice& physicalDevice, const VkPhysicalDevice& physicalDeviceHandle, 
-		const std::vector<const char*>& validationLayers, std::vector<EDeviceExtension> extensions);
+		const std::vector<const char*>& validationLayers, std::vector<EDeviceExtension> extensions,
+		const DeviceExtensionMapping& deviceExtensionMapping
+		);
 	LogicalVulkanDevice(const LogicalVulkanDevice& other) = delete;
 	LogicalVulkanDevice(LogicalVulkanDevice&& other) = default;
 	~LogicalVulkanDevice();
@@ -58,6 +60,7 @@ private:
 	VkPhysicalDeviceProperties QueryDeviceProperties() const;
 	VkPhysicalDeviceFeatures QueryDeviceFeatures() const;
 
+	const DeviceExtensionMapping& m_ExtensionMapping;
 	VkPhysicalDevice m_PhysicalDevice;
 	QueueFamilyIndices m_QueueFamilies;
 	VkPhysicalDeviceProperties m_Properties;
