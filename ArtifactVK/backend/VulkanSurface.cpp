@@ -30,6 +30,31 @@ bool VulkanSurface::IsSupportedOnQueue(const VkPhysicalDevice& device, uint32_t 
 	return isSupported == VK_TRUE;
 }
 
+SurfaceProperties VulkanSurface::QueryProperties(const VkPhysicalDevice& device) const
+{
+	SurfaceProperties surfaceProperties;
+
+	vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, m_Surface, &surfaceProperties.Capabilities);
+
+	uint32_t formatCount;
+	vkGetPhysicalDeviceSurfaceFormatsKHR(device, m_Surface, &formatCount, nullptr);
+
+	if (formatCount > 0)
+	{
+		surfaceProperties.Formats.resize(formatCount);
+		vkGetPhysicalDeviceSurfaceFormatsKHR(device, m_Surface, &formatCount, surfaceProperties.Formats.data());
+	}
+
+	uint32_t presentModeCount;
+	vkGetPhysicalDeviceSurfacePresentModesKHR(device, m_Surface, &presentModeCount, nullptr);
+	if (presentModeCount > 0)
+	{
+		surfaceProperties.PresentModes.resize(presentModeCount);
+		vkGetPhysicalDeviceSurfacePresentModesKHR(device, m_Surface, &presentModeCount, surfaceProperties.PresentModes.data());
+	}
+	return surfaceProperties;
+}
+
 VkSurfaceKHR VulkanSurface::CreateSurface(const VkInstance& instance, GLFWwindow& internalWindow)
 {
 	VkSurfaceKHR surface;

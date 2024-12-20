@@ -5,8 +5,7 @@
 #include <span>
 
 #include "DeviceExtensionMapping.h"
-
-class VulkanSurface;
+#include "VulkanSurface.h"
 
 struct QueueFamilyIndices
 {
@@ -65,6 +64,7 @@ private:
 	QueueFamilyIndices m_QueueFamilies;
 	VkPhysicalDeviceProperties m_Properties;
 	VkPhysicalDeviceFeatures m_Features;
+	SurfaceProperties m_SurfaceProperties;
 	std::set<EDeviceExtension> m_AvailableExtensions;
 	bool m_Valid;
 };

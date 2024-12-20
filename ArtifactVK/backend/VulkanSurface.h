@@ -1,7 +1,15 @@
 #pragma once
 #include <vulkan/vulkan.h>
+#include <vector>
 
 struct GLFWwindow;
+
+struct SurfaceProperties
+{
+	VkSurfaceCapabilitiesKHR Capabilities;
+	std::vector<VkSurfaceFormatKHR> Formats;
+	std::vector<VkPresentModeKHR> PresentModes;
+};
 
 class VulkanSurface
 {
@@ -12,6 +20,7 @@ public:
 	~VulkanSurface();
 
 	bool IsSupportedOnQueue(const VkPhysicalDevice& device, uint32_t queueIndex) const;
+	SurfaceProperties QueryProperties(const VkPhysicalDevice& device) const;
 private:
 	static VkSurfaceKHR CreateSurface(const VkInstance& instance, GLFWwindow& internalWindow);
 

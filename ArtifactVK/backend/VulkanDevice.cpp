@@ -15,6 +15,7 @@ VulkanDevice::VulkanDevice(VkPhysicalDevice physicalDevice, const VulkanSurface&
 	m_QueueFamilies(FindQueueFamilies(targetSurface)),
 	m_Properties(QueryDeviceProperties()),
 	m_Features(QueryDeviceFeatures()),
+	m_SurfaceProperties(targetSurface.QueryProperties(physicalDevice)),
 	m_AvailableExtensions(QueryExtensions(extensionMapping)),
 	m_Valid(Validate(requestedExtensions))
 {
