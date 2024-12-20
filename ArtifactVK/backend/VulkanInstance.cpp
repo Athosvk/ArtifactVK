@@ -57,11 +57,27 @@ VulkanInstance::VulkanInstance(const InstanceCreateInfo& createInfo, GLFWwindow&
 
 VulkanInstance::~VulkanInstance()
 {
-	m_VulkanDebugMessenger.ScopeEnd();
-	m_ActiveLogicalDevice.ScopeEnd();
-	m_ActiveDevice.ScopeEnd();
-	m_Surface.ScopeEnd();
-	vkDestroyInstance(m_VkInstance, nullptr);
+	if (m_VkInstance != VK_NULL_HANDLE)
+	{
+		m_VulkanDebugMessenger.ScopeEnd();
+		m_ActiveLogicalDevice.ScopeEnd();
+		m_ActiveDevice.ScopeEnd();
+		m_Surface.ScopeEnd();
+		vkDestroyInstance(m_VkInstance, nullptr);
+	}
+}
+
+VulkanInstance::VulkanInstance(VulkanInstance&& other) :
+	m_VkInstance(std::exchange(other.m_VkInstance, VK_NULL_HANDLE)),
+	m_ExtensionMapper(std::move(other.m_ExtensionMapper)),
+	m_DeviceExtensionMapper(std::move(other.m_DeviceExtensionMapper)),
+	m_VulkanDebugMessenger(std::move(other.m_VulkanDebugMessenger)),
+	m_Surface(std::move(other.m_Surface)),
+	m_ActiveDevice(std::move(other.m_ActiveDevice)),
+	m_ActiveLogicalDevice(std::move(other.m_ActiveLogicalDevice)),
+	m_ValidationLayers(std::move(other.m_ValidationLayers))
+{
+
 }
 
 std::vector<const char*> VulkanInstance::CheckValidationLayers(const std::vector<ValidationLayer>& validationLayers)

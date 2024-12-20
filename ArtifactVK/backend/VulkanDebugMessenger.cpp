@@ -44,8 +44,18 @@ VulkanDebugMessenger::VulkanDebugMessenger(VkInstance& vulkanInstance, const Ext
 
 VulkanDebugMessenger::~VulkanDebugMessenger()
 {
-	auto destroyDebugManager = (PFN_vkDestroyDebugUtilsMessengerEXT)m_ExtensionMapper.GetFunction(EExtensionFunction::VkDestroyDebugUtilsMessengerEXT);
-	destroyDebugManager(m_VulkanInstance, m_DebugMessenger, nullptr);
+	if (m_DebugMessenger != VK_NULL_HANDLE)
+	{
+		auto destroyDebugManager = (PFN_vkDestroyDebugUtilsMessengerEXT)m_ExtensionMapper.GetFunction(EExtensionFunction::VkDestroyDebugUtilsMessengerEXT);
+		destroyDebugManager(m_VulkanInstance, m_DebugMessenger, nullptr);
+	}
+}
+
+VulkanDebugMessenger::VulkanDebugMessenger(VulkanDebugMessenger&& other) :
+	m_VulkanInstance(other.m_VulkanInstance),
+	m_DebugMessenger(std::exchange(other.m_DebugMessenger, VK_NULL_HANDLE)),
+	m_ExtensionMapper(other.m_ExtensionMapper)
+{
 }
 
 VkDebugUtilsMessengerCreateInfoEXT VulkanDebugMessenger::CreateInfo()

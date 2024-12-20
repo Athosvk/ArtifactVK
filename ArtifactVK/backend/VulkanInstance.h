@@ -63,9 +63,15 @@ public:
 	ManualScope() = default;
 	~ManualScope()
 	{
-		assert(!m_Inner.has_value() && "Manual scope not manually destroyed. Prefer using a RAII base mechanism instead");
+		assert((m_Initialized || !m_Inner.has_value())  && "Manual scope not manually destroyed. Prefer using a RAII base mechanism instead");
 	}
 	ManualScope(const ManualScope&) = delete;
+
+	ManualScope(ManualScope&& other) :
+		m_Inner(std::exchange(other.m_Inner, std::nullopt)),
+		m_Initialized(other.m_Initialized)
+	{
+	}
 
 	const T& operator*() const
 	{
@@ -90,16 +96,18 @@ public:
 	template<typename... Args>
 	void ScopeBegin(Args&&... args) 
 	{
-		assert(!m_Inner.has_value() && "Scope value recreated");
+		assert(!m_Initialized && "Scope value recreated");
 		m_Inner.emplace(std::forward<Args>(args)...);
+		m_Initialized = true;
 	}
 
 	void ScopeEnd()
 	{
-		assert(m_Inner.has_value() && "Scope value not yet created or scope ended multiple times");
+		assert(m_Initialized && "Scope value not yet created or scope ended multiple times");
 		m_Inner = std::nullopt;
 	}
 private:
+	bool m_Initialized;
 	std::optional<T> m_Inner;
 };
 
@@ -109,7 +117,7 @@ public:
 	VulkanInstance(const InstanceCreateInfo& createInfo, GLFWwindow& window);
 	~VulkanInstance();
 	VulkanInstance(const VulkanInstance& other) = delete;
-	VulkanInstance(VulkanInstance&& other) = default;
+	VulkanInstance(VulkanInstance&& other);
 
 private:
 	static std::vector<const char*> CheckValidationLayers(const std::vector<ValidationLayer>& validationLayers);

@@ -169,12 +169,12 @@ LogicalVulkanDevice::LogicalVulkanDevice(const VulkanDevice& device, const VkPhy
 	vkGetDeviceQueue(m_Device, device.GetQueueFamilies().PresentFamily.value(), 0, &m_PresentQueue);
 }
 
-LogicalVulkanDevice::LogicalVulkanDevice(LogicalVulkanDevice&& other)
+LogicalVulkanDevice::LogicalVulkanDevice(LogicalVulkanDevice&& other) :
+	m_Device(std::exchange(other.m_Device, VK_NULL_HANDLE)),
+	m_GraphicsQueue(other.m_GraphicsQueue),
+	m_PresentQueue(other.m_PresentQueue),
+	m_Extensions(other.m_Extensions)
 {
-	m_Device = std::exchange(other.m_Device, VK_NULL_HANDLE);
-	m_GraphicsQueue = other.m_GraphicsQueue;
-	m_PresentQueue = other.m_PresentQueue;
-	m_Extensions = std::move(other.m_Extensions);
 }
 
 LogicalVulkanDevice::~LogicalVulkanDevice()

@@ -9,6 +9,7 @@ public:
 	VulkanDebugMessenger(VkInstance& vulkanInstance, const ExtensionFunctionMapping& extensionMapper);
 	~VulkanDebugMessenger();
 	VulkanDebugMessenger(const VulkanDebugMessenger& other) = delete;
+	VulkanDebugMessenger(VulkanDebugMessenger&& other);
 
 	static VkDebugUtilsMessengerCreateInfoEXT CreateInfo();
 private:

@@ -8,7 +8,7 @@ class VulkanSurface
 public:
 	VulkanSurface(const VkInstance& instance, GLFWwindow& internalWindow);
 	VulkanSurface(const VulkanSurface& other) = delete;
-	VulkanSurface(VulkanSurface&& other) = delete;
+	VulkanSurface(VulkanSurface&& other);
 	~VulkanSurface();
 
 	bool IsSupportedOnQueue(const VkPhysicalDevice& device, uint32_t queueIndex) const;

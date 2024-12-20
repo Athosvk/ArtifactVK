@@ -9,9 +9,18 @@ VulkanSurface::VulkanSurface(const VkInstance& instance, GLFWwindow& internalWin
 {
 }
 
+VulkanSurface::VulkanSurface(VulkanSurface&& other) :
+	m_Surface(std::exchange(other.m_Surface, VK_NULL_HANDLE)),
+	m_VkInstance(other.m_VkInstance)
+{
+}
+
 VulkanSurface::~VulkanSurface()
 {
-	vkDestroySurfaceKHR(m_VkInstance, m_Surface, nullptr);
+	if (m_Surface != VK_NULL_HANDLE)
+	{
+		vkDestroySurfaceKHR(m_VkInstance, m_Surface, nullptr);
+	}
 }
 
 bool VulkanSurface::IsSupportedOnQueue(const VkPhysicalDevice& device, uint32_t queueIndex) const
