@@ -78,6 +78,8 @@ bool VulkanDevice::Validate(std::span<const EDeviceExtension> requiredExtensions
 		m_Features.geometryShader &&
 		m_QueueFamilies.GraphicsFamily.has_value() &&
 		m_QueueFamilies.PresentFamily.has_value() &&
+		!m_SurfaceProperties.Formats.empty() &&
+		!m_SurfaceProperties.PresentModes.empty() &&
 		AllExtensionsAvailable(requiredExtensions);
 }
 
