@@ -26,9 +26,9 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityF
         severity = "ERROR";
         break;
     }
-    if (messageType <= VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
+    if (messageType <= VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT)
     {
-        return VK_FALSE;
+        //return VK_FALSE;
     }
 
     std::cout << severity << ": Validation layer: " << callbackData->pMessage << std::endl;

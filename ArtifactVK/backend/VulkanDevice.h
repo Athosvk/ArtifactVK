@@ -4,9 +4,11 @@
 #include <set>
 #include <span>
 #include <vulkan/vulkan.h>
+#include <optional>
 
 #include "DeviceExtensionMapping.h"
 #include "VulkanSurface.h"
+#include "Swapchain.h"
 
 struct QueueFamilyIndices
 {
@@ -17,24 +19,30 @@ struct QueueFamilyIndices
 };
 
 class VulkanDevice;
+struct GLFWwindow;
 
 class LogicalVulkanDevice
 {
   public:
     LogicalVulkanDevice(const VulkanDevice &physicalDevice, const VkPhysicalDevice &physicalDeviceHandle,
                         const std::vector<const char *> &validationLayers, std::vector<EDeviceExtension> extensions,
-                        const DeviceExtensionMapping &deviceExtensionMapping);
+                        const DeviceExtensionMapping &deviceExtensionMapping, GLFWwindow& window);
     LogicalVulkanDevice(const LogicalVulkanDevice &other) = delete;
     LogicalVulkanDevice(LogicalVulkanDevice &&other);
     ~LogicalVulkanDevice();
 
+    void CreateSwapchain(GLFWwindow& window, const VulkanSurface& surface);
   private:
     static std::vector<VkDeviceQueueCreateInfo> GetQueueCreateInfos(const VulkanDevice &physicalDevice);
+    VkSurfaceFormatKHR SelectSurfaceFormat() const;
+    VkPresentModeKHR SelectPresentMode() const;
+    VkExtent2D SelectSwapchainExtent(GLFWwindow& window) const;
 
     VkDevice m_Device;
+    const VulkanDevice &m_PhysicalDevice;
     VkQueue m_GraphicsQueue;
     VkQueue m_PresentQueue;
-    std::vector<EDeviceExtension> m_Extensions;
+    std::optional<Swapchain> m_Swapchain = std::nullopt;
 };
 
 class VulkanDevice
@@ -44,16 +52,17 @@ class VulkanDevice
                  std::optional<std::reference_wrapper<const VulkanSurface>> targetSurface,
                  const DeviceExtensionMapping &extensionMapping, std::span<const EDeviceExtension> requestedExtensions);
     VulkanDevice(const VulkanDevice &other) = delete;
-    VulkanDevice(VulkanDevice &&other) = default;
+    VulkanDevice(VulkanDevice&& other) = default;
 
-    const QueueFamilyIndices &GetQueueFamilies() const;
+    const QueueFamilyIndices& GetQueueFamilies() const;
     bool IsValid() const;
-    const VkPhysicalDeviceProperties &GetProperties() const;
-    const VkPhysicalDeviceFeatures &GetFeatures() const;
+    const VkPhysicalDeviceProperties& GetProperties() const;
+    const VkPhysicalDeviceFeatures& GetFeatures() const;
     std::vector<EDeviceExtension> FilterAvailableExtensions(std::span<const EDeviceExtension> desiredExtensions) const;
-    LogicalVulkanDevice CreateLogicalDevice(const std::vector<const char *> &validationLayers,
-                                            std::vector<EDeviceExtension> extensions);
+    LogicalVulkanDevice CreateLogicalDevice(const std::vector<const char *>& validationLayers,
+                                            std::vector<EDeviceExtension> extensions, GLFWwindow& window);
 
+    const SurfaceProperties& GetSurfaceProperties() const;
   private:
     bool Validate(std::span<const EDeviceExtension> requiredExtensions) const;
     bool AllExtensionsAvailable(std::span<const EDeviceExtension> extensions) const;

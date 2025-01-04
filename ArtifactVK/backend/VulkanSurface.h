@@ -21,6 +21,7 @@ class VulkanSurface
 
     bool IsSupportedOnQueue(const VkPhysicalDevice &device, uint32_t queueIndex) const;
     SurfaceProperties QueryProperties(const VkPhysicalDevice &device) const;
+    const VkSurfaceKHR &Get() const;
 
   private:
     static VkSurfaceKHR CreateSurface(const VkInstance &instance, GLFWwindow &internalWindow);

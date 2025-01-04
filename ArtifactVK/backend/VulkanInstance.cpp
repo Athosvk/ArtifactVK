@@ -51,7 +51,8 @@ VulkanInstance::VulkanInstance(const InstanceCreateInfo &createInfo, GLFWwindow 
     m_ActiveDevice.ScopeBegin(CreatePhysicalDevice(*m_Surface, std::span{createInfo.RequiredExtensions}));
 
     m_ActiveLogicalDevice.ScopeBegin(
-        m_ActiveDevice->CreateLogicalDevice(m_ValidationLayers, createInfo.RequiredExtensions));
+        m_ActiveDevice->CreateLogicalDevice(m_ValidationLayers, createInfo.RequiredExtensions, window));
+    m_ActiveLogicalDevice->CreateSwapchain(window, *m_Surface);
 }
 
 VulkanInstance::~VulkanInstance()

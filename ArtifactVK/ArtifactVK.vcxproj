@@ -97,6 +97,7 @@
     <ClCompile Include="backend\ExtensionFunctionMapping.cpp" />
     <ClCompile Include="backend\VulkanDevice.cpp" />
     <ClCompile Include="backend\VulkanSurface.cpp" />
+    <ClCompile Include="backend\Swapchain.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="App.h" />
@@ -107,6 +108,8 @@
     <ClInclude Include="backend\DeviceExtensionMapping.h" />
     <ClInclude Include="backend\VulkanDevice.h" />
     <ClInclude Include="backend\VulkanSurface.h" />
+    <ClInclude Include="backend\Swapchain.h" />
+    <ClInclude Include="ManualScope.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\.clang-format" />

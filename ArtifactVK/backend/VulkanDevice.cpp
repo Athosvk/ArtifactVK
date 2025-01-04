@@ -5,8 +5,14 @@
 #include <iostream>
 #include <stdexcept>
 #include <thread>
+#include <limits>
+#include <cstdint>
+#include <algorithm>
+
+#include <GLFW/glfw3.h>
 
 #include "VulkanSurface.h"
+#include "Window.h"
 
 VulkanDevice::VulkanDevice(VkPhysicalDevice physicalDevice,
                            std::optional<std::reference_wrapper<const VulkanSurface>> targetSurface,
@@ -52,9 +58,14 @@ std::vector<EDeviceExtension> VulkanDevice::FilterAvailableExtensions(
 }
 
 LogicalVulkanDevice VulkanDevice::CreateLogicalDevice(const std::vector<const char *> &validationLayers,
-                                                      std::vector<EDeviceExtension> extensions)
+                                                      std::vector<EDeviceExtension> extensions, GLFWwindow& window)
 {
-    return LogicalVulkanDevice(*this, m_PhysicalDevice, validationLayers, extensions, m_ExtensionMapping);
+    return LogicalVulkanDevice(*this, m_PhysicalDevice, validationLayers, extensions, m_ExtensionMapping, window);
+}
+
+const SurfaceProperties& VulkanDevice::GetSurfaceProperties() const
+{
+    return m_SurfaceProperties;
 }
 
 VkPhysicalDeviceProperties VulkanDevice::QueryDeviceProperties() const
@@ -82,6 +93,72 @@ SurfaceProperties VulkanDevice::QuerySurfaceProperties(
     {
         return SurfaceProperties{};
     }
+}
+
+VkSurfaceFormatKHR LogicalVulkanDevice::SelectSurfaceFormat() const
+{
+    auto surfaceProperties = m_PhysicalDevice.GetSurfaceProperties();
+    auto iter = std::find_if(surfaceProperties.Formats.begin(), surfaceProperties.Formats.end(), [](const VkSurfaceFormatKHR& format)
+        {
+        return format.colorSpace == VkColorSpaceKHR::VK_COLORSPACE_SRGB_NONLINEAR_KHR && format.format ==
+            VkFormat::VK_FORMAT_B8G8R8A8_SRGB; 
+        });
+    if (iter != surfaceProperties.Formats.end())
+    {
+        return *iter;
+    } 
+    else
+    {
+        // Prefer the one above, but return something in case that fails.
+        // TODO: Better surface format selection
+        return surfaceProperties.Formats.front();
+    }
+}
+
+VkPresentModeKHR LogicalVulkanDevice::SelectPresentMode() const
+{
+    auto surfaceProperties = m_PhysicalDevice.GetSurfaceProperties();
+    return std::find(surfaceProperties.PresentModes.begin(), surfaceProperties.PresentModes.end(), VkPresentModeKHR::VK_PRESENT_MODE_MAILBOX_KHR) != surfaceProperties.PresentModes.end() ?
+        VkPresentModeKHR::VK_PRESENT_MODE_MAILBOX_KHR : VkPresentModeKHR::VK_PRESENT_MODE_FIFO_KHR;
+}
+
+VkExtent2D LogicalVulkanDevice::SelectSwapchainExtent(GLFWwindow& window) const
+{
+    auto surfaceProperties = m_PhysicalDevice.GetSurfaceProperties();
+    if (surfaceProperties.Capabilities.currentExtent.width !=
+        std::numeric_limits<uint32_t>::max())
+    {
+        return surfaceProperties.Capabilities.currentExtent;
+    }
+    else
+    {
+        int width, height;
+        glfwGetFramebufferSize(&window, &width, &height);
+        VkExtent2D actualExtent = {
+            static_cast<uint32_t>(width),
+            static_cast<uint32_t>(height),
+        };
+        
+        actualExtent.width = std::clamp(actualExtent.width, surfaceProperties.Capabilities.minImageExtent.width, surfaceProperties.Capabilities.maxImageExtent.width);
+        actualExtent.height = std::clamp(actualExtent.height, surfaceProperties.Capabilities.minImageExtent.height, surfaceProperties.Capabilities.maxImageExtent.height);
+        return actualExtent;
+    }
+}
+
+void LogicalVulkanDevice::CreateSwapchain(GLFWwindow& window, const VulkanSurface& surface)
+{
+    auto maxImageCount = m_PhysicalDevice.GetSurfaceProperties().Capabilities.maxImageCount == 0 ? std::numeric_limits<uint32_t>::max()
+                             : m_PhysicalDevice.GetSurfaceProperties().Capabilities.maxImageCount;
+    SwapchainCreateInfo createInfo{
+        SelectSurfaceFormat(),
+        SelectPresentMode(),
+        SelectSwapchainExtent(window),
+        // Select min image count + 1 if available
+        std::min(m_PhysicalDevice.GetSurfaceProperties().Capabilities.minImageCount + 1,
+            maxImageCount)
+    };
+       
+    m_Swapchain.emplace(Swapchain(createInfo, surface.Get(), m_Device, m_PhysicalDevice));
 }
 
 bool VulkanDevice::Validate(std::span<const EDeviceExtension> requiredExtensions) const
@@ -143,15 +220,14 @@ QueueFamilyIndices VulkanDevice::FindQueueFamilies(
     return indices;
 }
 
-LogicalVulkanDevice::LogicalVulkanDevice(const VulkanDevice &device, const VkPhysicalDevice &physicalDeviceHandle,
-                                         const std::vector<const char *> &validationLayers,
-                                         std::vector<EDeviceExtension> extensions,
-                                         const DeviceExtensionMapping &deviceExtensionMapping)
-    : m_Extensions(std::move(extensions))
+LogicalVulkanDevice::LogicalVulkanDevice(const VulkanDevice &physicalDevice, const VkPhysicalDevice &physicalDeviceHandle,
+                        const std::vector<const char *> &validationLayers, std::vector<EDeviceExtension> extensions,
+                        const DeviceExtensionMapping &deviceExtensionMapping, GLFWwindow& window)
+    : m_PhysicalDevice(physicalDevice)
 {
-    assert(device.IsValid() && "Need a valid physical device");
+    assert(physicalDevice.IsValid() && "Need a valid physical device");
 
-    std::vector<VkDeviceQueueCreateInfo> queueCreateInfos = GetQueueCreateInfos(device);
+    std::vector<VkDeviceQueueCreateInfo> queueCreateInfos = GetQueueCreateInfos(physicalDevice);
 
     VkDeviceCreateInfo deviceCreateInfo{};
     deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -173,20 +249,21 @@ LogicalVulkanDevice::LogicalVulkanDevice(const VulkanDevice &device, const VkPhy
 
     deviceCreateInfo.ppEnabledExtensionNames = extensionNames.data();
 
-    deviceCreateInfo.pEnabledFeatures = &device.GetFeatures();
+    deviceCreateInfo.pEnabledFeatures = &physicalDevice.GetFeatures();
 
     if (vkCreateDevice(physicalDeviceHandle, &deviceCreateInfo, nullptr, &m_Device) != VK_SUCCESS)
     {
         throw std::runtime_error("Could not create logical device");
     }
     // Assertion: physical device has a graphics family queue
-    vkGetDeviceQueue(m_Device, device.GetQueueFamilies().GraphicsFamily.value(), 0, &m_GraphicsQueue);
-    vkGetDeviceQueue(m_Device, device.GetQueueFamilies().PresentFamily.value(), 0, &m_PresentQueue);
+    vkGetDeviceQueue(m_Device, physicalDevice.GetQueueFamilies().GraphicsFamily.value(), 0, &m_GraphicsQueue);
+    vkGetDeviceQueue(m_Device, physicalDevice.GetQueueFamilies().PresentFamily.value(), 0, &m_PresentQueue);
 }
 
 LogicalVulkanDevice::LogicalVulkanDevice(LogicalVulkanDevice &&other)
-    : m_Device(std::exchange(other.m_Device, VK_NULL_HANDLE)), m_GraphicsQueue(other.m_GraphicsQueue),
-      m_PresentQueue(other.m_PresentQueue), m_Extensions(other.m_Extensions)
+    : m_Device(std::exchange(other.m_Device, VK_NULL_HANDLE)), m_PhysicalDevice(other.m_PhysicalDevice),
+      m_GraphicsQueue(other.m_GraphicsQueue), m_PresentQueue(other.m_PresentQueue),
+      m_Swapchain(std::move(other.m_Swapchain))
 {
 }
 
@@ -196,6 +273,8 @@ LogicalVulkanDevice::~LogicalVulkanDevice()
     {
         return;
     }
+    // Order matters, swapchain has to be destroyed first
+    m_Swapchain.reset();
     std::condition_variable destroyed;
     std::mutex destroyMutex;
     std::thread destroyThread([this, &destroyed, &destroyMutex] {

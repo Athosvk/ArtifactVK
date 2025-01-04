@@ -54,6 +54,11 @@ SurfaceProperties VulkanSurface::QueryProperties(const VkPhysicalDevice &device)
     return surfaceProperties;
 }
 
+const VkSurfaceKHR &VulkanSurface::Get() const
+{
+    return m_Surface;
+}
+
 VkSurfaceKHR VulkanSurface::CreateSurface(const VkInstance &instance, GLFWwindow &internalWindow)
 {
     VkSurfaceKHR surface;
