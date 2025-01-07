@@ -1,5 +1,6 @@
 #pragma once
 #include <vulkan/vulkan.h>
+#include <vector>
 
 class VulkanDevice;
 
@@ -22,4 +23,6 @@ class Swapchain
 private:
     VkSwapchainKHR m_Swapchain;
     const VkDevice &m_VkDevice;
+    std::vector<VkImage> m_Images;
+    SwapchainCreateInfo m_OriginalCreateInfo;
 };

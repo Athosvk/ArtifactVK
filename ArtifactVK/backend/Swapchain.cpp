@@ -6,7 +6,8 @@
 #include "VulkanSurface.h"
 #include "VulkanDevice.h"
 
-Swapchain::Swapchain(const SwapchainCreateInfo& createInfo, const VkSurfaceKHR& surface, const VkDevice& device, const VulkanDevice& vulkanDevice) : m_VkDevice(device)
+Swapchain::Swapchain(const SwapchainCreateInfo& createInfo, const VkSurfaceKHR& surface, const VkDevice& device, const VulkanDevice& vulkanDevice) : 
+    m_VkDevice(device), m_OriginalCreateInfo(createInfo)
 {
     VkSwapchainCreateInfoKHR vkCreateInfo{};
     vkCreateInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
@@ -45,6 +46,12 @@ Swapchain::Swapchain(const SwapchainCreateInfo& createInfo, const VkSurfaceKHR& 
     {
         throw std::runtime_error("Could not create swapchain");
     }
+
+    uint32_t imageCount = 0;
+    vkGetSwapchainImagesKHR(m_VkDevice, m_Swapchain, &imageCount, nullptr);
+    std::vector<VkImage> images(imageCount);
+    vkGetSwapchainImagesKHR(m_VkDevice, m_Swapchain, &imageCount, images.data());
+    m_Images = std::move(images);
 }
 
 Swapchain::Swapchain(Swapchain &&other) :
