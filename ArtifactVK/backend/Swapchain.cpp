@@ -52,6 +52,31 @@ Swapchain::Swapchain(const SwapchainCreateInfo& createInfo, const VkSurfaceKHR& 
     std::vector<VkImage> images(imageCount);
     vkGetSwapchainImagesKHR(m_VkDevice, m_Swapchain, &imageCount, images.data());
     m_Images = std::move(images);
+
+    m_ImageViews.reserve(images.size());
+    for (auto& image : m_Images)
+    {
+        VkImageViewCreateInfo imageCreateInfo{};
+        imageCreateInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+        imageCreateInfo.image = image;
+        imageCreateInfo.viewType = VkImageViewType::VK_IMAGE_VIEW_TYPE_2D;
+        imageCreateInfo.format = createInfo.SurfaceFormat.format;
+        imageCreateInfo.components = {
+            VkComponentSwizzle::VK_COMPONENT_SWIZZLE_IDENTITY, VkComponentSwizzle::VK_COMPONENT_SWIZZLE_IDENTITY,
+            VkComponentSwizzle::VK_COMPONENT_SWIZZLE_IDENTITY, VkComponentSwizzle::VK_COMPONENT_SWIZZLE_IDENTITY };
+        imageCreateInfo.subresourceRange.aspectMask = VkImageAspectFlagBits::VK_IMAGE_ASPECT_COLOR_BIT;
+        imageCreateInfo.subresourceRange.baseMipLevel = 0;
+        imageCreateInfo.subresourceRange.levelCount = 1;
+        imageCreateInfo.subresourceRange.baseArrayLayer = 0;
+        imageCreateInfo.subresourceRange.layerCount = 1;
+        
+        VkImageView imageView;
+        if (vkCreateImageView(m_VkDevice, &imageCreateInfo, nullptr, &imageView) != VK_SUCCESS)
+        {
+            throw std::runtime_error("Could not create image view for swapchain image");
+        }
+        m_ImageViews.emplace_back(std::move(imageView));
+    }
 }
 
 Swapchain::Swapchain(Swapchain &&other) :

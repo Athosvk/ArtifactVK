@@ -23,6 +23,7 @@ class Swapchain
 private:
     VkSwapchainKHR m_Swapchain;
     const VkDevice &m_VkDevice;
-    std::vector<VkImage> m_Images;
     SwapchainCreateInfo m_OriginalCreateInfo;
+    std::vector<VkImage> m_Images;
+    std::vector<VkImageView> m_ImageViews;
 };
