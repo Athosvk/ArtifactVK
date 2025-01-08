@@ -88,6 +88,10 @@ Swapchain::~Swapchain()
 {
     if (m_Swapchain != VK_NULL_HANDLE) 
     {
+        for (auto imageView : m_ImageViews) 
+        {
+            vkDestroyImageView(m_VkDevice, imageView, nullptr);
+        }
         vkDestroySwapchainKHR(m_VkDevice, m_Swapchain, nullptr);
     }
 }
