@@ -79,8 +79,9 @@ Swapchain::Swapchain(const SwapchainCreateInfo& createInfo, const VkSurfaceKHR& 
     }
 }
 
-Swapchain::Swapchain(Swapchain &&other) :
-    m_Swapchain(std::exchange(other.m_Swapchain, VK_NULL_HANDLE)), m_VkDevice(other.m_VkDevice)
+Swapchain::Swapchain(Swapchain &&other)
+    : m_Swapchain(std::exchange(other.m_Swapchain, VK_NULL_HANDLE)), m_VkDevice(other.m_VkDevice),
+      m_Images(std::move(other.m_Images)), m_ImageViews(std::move(other.m_ImageViews))
 {
 }
 
