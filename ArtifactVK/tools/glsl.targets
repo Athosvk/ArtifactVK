@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <PropertyPageSchema Include="$(MSBuildThisFileDirectory)build_glsl.xml" />
+    <!-- Hook up GLSLC items to be built by the target. -->
+    <AvailableItemName Include="GLSLShader">
+      <Targets>GLSLC</Targets>
+    </AvailableItemName>
+  </ItemGroup>
+
+  <Target
+    Name="GLSLC"
+    Condition="'@(GLSLShader)' != ''"
+    BeforeTargets="ClCompile">
+    <Message Importance="High" Text="Building shaders!" />
+    <ItemGroup>
+        <GLSLShader>
+            <Message>Compiling %(Filename)%(Extension)</Message>
+			<Command>
+                @echo off
+				echo test 2>%(Filename)%(Extension).out
+			</Command>
+			<Outputs>
+				%(Filename)%(Extension).out
+			</Outputs>
+        </GLSLShader>
+    </ItemGroup>
+
+    <CustomBuild Sources="@(GLSLShader)" />
+  </Target>
+</Project>

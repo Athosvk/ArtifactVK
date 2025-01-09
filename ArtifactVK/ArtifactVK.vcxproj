@@ -98,6 +98,7 @@
     <ClCompile Include="backend\VulkanDevice.cpp" />
     <ClCompile Include="backend\VulkanSurface.cpp" />
     <ClCompile Include="backend\Swapchain.cpp" />
+    <ClCompile Include="backend\Pipeline.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="App.h" />
@@ -110,11 +111,24 @@
     <ClInclude Include="backend\VulkanSurface.h" />
     <ClInclude Include="backend\Swapchain.h" />
     <ClInclude Include="ManualScope.h" />
+    <ClInclude Include="backend\Pipeline.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\.clang-format" />
+    <None Include="shaders\compile_shaders.py" />
+    <GLSLShader Include="shaders\triangle.fragment.glsl">
+      <FileType>Document</FileType>
+    </GLSLShader>
+    <GLSLShader Include="shaders\triangle.vertex.glsl">
+      <FileType>Document</FileType>
+    </GLSLShader>
+    <None Include="tools\glsl.targets" />
+  </ItemGroup>
+  <ItemGroup>
+    <Xml Include="tools\build_glsl.xml" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
+    <Import Project="tools\glsl.targets" />
   </ImportGroup>
 </Project>

@@ -1,0 +1,5 @@
+<ProjectSchemaDefinitions xmlns="http://schemas.microsoft.com/build/2009/properties">
+  <ItemType Name="GLSLShader" DisplayName="GLSL Shader" />
+  <ContentType Name="GLSLShader" ItemType="GLSLShader" DisplayName="GLSL Shader" />
+  <FileExtension Name=".glsl" ContentType="GLSLShader" />
+</ProjectSchemaDefinitions>
