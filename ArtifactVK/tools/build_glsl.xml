@@ -1,5 +1,9 @@
 <ProjectSchemaDefinitions xmlns="http://schemas.microsoft.com/build/2009/properties">
-  <ItemType Name="GLSLShader" DisplayName="GLSL Shader" />
-  <ContentType Name="GLSLShader" ItemType="GLSLShader" DisplayName="GLSL Shader" />
-  <FileExtension Name=".glsl" ContentType="GLSLShader" />
+	<ItemType Name="GLSLVertexShader" DisplayName="GLSL Vertex Shader" />
+	<ContentType Name="GLSLVertexShader" ItemType="GLSLVertexShader" DisplayName="GLSL Vertex Shader" />
+	<FileExtension Name=".vert" ContentType="GLSLVertexShader" />
+
+	<ItemType Name="GLSLFragmentShader" DisplayName="GLSL Fragment Shader" />
+	<ContentType Name="GLSLFragmentShader" ItemType="GLSLFragmentShader" DisplayName="GLSL Fragment Shader" />
+	<FileExtension Name=".frag" ContentType="GLSLFragmentShader" />
 </ProjectSchemaDefinitions>

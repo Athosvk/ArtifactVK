@@ -6,7 +6,8 @@ def main(directory):
 	parser.add_argument("filepaths", nargs="+")
 	args = parser.parse_args()
 	for filepath in args.filepaths:
-		glob.glob(filepath)
+		for path in glob.glob(filepath + ".glsl.*"):
+			
 	path = "C:/VulkanSDK/1.3.231.1/Bin/glslc.exe"
 
 

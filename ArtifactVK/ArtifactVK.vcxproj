@@ -47,11 +47,13 @@
     <LinkIncremental>true</LinkIncremental>
     <IncludePath>C:\Users\athos\Documents\Projects\ArtifactVK\external\glfw\glfw-3.4.bin.WIN64\include;C:\Users\athos\Documents\Projects\ArtifactVK\external\glm;C:\VulkanSDK\1.3.231.1\include;$(IncludePath)</IncludePath>
     <LibraryPath>C:\Users\athos\Documents\Projects\ArtifactVK\external\glfw\glfw-3.4.bin.WIN64\lib-vc2022;C:\VulkanSDK\1.3.231.1\lib;$(LibraryPath)</LibraryPath>
+    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
     <IncludePath>C:\Users\athos\Documents\Projects\ArtifactVK\external\glfw\glfw-3.4.bin.WIN64\include;C:\Users\athos\Documents\Projects\ArtifactVK\external\glm;C:\VulkanSDK\1.3.231.1\include;$(IncludePath)</IncludePath>
     <LibraryPath>C:\Users\athos\Documents\Projects\ArtifactVK\external\glfw\glfw-3.4.bin.WIN64\lib-vc2022;C:\VulkanSDK\1.3.231.1\lib;$(LibraryPath)</LibraryPath>
+    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)</OutDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -116,12 +118,12 @@
   <ItemGroup>
     <None Include="..\.clang-format" />
     <None Include="shaders\compile_shaders.py" />
-    <GLSLShader Include="shaders\triangle.fragment.glsl">
+    <GLSLFragmentShader Include="shaders\triangle.frag">
       <FileType>Document</FileType>
-    </GLSLShader>
-    <GLSLShader Include="shaders\triangle.vertex.glsl">
+    </GLSLFragmentShader>
+    <GLSLVertexShader Include="shaders\triangle.vert">
       <FileType>Document</FileType>
-    </GLSLShader>
+    </GLSLVertexShader>
     <None Include="tools\glsl.targets" />
   </ItemGroup>
   <ItemGroup>

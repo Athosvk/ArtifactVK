@@ -1,31 +1,58 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <ItemGroup>
-    <PropertyPageSchema Include="$(MSBuildThisFileDirectory)build_glsl.xml" />
-    <!-- Hook up GLSLC items to be built by the target. -->
-    <AvailableItemName Include="GLSLShader">
-      <Targets>GLSLC</Targets>
-    </AvailableItemName>
-  </ItemGroup>
+	<ItemGroup>
+		<PropertyPageSchema Include="$(MSBuildThisFileDirectory)build_glsl.xml" />
+		<!-- Hook up GLSLC items to be built by the target. -->
+		<AvailableItemName Include="GLSLVertexShader">
+			<Targets>GLSLC Vertex</Targets>
+		</AvailableItemName>
+		<AvailableItemName Include="GLSLFragmentShader">
+			<Targets>GLSLC Fragment</Targets>
+		</AvailableItemName>
+	</ItemGroup>
+	<PropertyGroup>
+		<GLSLCTool>$(Vulkan_SDK)\Bin\glslc.exe</GLSLCTool>
+		<ShaderOutPath>$(OutputPath)spirv/</ShaderOutPath>
+	</PropertyGroup>
 
-  <Target
-    Name="GLSLC"
-    Condition="'@(GLSLShader)' != ''"
-    BeforeTargets="ClCompile">
-    <Message Importance="High" Text="Building shaders!" />
-    <ItemGroup>
-        <GLSLShader>
-            <Message>Compiling %(Filename)%(Extension)</Message>
-			<Command>
-                @echo off
-				echo test 2>%(Filename)%(Extension).out
-			</Command>
-			<Outputs>
-				%(Filename)%(Extension).out
-			</Outputs>
-        </GLSLShader>
-    </ItemGroup>
+	<!-- TODO: Assert output dir exists -->
+	<Target
+	  Name="GLSLC Vertex"
+	  Condition="'@(GLSLVertexShader)' != ''"
+	  BeforeTargets="ClCompile">
+		<ItemGroup>
+			<GLSLVertexShader>
+				<Message>Compiling %(RelativeDir)%(Filename)%(Extension)</Message>
+				<Command>
+					$(GLSLCTool) "%(FullPath)" -o "$(ShaderOutPath)/%(Filename)%(Extension).spv"
+				</Command>
+				<Outputs>
+					$(ShaderOutPath)%(Filename)%(Extension).spv
+				</Outputs>
+			</GLSLVertexShader>
+		</ItemGroup>
+	</Target>
 
-    <CustomBuild Sources="@(GLSLShader)" />
-  </Target>
+	<Target
+	  Name="GLSLC Fragment"
+	  Condition="'@(GLSLFragmentShader)' != ''"
+	  BeforeTargets="ClCompile">
+		<ItemGroup>
+			<GLSLFragmentShader>
+				<Message>Compiling %(RelativeDir)%(Filename)%(Extension)</Message>
+				<Command>
+					echo $(ShaderOutPath)/%(Filename)%(Extension).spv
+					echo %(FullPath)
+					echo Tool $(GLSLCTool)
+					$(GLSLCTool) "%(FullPath)" -o "$(ShaderOutPath)/%(Filename)%(Extension).spv"
+				</Command>
+				<Outputs>
+					$(ShaderOutPath)/%(Filename)%(Extension).spv
+				</Outputs>
+			</GLSLFragmentShader>
+		</ItemGroup>
+
+		<CustomBuild Sources="@(GLSLVertexShader)" />
+		<CustomBuild Sources="@(GLSLFragmentShader)" />
+	</Target>
 </Project>
