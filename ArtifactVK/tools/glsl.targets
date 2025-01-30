@@ -16,6 +16,9 @@
 	</PropertyGroup>
 
 	<!-- TODO: Assert output dir exists -->
+	<Target Name="MakeMyDir" AfterTargets="PrepareForBuild">
+		<MakeDir Directories="$(ShaderOutPath)" Condition="!Exists('$(ShaderOutPath)')"  />
+	</Target>
 	<Target
 	  Name="GLSLC Vertex"
 	  Condition="'@(GLSLVertexShader)' != ''"
@@ -24,7 +27,7 @@
 			<GLSLVertexShader>
 				<Message>Compiling %(RelativeDir)%(Filename)%(Extension)</Message>
 				<Command>
-					$(GLSLCTool) "%(FullPath)" -o "$(ShaderOutPath)/%(Filename)%(Extension).spv"
+					$(GLSLCTool) "%(FullPath)" -o "$(ShaderOutPath)%(Filename)%(Extension).spv"
 				</Command>
 				<Outputs>
 					$(ShaderOutPath)%(Filename)%(Extension).spv
@@ -41,9 +44,6 @@
 			<GLSLFragmentShader>
 				<Message>Compiling %(RelativeDir)%(Filename)%(Extension)</Message>
 				<Command>
-					echo $(ShaderOutPath)/%(Filename)%(Extension).spv
-					echo %(FullPath)
-					echo Tool $(GLSLCTool)
 					$(GLSLCTool) "%(FullPath)" -o "$(ShaderOutPath)/%(Filename)%(Extension).spv"
 				</Command>
 				<Outputs>

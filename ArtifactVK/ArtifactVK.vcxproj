@@ -47,13 +47,11 @@
     <LinkIncremental>true</LinkIncremental>
     <IncludePath>C:\Users\athos\Documents\Projects\ArtifactVK\external\glfw\glfw-3.4.bin.WIN64\include;C:\Users\athos\Documents\Projects\ArtifactVK\external\glm;C:\VulkanSDK\1.3.231.1\include;$(IncludePath)</IncludePath>
     <LibraryPath>C:\Users\athos\Documents\Projects\ArtifactVK\external\glfw\glfw-3.4.bin.WIN64\lib-vc2022;C:\VulkanSDK\1.3.231.1\lib;$(LibraryPath)</LibraryPath>
-    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
     <IncludePath>C:\Users\athos\Documents\Projects\ArtifactVK\external\glfw\glfw-3.4.bin.WIN64\include;C:\Users\athos\Documents\Projects\ArtifactVK\external\glm;C:\VulkanSDK\1.3.231.1\include;$(IncludePath)</IncludePath>
     <LibraryPath>C:\Users\athos\Documents\Projects\ArtifactVK\external\glfw\glfw-3.4.bin.WIN64\lib-vc2022;C:\VulkanSDK\1.3.231.1\lib;$(LibraryPath)</LibraryPath>
-    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)</OutDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
