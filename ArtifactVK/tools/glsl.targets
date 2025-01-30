@@ -15,7 +15,6 @@
 		<ShaderOutPath>$(OutputPath)spirv/</ShaderOutPath>
 	</PropertyGroup>
 
-	<!-- TODO: Assert output dir exists -->
 	<Target Name="MakeMyDir" AfterTargets="PrepareForBuild">
 		<MakeDir Directories="$(ShaderOutPath)" Condition="!Exists('$(ShaderOutPath)')"  />
 	</Target>
