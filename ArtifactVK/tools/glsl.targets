@@ -12,7 +12,7 @@
 	</ItemGroup>
 	<PropertyGroup>
 		<GLSLCTool>$(Vulkan_SDK)\Bin\glslc.exe</GLSLCTool>
-		<ShaderOutPath>$(OutputPath)spirv/</ShaderOutPath>
+		<ShaderOutPath>$(ProjectDir)spirv/</ShaderOutPath>
 	</PropertyGroup>
 
 	<Target Name="MakeMyDir" AfterTargets="PrepareForBuild">

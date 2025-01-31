@@ -7,6 +7,7 @@
 
 #include "backend/VulkanInstance.h"
 #include "backend/Window.h"
+#include "backend/Pipeline.h"
 
 class App
 {
@@ -19,4 +20,5 @@ class App
   private:
     Window m_Window;
     VulkanInstance m_VulkanInstance;
+    Pipeline m_Pipeline;
 };

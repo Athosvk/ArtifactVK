@@ -4,6 +4,8 @@
 #include <GLFW/glfw3.h>
 #include <vector>
 
+#include "backend/ShaderModule.h"
+
 const InstanceCreateInfo DefaultCreateInfo()
 {
     InstanceCreateInfo createInfo;
@@ -16,7 +18,8 @@ const InstanceCreateInfo DefaultCreateInfo()
 
 App::App()
     : m_Window(WindowCreateInfo{800, 600, "ArtifactVK"}),
-      m_VulkanInstance(m_Window.CreateVulkanInstance(DefaultCreateInfo()))
+      m_VulkanInstance(m_Window.CreateVulkanInstance(DefaultCreateInfo())), 
+      m_Pipeline(ShaderModule::LoadFromDisk("spirv/triangle.vert.spv"), ShaderModule::LoadFromDisk("spirv/triangle.frag.spv"))
 {
 }
 
