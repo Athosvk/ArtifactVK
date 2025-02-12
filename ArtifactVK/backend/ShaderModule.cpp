@@ -17,12 +17,20 @@ ShaderModule::ShaderModule(const VkDevice& vkDevice, const std::vector<char>& by
     }
 }
 
-ShaderModule::~ShaderModule()
+ShaderModule::ShaderModule(ShaderModule &&other) : m_Device(other.m_Device), m_ShaderModule(std::exchange(other.m_ShaderModule, VK_NULL_HANDLE))
 {
-    vkDestroyShaderModule(m_Device, m_ShaderModule, nullptr);
 }
 
-ShaderModule ShaderModule::LoadFromDisk(const VkDevice& vkDevice, const std::filesystem::path &filename)
+ShaderModule::~ShaderModule()
+{
+    if (m_ShaderModule != VK_NULL_HANDLE)
+    {
+        vkDestroyShaderModule(m_Device, m_ShaderModule, nullptr);
+    }
+}
+
+
+ShaderModule ShaderModule::LoadFromDisk(const VkDevice &vkDevice, const std::filesystem::path &filename)
 {
     std::cout << "Cwd: " << std::filesystem::current_path();
     std::ifstream file(filename, std::ios::ate | std::ios::binary);
