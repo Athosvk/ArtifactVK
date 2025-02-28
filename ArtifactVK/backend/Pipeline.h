@@ -1,12 +1,22 @@
 #pragma once
 #include "ShaderModule.h"
 
-class Pipeline
+class LogicalVulkanDevice;
+
+
+class RasterPipeline
+{
+};
+
+class RasterPipelineBuilder
 {
   public:
-    Pipeline(ShaderModule vertex, ShaderModule fragment);
+    RasterPipelineBuilder(std::filesystem::path &&vertexShaderPath, std::filesystem::path &&fragmentShaderPath);
+
+    const std::filesystem::path& GetVertexShaderPath() const;
+    const std::filesystem::path& GetFragmentShaderPath() const;
 
   private:
-    ShaderModule m_Vertex;
-    ShaderModule m_Fragment;
+    std::filesystem::path m_VertexShaderPath;
+    std::filesystem::path m_FragmentShaderPath;
 };

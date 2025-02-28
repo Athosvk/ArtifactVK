@@ -77,6 +77,11 @@ VulkanInstance::VulkanInstance(VulkanInstance &&other)
 {
 }
 
+LogicalVulkanDevice &VulkanInstance::GetActiveDevice()
+{
+    return *m_ActiveLogicalDevice;
+}
+
 std::vector<const char *> VulkanInstance::CheckValidationLayers(const std::vector<ValidationLayer> &validationLayers)
 {
     std::vector<const char *> requestedLayers;

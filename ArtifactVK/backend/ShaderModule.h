@@ -15,7 +15,7 @@ class ShaderModule
     ShaderModule &operator=(ShaderModule &&) = delete;
 
     static ShaderModule LoadFromDisk(const VkDevice& vkDevice, const std::filesystem::path &filename);
-
+    const VkShaderModule &Get() const;
   private:
     const VkDevice &m_Device;
     VkShaderModule m_ShaderModule;

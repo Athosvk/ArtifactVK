@@ -5,10 +5,16 @@
 #include <span>
 #include <vulkan/vulkan.h>
 #include <optional>
+#include <filesystem>
 
 #include "DeviceExtensionMapping.h"
 #include "VulkanSurface.h"
 #include "Swapchain.h"
+#include "Pipeline.h"
+
+class VulkanDevice;
+struct GLFWwindow;
+class ShaderModule;
 
 struct QueueFamilyIndices
 {
@@ -17,9 +23,6 @@ struct QueueFamilyIndices
 
     std::set<uint32_t> GetUniqueQueues() const;
 };
-
-class VulkanDevice;
-struct GLFWwindow;
 
 class LogicalVulkanDevice
 {
@@ -32,7 +35,10 @@ class LogicalVulkanDevice
     ~LogicalVulkanDevice();
 
     void CreateSwapchain(GLFWwindow& window, const VulkanSurface& surface);
+    ShaderModule LoadShaderModule(const std::filesystem::path &filename);
+    RasterPipeline CreateRasterPipeline(RasterPipelineBuilder &&pipelineBuilder);
   private:
+    void CreatePipelineStage();
     static std::vector<VkDeviceQueueCreateInfo> GetQueueCreateInfos(const VulkanDevice &physicalDevice);
     VkSurfaceFormatKHR SelectSurfaceFormat() const;
     VkPresentModeKHR SelectPresentMode() const;

@@ -29,7 +29,6 @@ ShaderModule::~ShaderModule()
     }
 }
 
-
 ShaderModule ShaderModule::LoadFromDisk(const VkDevice &vkDevice, const std::filesystem::path &filename)
 {
     std::cout << "Cwd: " << std::filesystem::current_path();
@@ -46,4 +45,9 @@ ShaderModule ShaderModule::LoadFromDisk(const VkDevice &vkDevice, const std::fil
     std::cout << "Read file contents of " << filename << " with size " << fileSize;
 
     return ShaderModule(vkDevice, fileContents);
+}
+
+const VkShaderModule &ShaderModule::Get() const
+{
+    return m_ShaderModule;
 }

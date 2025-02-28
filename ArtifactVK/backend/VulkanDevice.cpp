@@ -8,11 +8,15 @@
 #include <limits>
 #include <cstdint>
 #include <algorithm>
+#include <memory>
+#include <utility>
+#include <array>
 
 #include <GLFW/glfw3.h>
 
 #include "VulkanSurface.h"
 #include "Window.h"
+#include "ShaderModule.h"
 
 VulkanDevice::VulkanDevice(VkPhysicalDevice physicalDevice,
                            std::optional<std::reference_wrapper<const VulkanSurface>> targetSurface,
@@ -161,6 +165,51 @@ void LogicalVulkanDevice::CreateSwapchain(GLFWwindow& window, const VulkanSurfac
     m_Swapchain.emplace(Swapchain(createInfo, surface.Get(), m_Device, m_PhysicalDevice));
 }
 
+ShaderModule LogicalVulkanDevice::LoadShaderModule(const std::filesystem::path &filename)
+{
+    return ShaderModule::LoadFromDisk(m_Device, filename);
+}
+
+RasterPipeline LogicalVulkanDevice::CreateRasterPipeline(RasterPipelineBuilder &&pipelineBuilder)
+{
+    auto fragmentShader = LoadShaderModule(pipelineBuilder.GetFragmentShaderPath());
+    auto vertexShader = LoadShaderModule(pipelineBuilder.GetVertexShaderPath());
+
+    VkPipelineShaderStageCreateInfo fragCreateInfo{};
+    fragCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    fragCreateInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+    fragCreateInfo.module = fragmentShader.Get();
+    fragCreateInfo.pName = "main";
+    fragCreateInfo.pSpecializationInfo = nullptr;
+
+    VkPipelineShaderStageCreateInfo vertexCreateInfo{};
+    vertexCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    vertexCreateInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
+    vertexCreateInfo.module = vertexShader.Get();
+    vertexCreateInfo.pName = "main";
+    vertexCreateInfo.pSpecializationInfo = nullptr;
+
+    VkPipelineShaderStageCreateInfo stages[] = {fragCreateInfo, vertexCreateInfo};
+
+    std::array<VkDynamicState, 2> dynamicStates = {
+        VK_DYNAMIC_STATE_SCISSOR,
+        VK_DYNAMIC_STATE_VIEWPORT,
+    };
+
+    VkPipelineDynamicStateCreateInfo dynamicState{};
+    dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+    dynamicState.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
+    dynamicState.pDynamicStates = dynamicStates.data();
+
+    VkPipelineVertexInputStateCreateInfo vertexInputCreateInfo{};
+    vertexInputCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+    vertexInputCreateInfo.vertexBindingDescriptionCount = 0;
+    vertexInputCreateInfo.pVertexBindingDescriptions = nullptr;
+    vertexInputCreateInfo.vertexAttributeDescriptionCount = 0;
+    vertexInputCreateInfo.pVertexAttributeDescriptions = nullptr;
+    return RasterPipeline {};
+}
+
 bool VulkanDevice::Validate(std::span<const EDeviceExtension> requiredExtensions) const
 {
     return (m_Properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU ||
@@ -295,6 +344,10 @@ LogicalVulkanDevice::~LogicalVulkanDevice()
         destroyThread.join();
     }
     vkDestroyDevice(m_Device, nullptr);
+}
+
+void LogicalVulkanDevice::CreatePipelineStage()
+{
 }
 
 std::vector<VkDeviceQueueCreateInfo> LogicalVulkanDevice::GetQueueCreateInfos(const VulkanDevice &physicalDevice)
