@@ -96,3 +96,19 @@ Swapchain::~Swapchain()
         vkDestroySwapchainKHR(m_VkDevice, m_Swapchain, nullptr);
     }
 }
+
+Viewport Swapchain::GetViewportDescription() const
+{
+    VkViewport viewport{};
+    viewport.x = 0.0f;
+    viewport.y = 0.0f;
+    viewport.height = static_cast<float>(m_OriginalCreateInfo.Extents.height);
+    viewport.width = static_cast<float>(m_OriginalCreateInfo.Extents.width);
+    viewport.minDepth = 0.0f;
+    viewport.maxDepth = 1.0f;
+
+    VkRect2D scissorRect;
+    scissorRect.extent = m_OriginalCreateInfo.Extents;
+    scissorRect.offset = VkOffset2D { static_cast<int32_t>(viewport.x), static_cast<int32_t>(viewport.y)};
+    return {viewport, scissorRect};
+}

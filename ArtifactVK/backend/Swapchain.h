@@ -4,6 +4,12 @@
 
 class VulkanDevice;
 
+struct Viewport
+{
+    VkViewport Viewport;
+    VkRect2D Scissor
+};
+
 struct SwapchainCreateInfo
 {
     VkSurfaceFormatKHR SurfaceFormat;
@@ -20,7 +26,8 @@ class Swapchain
     Swapchain(Swapchain &&other);
     ~Swapchain();
 
-private:
+    Viewport GetViewportDescription() const;
+  private:
     VkSwapchainKHR m_Swapchain;
     const VkDevice &m_VkDevice;
     SwapchainCreateInfo m_OriginalCreateInfo;
