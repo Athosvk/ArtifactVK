@@ -7,7 +7,7 @@ class VulkanDevice;
 struct Viewport
 {
     VkViewport Viewport;
-    VkRect2D Scissor
+    VkRect2D Scissor;
 };
 
 struct SwapchainCreateInfo

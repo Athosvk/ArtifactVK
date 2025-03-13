@@ -275,20 +275,8 @@ RasterPipeline LogicalVulkanDevice::CreateRasterPipeline(RasterPipelineBuilder &
         colorBlendState.blendConstants[i] = 0.0f;
     }
 
-    VkPipelineLayoutCreateInfo pipelineLayout{};
-    pipelineLayout.sType = VkStructureType::VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipelineLayout.setLayoutCount = 0;
-    pipelineLayout.pSetLayouts = nullptr;
-    pipelineLayout.pushConstantRangeCount = 0;
-    pipelineLayout.pPushConstantRanges = nullptr;
 
-    VkPipelineLayout pipelineLayout;
-    if (vkCreatePipelineLayout(m_Device, &pipelineLayout, nullptr, &pipelineLayout))
-    {
-        throw std::runtime_error("Could not create pipeline layout");
-    }
-
-    return RasterPipeline {};
+    return RasterPipeline(m_Device);
 }
 
 bool VulkanDevice::Validate(std::span<const EDeviceExtension> requiredExtensions) const

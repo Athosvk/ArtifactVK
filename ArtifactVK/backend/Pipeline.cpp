@@ -23,7 +23,7 @@ bool RasterPipelineBuilder::RenderToSwapchain() const
     return true;
 }
 
-RasterPipeline::RasterPipeline(VkDevice &vulkanDevice)
+RasterPipeline::RasterPipeline(VkDevice &vulkanDevice) : m_VulkanDevice(vulkanDevice)
 {
     VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo{};
     pipelineLayoutCreateInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
