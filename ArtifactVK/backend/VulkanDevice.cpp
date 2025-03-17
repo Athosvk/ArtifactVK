@@ -428,7 +428,7 @@ VkRenderPass LogicalVulkanDevice::CreateRenderPass()
     subpass.colorAttachmentCount = 1;
     subpass.pColorAttachments = &swapchainAttachmentRef;
 
-    VkRenderPassCreateInfo renderPassCreateInfo;
+    VkRenderPassCreateInfo renderPassCreateInfo{};
     renderPassCreateInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
     renderPassCreateInfo.attachmentCount = 1;
     renderPassCreateInfo.pAttachments = &attachmentDescription;

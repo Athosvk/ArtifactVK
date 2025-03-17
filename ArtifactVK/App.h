@@ -8,6 +8,7 @@
 #include "backend/VulkanInstance.h"
 #include "backend/Window.h"
 #include "backend/Pipeline.h"
+#include "backend/RenderPass.h"
 
 class App
 {
@@ -22,6 +23,6 @@ class App
 
     Window m_Window;
     VulkanInstance m_VulkanInstance;
-    VkRenderPass m_RenderPass;
     RasterPipeline m_RenderFullscreen;
+    RenderPass m_RenderPass;
 };

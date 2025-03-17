@@ -47,5 +47,8 @@ RasterPipeline::RasterPipeline(RasterPipeline &&other) :
 
 RasterPipeline::~RasterPipeline()
 {
-    vkDestroyPipelineLayout(m_VulkanDevice, m_PipelineLayout, nullptr);
+    if (m_PipelineLayout != VK_NULL_HANDLE)
+    {
+        vkDestroyPipelineLayout(m_VulkanDevice, m_PipelineLayout, nullptr);
+    }
 }
