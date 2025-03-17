@@ -33,5 +33,4 @@ class RasterPipelineBuilder
   private:
     std::filesystem::path m_VertexShaderPath;
     std::filesystem::path m_FragmentShaderPath;
-    VkPipelineLayout m_PipelineLayout;
 };
