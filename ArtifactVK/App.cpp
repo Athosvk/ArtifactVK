@@ -19,9 +19,9 @@ const InstanceCreateInfo DefaultCreateInfo()
 App::App()
     : m_Window(WindowCreateInfo{800, 600, "ArtifactVK"}),
       m_VulkanInstance(m_Window.CreateVulkanInstance(DefaultCreateInfo())),
+      m_RenderPass(m_VulkanInstance.GetActiveDevice().CreateRenderPass()),
       m_RenderFullscreen(LoadShaderPipeline(m_VulkanInstance.GetActiveDevice()))
 {
-    const ShaderModule& _test = m_VulkanInstance.GetActiveDevice().LoadShaderModule("spirv/triangle.vert.spv");
 }
 
 App::~App()

@@ -22,5 +22,6 @@ class App
 
     Window m_Window;
     VulkanInstance m_VulkanInstance;
+    VkRenderPass m_RenderPass;
     RasterPipeline m_RenderFullscreen;
 };

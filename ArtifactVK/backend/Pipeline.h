@@ -19,6 +19,7 @@ class RasterPipeline
 
   private:
     VkDevice &m_VulkanDevice;
+    VkRenderPass m_RenderPass;
     VkPipelineLayout m_PipelineLayout;
 };
 

@@ -27,6 +27,7 @@ class Swapchain
     ~Swapchain();
 
     Viewport GetViewportDescription() const;
+    VkAttachmentDescription AttchmentDescription() const;
   private:
     VkSwapchainKHR m_Swapchain;
     const VkDevice &m_VkDevice;

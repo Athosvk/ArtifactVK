@@ -275,7 +275,6 @@ RasterPipeline LogicalVulkanDevice::CreateRasterPipeline(RasterPipelineBuilder &
         colorBlendState.blendConstants[i] = 0.0f;
     }
 
-
     return RasterPipeline(m_Device);
 }
 
@@ -415,8 +414,33 @@ LogicalVulkanDevice::~LogicalVulkanDevice()
     vkDestroyDevice(m_Device, nullptr);
 }
 
-void LogicalVulkanDevice::CreatePipelineStage()
+VkRenderPass LogicalVulkanDevice::CreateRenderPass()
 {
+    assert(m_Swapchain.has_value());
+    auto attachmentDescription = m_Swapchain->AttchmentDescription();
+    
+    VkAttachmentReference swapchainAttachmentRef{};
+    swapchainAttachmentRef.attachment = 0;
+    swapchainAttachmentRef.layout = VkImageLayout::VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+    VkSubpassDescription subpass{};
+    subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    subpass.colorAttachmentCount = 1;
+    subpass.pColorAttachments = &swapchainAttachmentRef;
+
+    VkRenderPassCreateInfo renderPassCreateInfo;
+    renderPassCreateInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    renderPassCreateInfo.attachmentCount = 1;
+    renderPassCreateInfo.pAttachments = &attachmentDescription;
+    renderPassCreateInfo.subpassCount = 1;
+    renderPassCreateInfo.pSubpasses = &subpass;
+
+    VkRenderPass renderPass;
+    if (vkCreateRenderPass(m_Device, &renderPassCreateInfo, nullptr, &renderPass) != VK_SUCCESS)
+    {
+        throw std::runtime_error("Could not create render pass");
+    }
+    return renderPass;
 }
 
 std::vector<VkDeviceQueueCreateInfo> LogicalVulkanDevice::GetQueueCreateInfos(const VulkanDevice &physicalDevice)
@@ -441,4 +465,4 @@ std::vector<VkDeviceQueueCreateInfo> LogicalVulkanDevice::GetQueueCreateInfos(co
 std::set<uint32_t> QueueFamilyIndices::GetUniqueQueues() const
 {
     return {GraphicsFamily.value(), PresentFamily.value()};
-}
+}j

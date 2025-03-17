@@ -112,3 +112,19 @@ Viewport Swapchain::GetViewportDescription() const
     scissorRect.offset = VkOffset2D { static_cast<int32_t>(viewport.x), static_cast<int32_t>(viewport.y)};
     return {viewport, scissorRect};
 }
+
+VkAttachmentDescription Swapchain::AttchmentDescription() const
+{
+    VkAttachmentDescription attachmentDescription;
+
+    attachmentDescription.format = m_OriginalCreateInfo.SurfaceFormat.format;
+    attachmentDescription.samples = VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT;
+    attachmentDescription.loadOp = VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_CLEAR;
+    attachmentDescription.storeOp = VkAttachmentStoreOp::VK_ATTACHMENT_STORE_OP_STORE;
+    attachmentDescription.stencilLoadOp = VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_CLEAR;
+    attachmentDescription.stencilStoreOp = VkAttachmentStoreOp::VK_ATTACHMENT_STORE_OP_STORE;
+    attachmentDescription.initialLayout = VkImageLayout::VK_IMAGE_LAYOUT_UNDEFINED;
+    attachmentDescription.finalLayout = VkImageLayout::VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+    return attachmentDescription;
+}
