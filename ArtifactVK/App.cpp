@@ -4,6 +4,8 @@
 #include <GLFW/glfw3.h>
 #include <vector>
 
+#include "backend/ShaderModule.h"
+
 const InstanceCreateInfo DefaultCreateInfo()
 {
     InstanceCreateInfo createInfo;
@@ -16,8 +18,10 @@ const InstanceCreateInfo DefaultCreateInfo()
 
 App::App()
     : m_Window(WindowCreateInfo{800, 600, "ArtifactVK"}),
-      m_VulkanInstance(m_Window.CreateVulkanInstance(DefaultCreateInfo()))
+      m_VulkanInstance(m_Window.CreateVulkanInstance(DefaultCreateInfo())),
+      m_RenderFullscreen(LoadShaderPipeline(m_VulkanInstance.GetActiveDevice()))
 {
+    const ShaderModule& _test = m_VulkanInstance.GetActiveDevice().LoadShaderModule("spirv/triangle.vert.spv");
 }
 
 App::~App()
@@ -31,4 +35,10 @@ void App::RunRenderLoop()
     {
         m_Window.PollEvents();
     }
+}
+
+RasterPipeline App::LoadShaderPipeline(LogicalVulkanDevice& vulkanDevice) const
+{
+    return vulkanDevice.CreateRasterPipeline(
+        RasterPipelineBuilder("spirv/triangle.vert.spv", "spirv/triangle.frag.spv"));
 }

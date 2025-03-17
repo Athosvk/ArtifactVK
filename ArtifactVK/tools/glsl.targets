@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+	<ItemGroup>
+		<PropertyPageSchema Include="$(MSBuildThisFileDirectory)build_glsl.xml" />
+		<!-- Hook up GLSLC items to be built by the target. -->
+		<AvailableItemName Include="GLSLVertexShader">
+			<Targets>GLSLC Vertex</Targets>
+		</AvailableItemName>
+		<AvailableItemName Include="GLSLFragmentShader">
+			<Targets>GLSLC Fragment</Targets>
+		</AvailableItemName>
+	</ItemGroup>
+	<PropertyGroup>
+		<GLSLCTool>$(Vulkan_SDK)\Bin\glslc.exe</GLSLCTool>
+		<ShaderOutPath>$(ProjectDir)spirv/</ShaderOutPath>
+	</PropertyGroup>
+
+	<Target Name="MakeMyDir" AfterTargets="PrepareForBuild">
+		<MakeDir Directories="$(ShaderOutPath)" Condition="!Exists('$(ShaderOutPath)')"  />
+	</Target>
+	<Target
+	  Name="GLSLC Vertex"
+	  Condition="'@(GLSLVertexShader)' != ''"
+	  BeforeTargets="ClCompile">
+		<ItemGroup>
+			<GLSLVertexShader>
+				<Message>Compiling %(RelativeDir)%(Filename)%(Extension)</Message>
+				<Command>
+					$(GLSLCTool) "%(FullPath)" -o "$(ShaderOutPath)%(Filename)%(Extension).spv"
+				</Command>
+				<Outputs>
+					$(ShaderOutPath)%(Filename)%(Extension).spv
+				</Outputs>
+			</GLSLVertexShader>
+		</ItemGroup>
+	</Target>
+
+	<Target
+	  Name="GLSLC Fragment"
+	  Condition="'@(GLSLFragmentShader)' != ''"
+	  BeforeTargets="ClCompile">
+		<ItemGroup>
+			<GLSLFragmentShader>
+				<Message>Compiling %(RelativeDir)%(Filename)%(Extension)</Message>
+				<Command>
+					$(GLSLCTool) "%(FullPath)" -o "$(ShaderOutPath)/%(Filename)%(Extension).spv"
+				</Command>
+				<Outputs>
+					$(ShaderOutPath)/%(Filename)%(Extension).spv
+				</Outputs>
+			</GLSLFragmentShader>
+		</ItemGroup>
+
+		<CustomBuild Sources="@(GLSLVertexShader)" />
+		<CustomBuild Sources="@(GLSLFragmentShader)" />
+	</Target>
+</Project>

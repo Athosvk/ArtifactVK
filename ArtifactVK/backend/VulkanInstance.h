@@ -61,6 +61,7 @@ class VulkanInstance
     VulkanInstance(const VulkanInstance &other) = delete;
     VulkanInstance(VulkanInstance &&other);
 
+    LogicalVulkanDevice &GetActiveDevice();
   private:
     static std::vector<const char *> CheckValidationLayers(const std::vector<ValidationLayer> &validationLayers);
     VkDebugUtilsMessengerEXT CreateDebugMessenger() const;

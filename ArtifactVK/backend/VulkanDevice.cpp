@@ -8,11 +8,15 @@
 #include <limits>
 #include <cstdint>
 #include <algorithm>
+#include <memory>
+#include <utility>
+#include <array>
 
 #include <GLFW/glfw3.h>
 
 #include "VulkanSurface.h"
 #include "Window.h"
+#include "ShaderModule.h"
 
 VulkanDevice::VulkanDevice(VkPhysicalDevice physicalDevice,
                            std::optional<std::reference_wrapper<const VulkanSurface>> targetSurface,
@@ -161,6 +165,120 @@ void LogicalVulkanDevice::CreateSwapchain(GLFWwindow& window, const VulkanSurfac
     m_Swapchain.emplace(Swapchain(createInfo, surface.Get(), m_Device, m_PhysicalDevice));
 }
 
+ShaderModule LogicalVulkanDevice::LoadShaderModule(const std::filesystem::path &filename)
+{
+    return ShaderModule::LoadFromDisk(m_Device, filename);
+}
+
+RasterPipeline LogicalVulkanDevice::CreateRasterPipeline(RasterPipelineBuilder &&pipelineBuilder)
+{
+    auto fragmentShader = LoadShaderModule(pipelineBuilder.GetFragmentShaderPath());
+    auto vertexShader = LoadShaderModule(pipelineBuilder.GetVertexShaderPath());
+
+    VkPipelineShaderStageCreateInfo fragCreateInfo{};
+    fragCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    fragCreateInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+    fragCreateInfo.module = fragmentShader.Get();
+    fragCreateInfo.pName = "main";
+    fragCreateInfo.pSpecializationInfo = nullptr;
+
+    VkPipelineShaderStageCreateInfo vertexCreateInfo{};
+    vertexCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    vertexCreateInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
+    vertexCreateInfo.module = vertexShader.Get();
+    vertexCreateInfo.pName = "main";
+    vertexCreateInfo.pSpecializationInfo = nullptr;
+
+    VkPipelineShaderStageCreateInfo stages[] = {fragCreateInfo, vertexCreateInfo};
+
+    std::array<VkDynamicState, 2> dynamicStates = {
+        // Only when d
+        VK_DYNAMIC_STATE_SCISSOR,
+        VK_DYNAMIC_STATE_VIEWPORT,
+    };
+
+    VkPipelineDynamicStateCreateInfo dynamicState{};
+    dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+    //dynamicState.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
+    //dynamicState.pDynamicStates = dynamicStates.data();
+
+    dynamicState.dynamicStateCount = 0;
+    dynamicState.pDynamicStates = nullptr;
+
+    VkPipelineVertexInputStateCreateInfo vertexInputCreateInfo{};
+    vertexInputCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+    vertexInputCreateInfo.vertexBindingDescriptionCount = 0;
+    vertexInputCreateInfo.pVertexBindingDescriptions = nullptr;
+    vertexInputCreateInfo.vertexAttributeDescriptionCount = 0;
+    vertexInputCreateInfo.pVertexAttributeDescriptions = nullptr;
+
+    VkPipelineInputAssemblyStateCreateInfo inputAssemblyCreateInfo{};
+    inputAssemblyCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+    inputAssemblyCreateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    inputAssemblyCreateInfo.primitiveRestartEnable = VK_FALSE;
+
+    // TODO: Get framebuffer from pipeline builder, so that it's not 
+    // fixed to the currently active swapchain on this device.
+    assert(m_Swapchain.has_value());
+
+    Viewport viewport = m_Swapchain->GetViewportDescription();
+    
+    VkPipelineViewportStateCreateInfo viewportState{};
+    viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+    viewportState.viewportCount = 1;
+    viewportState.pViewports = &viewport.Viewport;
+    viewportState.scissorCount = 1;
+    viewportState.pScissors = &viewport.Scissor;
+
+    VkPipelineRasterizationStateCreateInfo rasterizationState{};
+    rasterizationState.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+    rasterizationState.depthClampEnable = VK_FALSE;
+    rasterizationState.rasterizerDiscardEnable = VK_FALSE;
+    rasterizationState.polygonMode = VkPolygonMode::VK_POLYGON_MODE_FILL;
+    rasterizationState.lineWidth = 1.0f;
+    rasterizationState.cullMode = VkCullModeFlagBits::VK_CULL_MODE_BACK_BIT;
+    rasterizationState.frontFace = VK_FRONT_FACE_CLOCKWISE;
+    rasterizationState.depthBiasEnable = VK_FALSE;
+    rasterizationState.depthBiasConstantFactor = 0.0f;
+    rasterizationState.depthBiasClamp = 0.0f;
+    rasterizationState.depthBiasSlopeFactor = 0.0f;
+
+    VkPipelineMultisampleStateCreateInfo multiSampling{};
+    multiSampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+    multiSampling.sampleShadingEnable = VK_FALSE;
+    multiSampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+    multiSampling.minSampleShading = 1.0f;
+    multiSampling.pSampleMask = nullptr;
+    multiSampling.alphaToCoverageEnable = VK_FALSE;
+    multiSampling.alphaToOneEnable = VK_FALSE;
+
+    VkPipelineColorBlendAttachmentState colorBlendAttachmentState{};
+    colorBlendAttachmentState.colorWriteMask =
+        VkColorComponentFlagBits::VK_COLOR_COMPONENT_R_BIT | VkColorComponentFlagBits::VK_COLOR_COMPONENT_G_BIT |
+        VkColorComponentFlagBits::VK_COLOR_COMPONENT_B_BIT | VkColorComponentFlagBits::VK_COLOR_COMPONENT_A_BIT;
+    colorBlendAttachmentState.blendEnable = VK_FALSE;
+	colorBlendAttachmentState.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
+	colorBlendAttachmentState.dstColorBlendFactor = VK_BLEND_FACTOR_ZERO;
+	colorBlendAttachmentState.colorBlendOp = VK_BLEND_OP_ADD;
+	colorBlendAttachmentState.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+	colorBlendAttachmentState.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+	colorBlendAttachmentState.alphaBlendOp = VK_BLEND_OP_ADD;
+
+    VkPipelineColorBlendStateCreateInfo colorBlendState{};
+    colorBlendState.sType = VkStructureType::VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+    colorBlendState.logicOpEnable = VK_FALSE;
+    colorBlendState.logicOp = VkLogicOp::VK_LOGIC_OP_COPY;
+    colorBlendState.attachmentCount = 1;
+    colorBlendState.pAttachments = &colorBlendAttachmentState;
+    for (uint32_t i = 0; i < 4; i++)
+    {
+        colorBlendState.blendConstants[i] = 0.0f;
+    }
+
+
+    return RasterPipeline(m_Device);
+}
+
 bool VulkanDevice::Validate(std::span<const EDeviceExtension> requiredExtensions) const
 {
     return (m_Properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU ||
@@ -295,6 +413,10 @@ LogicalVulkanDevice::~LogicalVulkanDevice()
         destroyThread.join();
     }
     vkDestroyDevice(m_Device, nullptr);
+}
+
+void LogicalVulkanDevice::CreatePipelineStage()
+{
 }
 
 std::vector<VkDeviceQueueCreateInfo> LogicalVulkanDevice::GetQueueCreateInfos(const VulkanDevice &physicalDevice)
