@@ -170,7 +170,7 @@ ShaderModule LogicalVulkanDevice::LoadShaderModule(const std::filesystem::path &
     return ShaderModule::LoadFromDisk(m_Device, filename);
 }
 
-RasterPipeline LogicalVulkanDevice::CreateRasterPipeline(RasterPipelineBuilder &&pipelineBuilder)
+RasterPipeline LogicalVulkanDevice::CreateRasterPipeline(RasterPipelineBuilder &&pipelineBuilder, const RenderPass& renderPass)
 {
     auto fragmentShader = LoadShaderModule(pipelineBuilder.GetFragmentShaderPath());
     auto vertexShader = LoadShaderModule(pipelineBuilder.GetVertexShaderPath());
@@ -243,14 +243,14 @@ RasterPipeline LogicalVulkanDevice::CreateRasterPipeline(RasterPipelineBuilder &
     rasterizationState.depthBiasClamp = 0.0f;
     rasterizationState.depthBiasSlopeFactor = 0.0f;
 
-    VkPipelineMultisampleStateCreateInfo multiSampling{};
-    multiSampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-    multiSampling.sampleShadingEnable = VK_FALSE;
-    multiSampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
-    multiSampling.minSampleShading = 1.0f;
-    multiSampling.pSampleMask = nullptr;
-    multiSampling.alphaToCoverageEnable = VK_FALSE;
-    multiSampling.alphaToOneEnable = VK_FALSE;
+    VkPipelineMultisampleStateCreateInfo multiSampleState{};
+    multiSampleState.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+    multiSampleState.sampleShadingEnable = VK_FALSE;
+    multiSampleState.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+    multiSampleState.minSampleShading = 1.0f;
+    multiSampleState.pSampleMask = nullptr;
+    multiSampleState.alphaToCoverageEnable = VK_FALSE;
+    multiSampleState.alphaToOneEnable = VK_FALSE;
 
     VkPipelineColorBlendAttachmentState colorBlendAttachmentState{};
     colorBlendAttachmentState.colorWriteMask =
@@ -275,8 +275,21 @@ RasterPipeline LogicalVulkanDevice::CreateRasterPipeline(RasterPipelineBuilder &
         colorBlendState.blendConstants[i] = 0.0f;
     }
 
+    VkGraphicsPipelineCreateInfo pipelineInfo{};
+    pipelineInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+    pipelineInfo.stageCount = 2;
+    pipelineInfo.pStages = stages;
+    pipelineInfo.pVertexInputState = &vertexInputCreateInfo;
+    pipelineInfo.pInputAssemblyState = &inputAssemblyCreateInfo;
+    pipelineInfo.pViewportState = &viewportState;
+    pipelineInfo.pRasterizationState = &rasterizationState;
+    pipelineInfo.pMultisampleState = &multiSampleState;
+    pipelineInfo.pDepthStencilState = nullptr;
 
-    return RasterPipeline(m_Device);
+    pipelineInfo.pColorBlendState = &colorBlendState;
+    pipelineInfo.pDynamicState = &dynamicState;
+    
+    return RasterPipeline(m_Device, pipelineInfo, renderPass);
 }
 
 bool VulkanDevice::Validate(std::span<const EDeviceExtension> requiredExtensions) const
@@ -415,8 +428,12 @@ LogicalVulkanDevice::~LogicalVulkanDevice()
     vkDestroyDevice(m_Device, nullptr);
 }
 
-void LogicalVulkanDevice::CreatePipelineStage()
+RenderPass LogicalVulkanDevice::CreateRenderPass()
 {
+    assert(m_Swapchain.has_value());
+    auto attachmentDescription = m_Swapchain->AttchmentDescription();
+    
+    return RenderPass(m_Device, RenderPassCreateInfo{ attachmentDescription });
 }
 
 std::vector<VkDeviceQueueCreateInfo> LogicalVulkanDevice::GetQueueCreateInfos(const VulkanDevice &physicalDevice)

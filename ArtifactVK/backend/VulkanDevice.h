@@ -35,10 +35,10 @@ class LogicalVulkanDevice
     ~LogicalVulkanDevice();
 
     void CreateSwapchain(GLFWwindow& window, const VulkanSurface& surface);
-    ShaderModule LoadShaderModule(const std::filesystem::path &filename);
-    RasterPipeline CreateRasterPipeline(RasterPipelineBuilder &&pipelineBuilder);
+    RasterPipeline CreateRasterPipeline(RasterPipelineBuilder &&pipelineBuilder, const RenderPass& renderPass);
+    RenderPass CreateRenderPass();
   private:
-    void CreatePipelineStage();
+    ShaderModule LoadShaderModule(const std::filesystem::path &filename);
     static std::vector<VkDeviceQueueCreateInfo> GetQueueCreateInfos(const VulkanDevice &physicalDevice);
     VkSurfaceFormatKHR SelectSurfaceFormat() const;
     VkPresentModeKHR SelectPresentMode() const;

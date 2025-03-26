@@ -1,5 +1,6 @@
 #pragma once
 #include "ShaderModule.h"
+#include "RenderPass.h"
 #include <vulkan/vulkan.h>
 
 class LogicalVulkanDevice;
@@ -8,7 +9,8 @@ class LogicalVulkanDevice;
 class RasterPipeline
 {
   public:
-    explicit RasterPipeline(VkDevice &vulkanDevice);
+    RasterPipeline();
+    RasterPipeline(VkDevice vulkanDevice, VkGraphicsPipelineCreateInfo createInfo, const RenderPass& renderPass);
 
     RasterPipeline(const RasterPipeline &) = delete;
     RasterPipeline(RasterPipeline &&other);
@@ -18,8 +20,9 @@ class RasterPipeline
     RasterPipeline &operator=(ShaderModule &&) = delete;
 
   private:
-    VkDevice &m_VulkanDevice;
+    VkDevice m_VulkanDevice;
     VkPipelineLayout m_PipelineLayout;
+    VkPipeline m_Pipeline;
 };
 
 class RasterPipelineBuilder

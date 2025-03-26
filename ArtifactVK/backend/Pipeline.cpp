@@ -23,7 +23,8 @@ bool RasterPipelineBuilder::RenderToSwapchain() const
     return true;
 }
 
-RasterPipeline::RasterPipeline(VkDevice &vulkanDevice) : m_VulkanDevice(vulkanDevice)
+RasterPipeline::RasterPipeline(VkDevice vulkanDevice, VkGraphicsPipelineCreateInfo createInfo, const RenderPass& renderPass)
+    : m_VulkanDevice(vulkanDevice) 
 {
     VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo{};
     pipelineLayoutCreateInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
@@ -32,20 +33,36 @@ RasterPipeline::RasterPipeline(VkDevice &vulkanDevice) : m_VulkanDevice(vulkanDe
     pipelineLayoutCreateInfo.pushConstantRangeCount = 0;
     pipelineLayoutCreateInfo.pPushConstantRanges = nullptr;
 
-    if (vkCreatePipelineLayout(vulkanDevice, &pipelineLayoutCreateInfo, nullptr, &m_PipelineLayout))
+    if (vkCreatePipelineLayout(vulkanDevice, &pipelineLayoutCreateInfo, nullptr, &m_PipelineLayout) != VK_SUCCESS)
     {
         throw std::runtime_error("Could not create pipeline layout");
+    }
+    createInfo.layout = m_PipelineLayout;
+    createInfo.renderPass = renderPass.Get();
+    createInfo.subpass = 0;
+
+    // Unused
+    createInfo.basePipelineHandle = VK_NULL_HANDLE;
+    createInfo.basePipelineIndex = -1;
+    if (vkCreateGraphicsPipelines(vulkanDevice, VK_NULL_HANDLE, 1, &createInfo, nullptr, &m_Pipeline))
+    {
+        throw std::runtime_error("Could not create pipeline");
     }
 }
 
 RasterPipeline::RasterPipeline(RasterPipeline &&other) : 
     m_VulkanDevice(other.m_VulkanDevice),
-    m_PipelineLayout(std::exchange(other.m_PipelineLayout, VK_NULL_HANDLE))
+    m_PipelineLayout(std::exchange(other.m_PipelineLayout, VK_NULL_HANDLE)),
+    m_Pipeline(std::exchange(other.m_Pipeline, VK_NULL_HANDLE))
 {
-    
+    // TODO: Somehow ensure that this signals the render pass is still bound by this (?)
 }
 
 RasterPipeline::~RasterPipeline()
 {
-    vkDestroyPipelineLayout(m_VulkanDevice, m_PipelineLayout, nullptr);
+    if (m_PipelineLayout != VK_NULL_HANDLE)
+    {
+        vkDestroyPipeline(m_VulkanDevice, m_Pipeline, nullptr);
+        vkDestroyPipelineLayout(m_VulkanDevice, m_PipelineLayout, nullptr);
+    }
 }
