@@ -40,5 +40,5 @@ void App::RunRenderLoop()
 RasterPipeline App::LoadShaderPipeline(LogicalVulkanDevice &vulkanDevice, const RenderPass& renderPass) const
 {
     return vulkanDevice.CreateRasterPipeline(
-        RasterPipelineBuilder("spirv/triangle.vert.spv", "spirv/triangle.frag.spv"));
+        RasterPipelineBuilder("spirv/triangle.vert.spv", "spirv/triangle.frag.spv"), renderPass);
 }
