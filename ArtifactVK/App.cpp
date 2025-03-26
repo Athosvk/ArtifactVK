@@ -19,8 +19,8 @@ const InstanceCreateInfo DefaultCreateInfo()
 App::App()
     : m_Window(WindowCreateInfo{800, 600, "ArtifactVK"}),
       m_VulkanInstance(m_Window.CreateVulkanInstance(DefaultCreateInfo())),
-      m_RenderPass(m_VulkanInstance.GetActiveDevice().CreateRenderPass()),
-      m_RenderFullscreen(LoadShaderPipeline(m_VulkanInstance.GetActiveDevice()))
+      m_MainPass(m_VulkanInstance.GetActiveDevice().CreateRenderPass()),
+      m_RenderFullscreen(LoadShaderPipeline(m_VulkanInstance.GetActiveDevice(), m_MainPass))
 {
 }
 
@@ -37,7 +37,7 @@ void App::RunRenderLoop()
     }
 }
 
-RasterPipeline App::LoadShaderPipeline(LogicalVulkanDevice& vulkanDevice) const
+RasterPipeline App::LoadShaderPipeline(LogicalVulkanDevice &vulkanDevice, const RenderPass& renderPass) const
 {
     return vulkanDevice.CreateRasterPipeline(
         RasterPipelineBuilder("spirv/triangle.vert.spv", "spirv/triangle.frag.spv"));

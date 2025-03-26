@@ -3,8 +3,7 @@
 
 struct RenderPassCreateInfo
 {
-    VkAttachmentDescription attachmentDescription;
-    VkImageLayout attachmentLayout;
+    VkAttachmentDescription swapchainAttachmentDescription;
 };
 
 class RenderPass
@@ -14,6 +13,8 @@ class RenderPass
     ~RenderPass();
     RenderPass(const RenderPass &) = delete; 
     RenderPass(RenderPass && other);
+
+    VkRenderPass Get() const;
   private:
     VkDevice m_Device;
     VkRenderPass m_RenderPass;

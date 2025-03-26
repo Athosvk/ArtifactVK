@@ -100,6 +100,7 @@
     <ClCompile Include="backend\Swapchain.cpp" />
     <ClCompile Include="backend\Pipeline.cpp" />
     <ClCompile Include="backend\ShaderModule.cpp" />
+    <ClCompile Include="backend\RenderPass.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="App.h" />
@@ -114,6 +115,7 @@
     <ClInclude Include="ManualScope.h" />
     <ClInclude Include="backend\Pipeline.h" />
     <ClInclude Include="backend\ShaderModule.h" />
+    <ClInclude Include="backend\RenderPass.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\.clang-format" />

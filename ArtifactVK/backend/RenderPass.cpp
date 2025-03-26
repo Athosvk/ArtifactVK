@@ -16,7 +16,7 @@ RenderPass::RenderPass(VkDevice device, RenderPassCreateInfo &&createInfo) : m_D
     VkRenderPassCreateInfo renderPassCreateInfo{};
     renderPassCreateInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
     renderPassCreateInfo.attachmentCount = 1;
-    renderPassCreateInfo.pAttachments = &createInfo.attachmentDescription;
+    renderPassCreateInfo.pAttachments = &createInfo.swapchainAttachmentDescription;
     renderPassCreateInfo.subpassCount = 1;
     renderPassCreateInfo.pSubpasses = &subpass;
 
@@ -24,6 +24,7 @@ RenderPass::RenderPass(VkDevice device, RenderPassCreateInfo &&createInfo) : m_D
     {
         throw std::runtime_error("Could not create render pass");
     }
+
 }
 
 RenderPass::~RenderPass()
@@ -36,4 +37,9 @@ RenderPass::~RenderPass()
 
 RenderPass::RenderPass(RenderPass &&other) : m_Device(other.m_Device), m_RenderPass(std::exchange(other.m_RenderPass, VK_NULL_HANDLE))
 {
+}
+
+VkRenderPass RenderPass::Get() const
+{
+    return m_RenderPass;
 }

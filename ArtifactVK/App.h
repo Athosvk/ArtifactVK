@@ -19,10 +19,10 @@ class App
     void RunRenderLoop();
 
   private:
-    RasterPipeline LoadShaderPipeline(LogicalVulkanDevice& vulkanDevice) const;
+    RasterPipeline LoadShaderPipeline(LogicalVulkanDevice &vulkanDevice, const RenderPass& renderPass) const;
 
     Window m_Window;
     VulkanInstance m_VulkanInstance;
+    RenderPass m_MainPass;
     RasterPipeline m_RenderFullscreen;
-    RenderPass m_RenderPass;
 };
