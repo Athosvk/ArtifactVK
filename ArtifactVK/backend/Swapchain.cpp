@@ -6,8 +6,9 @@
 #include "VulkanSurface.h"
 #include "VulkanDevice.h"
 
-Swapchain::Swapchain(const SwapchainCreateInfo& createInfo, const VkSurfaceKHR& surface, const VkDevice& device, const VulkanDevice& vulkanDevice) : 
-    m_VkDevice(device), m_OriginalCreateInfo(createInfo)
+Swapchain::Swapchain(const SwapchainCreateInfo &createInfo, const VkSurfaceKHR &surface, const VkDevice &device,
+                     const VulkanDevice &vulkanDevice)
+    : m_VkDevice(device), m_OriginalCreateInfo(createInfo)
 {
     VkSwapchainCreateInfoKHR vkCreateInfo{};
     vkCreateInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
@@ -20,9 +21,10 @@ Swapchain::Swapchain(const SwapchainCreateInfo& createInfo, const VkSurfaceKHR& 
     vkCreateInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
     auto queueFamilies = vulkanDevice.GetQueueFamilies();
-    if (queueFamilies.GraphicsFamily != queueFamilies.PresentFamily) {
+    if (queueFamilies.GraphicsFamily != queueFamilies.PresentFamily)
+    {
         uint32_t indices[] = {queueFamilies.GraphicsFamily.value(), queueFamilies.PresentFamily.value()};
-        vkCreateInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;   
+        vkCreateInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
         vkCreateInfo.queueFamilyIndexCount = 2;
         vkCreateInfo.pQueueFamilyIndices = indices;
     }
@@ -37,12 +39,12 @@ Swapchain::Swapchain(const SwapchainCreateInfo& createInfo, const VkSurfaceKHR& 
     SurfaceProperties surfaceProperties = vulkanDevice.GetSurfaceProperties();
     vkCreateInfo.preTransform = surfaceProperties.Capabilities.currentTransform;
 
-    vkCreateInfo.compositeAlpha = VkCompositeAlphaFlagBitsKHR::VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;   
+    vkCreateInfo.compositeAlpha = VkCompositeAlphaFlagBitsKHR::VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
     vkCreateInfo.presentMode = createInfo.PresentMode;
     vkCreateInfo.clipped = VK_TRUE;
     vkCreateInfo.oldSwapchain = VK_NULL_HANDLE;
 
-    if (vkCreateSwapchainKHR(device, &vkCreateInfo, nullptr, &m_Swapchain) != VK_SUCCESS) 
+    if (vkCreateSwapchainKHR(device, &vkCreateInfo, nullptr, &m_Swapchain) != VK_SUCCESS)
     {
         throw std::runtime_error("Could not create swapchain");
     }
@@ -54,7 +56,7 @@ Swapchain::Swapchain(const SwapchainCreateInfo& createInfo, const VkSurfaceKHR& 
     m_Images = std::move(images);
 
     m_ImageViews.reserve(images.size());
-    for (auto& image : m_Images)
+    for (auto &image : m_Images)
     {
         VkImageViewCreateInfo imageCreateInfo{};
         imageCreateInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -63,13 +65,13 @@ Swapchain::Swapchain(const SwapchainCreateInfo& createInfo, const VkSurfaceKHR& 
         imageCreateInfo.format = createInfo.SurfaceFormat.format;
         imageCreateInfo.components = {
             VkComponentSwizzle::VK_COMPONENT_SWIZZLE_IDENTITY, VkComponentSwizzle::VK_COMPONENT_SWIZZLE_IDENTITY,
-            VkComponentSwizzle::VK_COMPONENT_SWIZZLE_IDENTITY, VkComponentSwizzle::VK_COMPONENT_SWIZZLE_IDENTITY };
+            VkComponentSwizzle::VK_COMPONENT_SWIZZLE_IDENTITY, VkComponentSwizzle::VK_COMPONENT_SWIZZLE_IDENTITY};
         imageCreateInfo.subresourceRange.aspectMask = VkImageAspectFlagBits::VK_IMAGE_ASPECT_COLOR_BIT;
         imageCreateInfo.subresourceRange.baseMipLevel = 0;
         imageCreateInfo.subresourceRange.levelCount = 1;
         imageCreateInfo.subresourceRange.baseArrayLayer = 0;
         imageCreateInfo.subresourceRange.layerCount = 1;
-        
+
         VkImageView imageView;
         if (vkCreateImageView(m_VkDevice, &imageCreateInfo, nullptr, &imageView) != VK_SUCCESS)
         {
@@ -127,4 +129,15 @@ VkAttachmentDescription Swapchain::AttchmentDescription() const
     attachmentDescription.finalLayout = VkImageLayout::VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
     return attachmentDescription;
+}
+
+std::vector<Framebuffer> Swapchain::CreateFramebuffersFor(const std::vector<VkImageView> imageViews, const RenderPass& renderPass)
+{
+    std::vector<Framebuffer> framebuffers;
+    framebuffers.reserve(imageViews.size());
+    for (const auto& imageView : imageViews) 
+    {
+        framebuffers.emplace_back(Framebuffer (m_VkDevice, FramebufferCreateInfo{ renderPass, imageView, m_OriginalCreateInfo.Extents}));
+    }
+    return framebuffers;
 }
