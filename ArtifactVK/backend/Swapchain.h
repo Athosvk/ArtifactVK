@@ -31,8 +31,8 @@ class Swapchain
 
     Viewport GetViewportDescription() const;
     VkAttachmentDescription AttchmentDescription() const;
+    std::vector<Framebuffer> CreateFramebuffersFor(const RenderPass& renderPass);
   private:
-    std::vector<Framebuffer> CreateFramebuffersFor(const std::vector<VkImageView> imageViews, const RenderPass& renderPass);
 
     VkSwapchainKHR m_Swapchain;
     const VkDevice &m_VkDevice;

@@ -131,11 +131,11 @@ VkAttachmentDescription Swapchain::AttchmentDescription() const
     return attachmentDescription;
 }
 
-std::vector<Framebuffer> Swapchain::CreateFramebuffersFor(const std::vector<VkImageView> imageViews, const RenderPass& renderPass)
+std::vector<Framebuffer> Swapchain::CreateFramebuffersFor(const RenderPass& renderPass)
 {
     std::vector<Framebuffer> framebuffers;
-    framebuffers.reserve(imageViews.size());
-    for (const auto& imageView : imageViews) 
+    framebuffers.reserve(m_ImageViews.size());
+    for (const auto& imageView : m_ImageViews) 
     {
         framebuffers.emplace_back(Framebuffer (m_VkDevice, FramebufferCreateInfo{ renderPass, imageView, m_OriginalCreateInfo.Extents}));
     }

@@ -10,7 +10,7 @@ template <typename T> class ManualScope
     ~ManualScope()
     {
         assert((m_Initialized || !m_Inner.has_value()) &&
-               "Manual scope not manually destroyed. Prefer using a RAII base mechanism instead");
+               "Manual scope not manually destroyed. Prefer using a RAII-based mechanism instead");
     }
     ManualScope(const ManualScope &) = delete;
 

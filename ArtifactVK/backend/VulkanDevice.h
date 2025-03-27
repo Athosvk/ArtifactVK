@@ -6,6 +6,7 @@
 #include <vulkan/vulkan.h>
 #include <optional>
 #include <filesystem>
+#include <span>
 
 #include "DeviceExtensionMapping.h"
 #include "VulkanSurface.h"
@@ -37,6 +38,7 @@ class LogicalVulkanDevice
     void CreateSwapchain(GLFWwindow& window, const VulkanSurface& surface);
     RasterPipeline CreateRasterPipeline(RasterPipelineBuilder &&pipelineBuilder, const RenderPass& renderPass);
     RenderPass CreateRenderPass();
+    std::vector<Framebuffer>& CreateSwapchainFramebuffers(const RenderPass &renderpass);
   private:
     ShaderModule LoadShaderModule(const std::filesystem::path &filename);
     static std::vector<VkDeviceQueueCreateInfo> GetQueueCreateInfos(const VulkanDevice &physicalDevice);
@@ -49,6 +51,7 @@ class LogicalVulkanDevice
     VkQueue m_GraphicsQueue;
     VkQueue m_PresentQueue;
     std::optional<Swapchain> m_Swapchain = std::nullopt;
+    std::vector<Framebuffer> m_Framebuffers;
 };
 
 class VulkanDevice
