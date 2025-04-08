@@ -38,7 +38,7 @@ class LogicalVulkanDevice
     void CreateSwapchain(GLFWwindow& window, const VulkanSurface& surface);
     RasterPipeline CreateRasterPipeline(RasterPipelineBuilder &&pipelineBuilder, const RenderPass& renderPass);
     RenderPass CreateRenderPass();
-    std::vector<Framebuffer>& CreateSwapchainFramebuffers(const RenderPass &renderpass);
+    std::span<Framebuffer> CreateSwapchainFramebuffers(const RenderPass &renderpass);
   private:
     ShaderModule LoadShaderModule(const std::filesystem::path &filename);
     static std::vector<VkDeviceQueueCreateInfo> GetQueueCreateInfos(const VulkanDevice &physicalDevice);

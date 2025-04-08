@@ -13,6 +13,7 @@
 #include <array>
 #include <iterator>
 #include <algorithm>
+#include <iterator>
 
 #include <GLFW/glfw3.h>
 
@@ -408,6 +409,8 @@ LogicalVulkanDevice::~LogicalVulkanDevice()
         return;
     }
     // Explicitly order destruction of vulkan objects
+    // Prior to swapchain destruction, since framebuffers may be 
+    // to swapchain images
     m_Framebuffers.clear();
 
     m_Swapchain.reset();
@@ -441,13 +444,12 @@ RenderPass LogicalVulkanDevice::CreateRenderPass()
     return RenderPass(m_Device, RenderPassCreateInfo{ attachmentDescription });
 }
 
-std::vector<Framebuffer>& LogicalVulkanDevice::CreateSwapchainFramebuffers(const RenderPass &renderpass)
+std::span<Framebuffer> LogicalVulkanDevice::CreateSwapchainFramebuffers(const RenderPass &renderpass)
 {
     assert(m_Swapchain.has_value());
     std::vector<Framebuffer> framebuffers = m_Swapchain->CreateFramebuffersFor(renderpass);
-    
-    std::ranges::move(framebuffers, std::back_inserter(m_Framebuffers));
-    return m_Framebuffers;
+    std::move(framebuffers.begin(), framebuffers.end(), std::back_inserter(m_Framebuffers));
+    return std::span{m_Framebuffers.end() - framebuffers.size(), m_Framebuffers.end() };
 }
 
 std::vector<VkDeviceQueueCreateInfo> LogicalVulkanDevice::GetQueueCreateInfos(const VulkanDevice &physicalDevice)

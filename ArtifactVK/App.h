@@ -25,4 +25,5 @@ class App
     VulkanInstance m_VulkanInstance;
     RenderPass m_MainPass;
     RasterPipeline m_RenderFullscreen;
+    std::span<Framebuffer> m_SwapchainFramebuffers;
 };
