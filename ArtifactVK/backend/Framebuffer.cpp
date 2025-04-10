@@ -3,7 +3,7 @@
 
 #include <stdexcept>
 
-Framebuffer::Framebuffer(VkDevice device, const FramebufferCreateInfo& createInfo) : m_Framebuffer()
+Framebuffer::Framebuffer(VkDevice device, const FramebufferCreateInfo &createInfo) : m_Device(device)
 {
 	VkImageView swapchainColorAttachment[] = {createInfo.ImageView};
 	VkFramebufferCreateInfo framebufferCreateInfo{}; 
