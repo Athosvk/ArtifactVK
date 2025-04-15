@@ -22,7 +22,7 @@ App::App()
       m_MainPass(m_VulkanInstance.GetActiveDevice().CreateRenderPass()),
       m_RenderFullscreen(LoadShaderPipeline(m_VulkanInstance.GetActiveDevice(), m_MainPass)),
       m_SwapchainFramebuffers(m_VulkanInstance.GetActiveDevice().CreateSwapchainFramebuffers(m_MainPass)),
-      m_CommandBufferPool(m_VulkanInstance.GetActiveDevice().CreateGraphicsCommandBufferPool())
+      m_GraphicsCommandBufferPool(m_VulkanInstance.GetActiveDevice().CreateGraphicsCommandBufferPool())
 {
 }
 
