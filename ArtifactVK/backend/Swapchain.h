@@ -2,7 +2,10 @@
 #include <vulkan/vulkan.h>
 #include <vector>
 
+#include "Framebuffer.h"
+
 class VulkanDevice;
+class RenderPass;
 
 struct Viewport
 {
@@ -28,7 +31,9 @@ class Swapchain
 
     Viewport GetViewportDescription() const;
     VkAttachmentDescription AttchmentDescription() const;
+    std::vector<Framebuffer> CreateFramebuffersFor(const RenderPass& renderPass);
   private:
+
     VkSwapchainKHR m_Swapchain;
     const VkDevice &m_VkDevice;
     SwapchainCreateInfo m_OriginalCreateInfo;

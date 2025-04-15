@@ -90,6 +90,7 @@
   <ItemGroup>
     <ClCompile Include="App.cpp" />
     <ClCompile Include="backend\DeviceExtensionMapping.cpp" />
+    <ClCompile Include="backend\Framebuffer.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="backend\Window.cpp" />
     <ClCompile Include="backend\VulkanInstance.cpp" />
@@ -112,6 +113,7 @@
     <ClInclude Include="backend\VulkanDevice.h" />
     <ClInclude Include="backend\VulkanSurface.h" />
     <ClInclude Include="backend\Swapchain.h" />
+    <ClInclude Include="backend\Framebuffer.h" />
     <ClInclude Include="ManualScope.h" />
     <ClInclude Include="backend\Pipeline.h" />
     <ClInclude Include="backend\ShaderModule.h" />
