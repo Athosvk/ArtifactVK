@@ -21,9 +21,9 @@ Swapchain::Swapchain(const SwapchainCreateInfo &createInfo, const VkSurfaceKHR &
     vkCreateInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
     auto queueFamilies = vulkanDevice.GetQueueFamilies();
-    if (queueFamilies.GraphicsFamily != queueFamilies.PresentFamily)
+    if (queueFamilies.GraphicsFamilyIndex != queueFamilies.PresentFamilyIndex)
     {
-        uint32_t indices[] = {queueFamilies.GraphicsFamily.value(), queueFamilies.PresentFamily.value()};
+        uint32_t indices[] = {queueFamilies.GraphicsFamilyIndex.value(), queueFamilies.PresentFamilyIndex.value()};
         vkCreateInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
         vkCreateInfo.queueFamilyIndexCount = 2;
         vkCreateInfo.pQueueFamilyIndices = indices;

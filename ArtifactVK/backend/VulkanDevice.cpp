@@ -299,8 +299,8 @@ bool VulkanDevice::Validate(std::span<const EDeviceExtension> requiredExtensions
 {
     return (m_Properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU ||
             m_Properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU) &&
-           m_Features.geometryShader && m_QueueFamilies.GraphicsFamily.has_value() &&
-           m_QueueFamilies.PresentFamily.has_value() && !m_SurfaceProperties.Formats.empty() &&
+           m_Features.geometryShader && m_QueueFamilies.GraphicsFamilyIndex.has_value() &&
+           m_QueueFamilies.PresentFamilyIndex.has_value() && !m_SurfaceProperties.Formats.empty() &&
            !m_SurfaceProperties.PresentModes.empty() && AllExtensionsAvailable(requiredExtensions);
 }
 
@@ -343,11 +343,11 @@ QueueFamilyIndices VulkanDevice::FindQueueFamilies(
     {
         if ((queueFamilies[static_cast<size_t>(i)].queueFlags & VK_QUEUE_GRAPHICS_BIT) == 1)
         {
-            indices.GraphicsFamily = i;
+            indices.GraphicsFamilyIndex = i;
         }
-        if (!indices.PresentFamily.has_value() && surface && (*surface).get().IsSupportedOnQueue(m_PhysicalDevice, i))
+        if (!indices.PresentFamilyIndex.has_value() && surface && (*surface).get().IsSupportedOnQueue(m_PhysicalDevice, i))
         {
-            indices.PresentFamily = i;
+            indices.PresentFamilyIndex = i;
         }
     }
 
@@ -390,8 +390,8 @@ LogicalVulkanDevice::LogicalVulkanDevice(const VulkanDevice &physicalDevice, con
         throw std::runtime_error("Could not create logical device");
     }
     // Assertion: physical device has a graphics family queue
-    vkGetDeviceQueue(m_Device, physicalDevice.GetQueueFamilies().GraphicsFamily.value(), 0, &m_GraphicsQueue);
-    vkGetDeviceQueue(m_Device, physicalDevice.GetQueueFamilies().PresentFamily.value(), 0, &m_PresentQueue);
+    vkGetDeviceQueue(m_Device, physicalDevice.GetQueueFamilies().GraphicsFamilyIndex.value(), 0, &m_GraphicsQueue);
+    vkGetDeviceQueue(m_Device, physicalDevice.GetQueueFamilies().PresentFamilyIndex.value(), 0, &m_PresentQueue);
 }
 
 LogicalVulkanDevice::LogicalVulkanDevice(LogicalVulkanDevice &&other)
@@ -452,6 +452,17 @@ std::span<Framebuffer> LogicalVulkanDevice::CreateSwapchainFramebuffers(const Re
     return std::span{m_Framebuffers.end() - framebuffers.size(), m_Framebuffers.end() };
 }
 
+CommandBufferPool &LogicalVulkanDevice::CreateGraphicsCommandBufferPool()
+{
+    auto familyIndices = m_PhysicalDevice.GetQueueFamilies();
+    assert(familyIndices.GraphicsFamilyIndex.has_value() &&
+           "No graphics family queue to create command buffer pool for");
+
+    CommandBufferPoolCreateInfo createInfo{VkCommandPoolCreateFlagBits::VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+                                           familyIndices.GraphicsFamilyIndex.value()};
+    return m_CommandBufferPools.emplace_back(createInfo);
+}
+
 std::vector<VkDeviceQueueCreateInfo> LogicalVulkanDevice::GetQueueCreateInfos(const VulkanDevice &physicalDevice)
 {
     std::set<uint32_t> uniqueQueueIndices = physicalDevice.GetQueueFamilies().GetUniqueQueues();
@@ -473,5 +484,5 @@ std::vector<VkDeviceQueueCreateInfo> LogicalVulkanDevice::GetQueueCreateInfos(co
 
 std::set<uint32_t> QueueFamilyIndices::GetUniqueQueues() const
 {
-    return {GraphicsFamily.value(), PresentFamily.value()};
+    return {GraphicsFamilyIndex.value(), PresentFamilyIndex.value()};
 }

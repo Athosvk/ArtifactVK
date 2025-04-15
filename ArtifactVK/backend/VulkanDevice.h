@@ -12,6 +12,7 @@
 #include "VulkanSurface.h"
 #include "Swapchain.h"
 #include "Pipeline.h"
+#include "CommandBufferPool.h"
 
 class VulkanDevice;
 struct GLFWwindow;
@@ -19,8 +20,8 @@ class ShaderModule;
 
 struct QueueFamilyIndices
 {
-    std::optional<uint32_t> GraphicsFamily;
-    std::optional<uint32_t> PresentFamily;
+    std::optional<uint32_t> GraphicsFamilyIndex;
+    std::optional<uint32_t> PresentFamilyIndex;
 
     std::set<uint32_t> GetUniqueQueues() const;
 };
@@ -39,6 +40,7 @@ class LogicalVulkanDevice
     RasterPipeline CreateRasterPipeline(RasterPipelineBuilder &&pipelineBuilder, const RenderPass& renderPass);
     RenderPass CreateRenderPass();
     std::span<Framebuffer> CreateSwapchainFramebuffers(const RenderPass &renderpass);
+    CommandBufferPool &CreateGraphicsCommandBufferPool();
   private:
     ShaderModule LoadShaderModule(const std::filesystem::path &filename);
     static std::vector<VkDeviceQueueCreateInfo> GetQueueCreateInfos(const VulkanDevice &physicalDevice);
@@ -52,6 +54,7 @@ class LogicalVulkanDevice
     VkQueue m_PresentQueue;
     std::optional<Swapchain> m_Swapchain = std::nullopt;
     std::vector<Framebuffer> m_Framebuffers;
+    std::vector<CommandBufferPool> m_CommandBufferPools;
 };
 
 class VulkanDevice

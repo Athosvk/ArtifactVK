@@ -10,6 +10,8 @@
 #include "backend/Pipeline.h"
 #include "backend/RenderPass.h"
 
+class CommandBufferPool;
+
 class App
 {
   public:
@@ -26,4 +28,5 @@ class App
     RenderPass m_MainPass;
     RasterPipeline m_RenderFullscreen;
     std::span<Framebuffer> m_SwapchainFramebuffers;
+    CommandBufferPool &m_GraphicsCommandBufferPool;
 };
