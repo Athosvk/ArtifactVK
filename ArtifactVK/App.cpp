@@ -37,6 +37,7 @@ void App::RunRenderLoop()
     while (!m_Window.ShouldClose())
     {
         m_Window.PollEvents();
+        RecordCommandBuffer(0);
     }
 }
 
@@ -48,4 +49,5 @@ RasterPipeline App::LoadShaderPipeline(LogicalVulkanDevice &vulkanDevice, const 
 
 void App::RecordCommandBuffer(uint32_t swapchainImageIndex)
 {
+    m_GraphicsCommandBuffer.Draw(m_SwapchainFramebuffers[swapchainImageIndex], m_MainPass, m_RenderFullscreen);
 }
