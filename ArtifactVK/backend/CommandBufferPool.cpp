@@ -23,7 +23,7 @@ void CommandBuffer::Begin()
     }
 }
 
-void CommandBuffer::SubmitRenderPass(const Framebuffer& frameBuffer, const RenderPass& renderPass, 
+void CommandBuffer::Draw(const Framebuffer& frameBuffer, const RenderPass& renderPass, 
     const RasterPipeline& pipeline)
 {
     VkRenderPassBeginInfo renderPassBeginInfo{};

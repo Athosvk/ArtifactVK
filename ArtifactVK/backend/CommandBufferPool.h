@@ -17,7 +17,7 @@ struct CommandBuffer
   public:
     CommandBuffer(VkCommandBuffer &&commandBuffer);
     void Begin();
-    void SubmitRenderPass(const Framebuffer& frameBuffer, const RenderPass& renderPass, const RasterPipeline& pipeline);
+    void Draw(const Framebuffer& frameBuffer, const RenderPass& renderPass, const RasterPipeline& pipeline);
   private:
     VkCommandBuffer m_CommandBuffer;
 };
