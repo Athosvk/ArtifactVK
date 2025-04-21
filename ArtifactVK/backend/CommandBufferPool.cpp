@@ -41,6 +41,13 @@ void CommandBuffer::SubmitRenderPass(const Framebuffer& frameBuffer, const Rende
     
     vkCmdBeginRenderPass(m_CommandBuffer, &renderPassBeginInfo, VkSubpassContents::VK_SUBPASS_CONTENTS_INLINE);
     pipeline.Bind(m_CommandBuffer, viewport);
+    vkCmdDraw(m_CommandBuffer, 3, 1, 0, 0);
+    vkCmdEndRenderPass(m_CommandBuffer);
+    
+    if (vkEndCommandBuffer(m_CommandBuffer) != VK_SUCCESS)
+    {
+        throw std::runtime_error("Could not end command buffer");
+    }
 }
 
 CommandBufferPool::CommandBufferPool(VkDevice device, CommandBufferPoolCreateInfo createInfo) : m_Device(device)
@@ -76,7 +83,7 @@ CommandBuffer &CommandBufferPool::CreateCommandBuffer()
     allocationInfo.level = VkCommandBufferLevel::VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     
     VkCommandBuffer commandBuffer;
-    if (vkAllocateCommandBuffers(m_Device, nullptr, &commandBuffer) != VkResult::VK_SUCCESS)
+    if (vkAllocateCommandBuffers(m_Device, &allocationInfo, &commandBuffer) != VkResult::VK_SUCCESS)
     {
         throw std::runtime_error("Failed to allocate command buffer");
     }
