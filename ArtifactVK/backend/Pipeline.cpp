@@ -72,5 +72,4 @@ void RasterPipeline::Bind(const VkCommandBuffer &commandBuffer, const Viewport& 
     vkCmdBindPipeline(commandBuffer, VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_GRAPHICS, m_Pipeline);
     vkCmdSetViewport(commandBuffer, 0, 1, &viewport.Viewport);
     vkCmdSetScissor(commandBuffer, 0, 1, &viewport.Scissor);
-
 }
