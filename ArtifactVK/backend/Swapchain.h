@@ -7,12 +7,6 @@
 class VulkanDevice;
 class RenderPass;
 
-struct Viewport
-{
-    VkViewport Viewport;
-    VkRect2D Scissor;
-};
-
 struct SwapchainCreateInfo
 {
     VkSurfaceFormatKHR SurfaceFormat;
@@ -30,7 +24,7 @@ class Swapchain
     ~Swapchain();
 
     Viewport GetViewportDescription() const;
-    VkAttachmentDescription AttchmentDescription() const;
+    VkAttachmentDescription AttachmentDescription() const;
     std::vector<Framebuffer> CreateFramebuffersFor(const RenderPass& renderPass);
   private:
 

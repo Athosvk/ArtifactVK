@@ -1,11 +1,25 @@
 #pragma once
-
 #include <vulkan/vulkan.h>
+#include <vector>
+
+class Framebuffer;
+class RenderPass;
+class RasterPipeline;
 
 struct CommandBufferPoolCreateInfo
 {
     VkCommandPoolCreateFlagBits CreationFlags;
     uint32_t QueueIndex;
+};
+
+struct CommandBuffer
+{
+  public:
+    CommandBuffer(VkCommandBuffer &&commandBuffer);
+    void Begin();
+    void SubmitRenderPass(const Framebuffer& frameBuffer, const RenderPass& renderPass, const RasterPipeline& pipeline);
+  private:
+    VkCommandBuffer m_CommandBuffer;
 };
 
 class CommandBufferPool
@@ -15,8 +29,10 @@ class CommandBufferPool
     CommandBufferPool(const CommandBufferPool &other) = delete;
     CommandBufferPool(CommandBufferPool &&other);
     ~CommandBufferPool();
-
-private:
+    
+    CommandBuffer &CreateCommandBuffer();
+  private:
     VkDevice m_Device;
     VkCommandPool m_CommandBufferPool;
+    std::vector<CommandBuffer> m_CommandBuffers;
 };

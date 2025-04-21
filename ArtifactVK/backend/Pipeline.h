@@ -3,8 +3,8 @@
 #include "RenderPass.h"
 #include <vulkan/vulkan.h>
 
+struct Viewport;
 class LogicalVulkanDevice;
-
 
 class RasterPipeline
 {
@@ -19,6 +19,7 @@ class RasterPipeline
     RasterPipeline &operator=(const ShaderModule &) = delete;
     RasterPipeline &operator=(ShaderModule &&) = delete;
 
+    void Bind(const VkCommandBuffer &commandBuffer, const Viewport& viewport) const;
   private:
     VkDevice m_VulkanDevice;
     VkPipelineLayout m_PipelineLayout;

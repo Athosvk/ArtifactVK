@@ -22,11 +22,12 @@ class App
 
   private:
     RasterPipeline LoadShaderPipeline(LogicalVulkanDevice &vulkanDevice, const RenderPass& renderPass) const;
+    void RecordCommandBuffer(uint32_t swapchainImageIndex);
 
     Window m_Window;
     VulkanInstance m_VulkanInstance;
     RenderPass m_MainPass;
     RasterPipeline m_RenderFullscreen;
     std::span<Framebuffer> m_SwapchainFramebuffers;
-    CommandBufferPool &m_GraphicsCommandBufferPool;
+    CommandBuffer &m_GraphicsCommandBuffer;
 };

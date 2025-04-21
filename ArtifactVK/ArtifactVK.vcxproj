@@ -120,6 +120,7 @@
     <ClInclude Include="backend\Pipeline.h" />
     <ClInclude Include="backend\ShaderModule.h" />
     <ClInclude Include="backend\RenderPass.h" />
+    <ClInclude Include="backend\Viewport.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\.clang-format" />

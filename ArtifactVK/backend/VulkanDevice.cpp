@@ -414,6 +414,7 @@ LogicalVulkanDevice::~LogicalVulkanDevice()
     m_Framebuffers.clear();
 
     m_Swapchain.reset();
+    m_CommandBufferPools.clear();
     std::condition_variable destroyed;
     std::mutex destroyMutex;
     std::thread destroyThread([this, &destroyed, &destroyMutex] {
@@ -439,7 +440,7 @@ LogicalVulkanDevice::~LogicalVulkanDevice()
 RenderPass LogicalVulkanDevice::CreateRenderPass()
 {
     assert(m_Swapchain.has_value());
-    auto attachmentDescription = m_Swapchain->AttchmentDescription();
+    auto attachmentDescription = m_Swapchain->AttachmentDescription();
     
     return RenderPass(m_Device, RenderPassCreateInfo{ attachmentDescription });
 }

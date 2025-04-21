@@ -115,7 +115,7 @@ Viewport Swapchain::GetViewportDescription() const
     return {viewport, scissorRect};
 }
 
-VkAttachmentDescription Swapchain::AttchmentDescription() const
+VkAttachmentDescription Swapchain::AttachmentDescription() const
 {
     VkAttachmentDescription attachmentDescription;
 
@@ -137,7 +137,8 @@ std::vector<Framebuffer> Swapchain::CreateFramebuffersFor(const RenderPass& rend
     framebuffers.reserve(m_ImageViews.size());
     for (const auto& imageView : m_ImageViews) 
     {
-        framebuffers.emplace_back(Framebuffer (m_VkDevice, FramebufferCreateInfo{ renderPass, imageView, m_OriginalCreateInfo.Extents}));
+        framebuffers.emplace_back(
+            Framebuffer(m_VkDevice, FramebufferCreateInfo{renderPass, imageView, GetViewportDescription()}));
     }
     return framebuffers;
 }

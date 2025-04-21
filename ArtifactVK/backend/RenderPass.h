@@ -3,6 +3,7 @@
 
 struct RenderPassCreateInfo
 {
+    // Abstract to attachment, encode with width/height
     VkAttachmentDescription swapchainAttachmentDescription;
 };
 
