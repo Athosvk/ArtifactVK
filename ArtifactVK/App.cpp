@@ -25,7 +25,7 @@ App::App()
       m_GraphicsCommandBuffer(m_VulkanInstance.GetActiveDevice().CreateGraphicsCommandBufferPool().CreateCommandBuffer()),
       m_ImageAvailable(m_VulkanInstance.GetActiveDevice().CreateSemaphore()),
       m_RenderFinished(m_VulkanInstance.GetActiveDevice().CreateSemaphore()),
-      m_CommandBufferInFlight(m_VulkanInstance.GetActiveDevice().CreateFence())
+      m_CommandBufferInFlightFence(m_VulkanInstance.GetActiveDevice().CreateFence())
 {
     
 }
@@ -52,7 +52,9 @@ RasterPipeline App::LoadShaderPipeline(LogicalVulkanDevice &vulkanDevice, const 
 
 void App::RecordCommandBuffer(uint32_t swapchainImageIndex)
 {
+    //m_CommandBufferInFlight.Wait();
     m_GraphicsCommandBuffer.Begin();
     m_GraphicsCommandBuffer.Draw(m_SwapchainFramebuffers[swapchainImageIndex], m_MainPass, m_RenderFullscreen);
     m_GraphicsCommandBuffer.End();
+    m_CommandBufferInFlightFence.Wait();
 }
