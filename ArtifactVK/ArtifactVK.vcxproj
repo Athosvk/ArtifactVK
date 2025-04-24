@@ -103,6 +103,7 @@
     <ClCompile Include="backend\Pipeline.cpp" />
     <ClCompile Include="backend\ShaderModule.cpp" />
     <ClCompile Include="backend\RenderPass.cpp" />
+    <ClCompile Include="backend\Semaphore.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="App.h" />
@@ -121,6 +122,7 @@
     <ClInclude Include="backend\ShaderModule.h" />
     <ClInclude Include="backend\RenderPass.h" />
     <ClInclude Include="backend\Viewport.h" />
+    <ClInclude Include="backend\Semaphore.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\.clang-format" />
