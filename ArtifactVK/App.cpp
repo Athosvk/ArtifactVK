@@ -49,5 +49,7 @@ RasterPipeline App::LoadShaderPipeline(LogicalVulkanDevice &vulkanDevice, const 
 
 void App::RecordCommandBuffer(uint32_t swapchainImageIndex)
 {
+    m_GraphicsCommandBuffer.Begin();
     m_GraphicsCommandBuffer.Draw(m_SwapchainFramebuffers[swapchainImageIndex], m_MainPass, m_RenderFullscreen);
+    m_GraphicsCommandBuffer.End();
 }

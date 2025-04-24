@@ -43,7 +43,10 @@ void CommandBuffer::Draw(const Framebuffer& frameBuffer, const RenderPass& rende
     pipeline.Bind(m_CommandBuffer, viewport);
     vkCmdDraw(m_CommandBuffer, 3, 1, 0, 0);
     vkCmdEndRenderPass(m_CommandBuffer);
-    
+}
+
+void CommandBuffer::End()
+{
     if (vkEndCommandBuffer(m_CommandBuffer) != VK_SUCCESS)
     {
         throw std::runtime_error("Could not end command buffer");
