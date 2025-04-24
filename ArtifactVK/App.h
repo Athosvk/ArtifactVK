@@ -30,4 +30,7 @@ class App
     RasterPipeline m_RenderFullscreen;
     std::span<Framebuffer> m_SwapchainFramebuffers;
     CommandBuffer &m_GraphicsCommandBuffer;
+    Semaphore &m_ImageAvailable;
+    Semaphore &m_RenderFinished;
+    Fence &m_CommandBufferInFlight;
 };
