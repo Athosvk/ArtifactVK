@@ -21,8 +21,10 @@ App::App()
       m_VulkanInstance(m_Window.CreateVulkanInstance(DefaultCreateInfo())),
       m_MainPass(m_VulkanInstance.GetActiveDevice().CreateRenderPass()),
       m_RenderFullscreen(LoadShaderPipeline(m_VulkanInstance.GetActiveDevice(), m_MainPass)),
-      m_SwapchainFramebuffers(m_VulkanInstance.GetActiveDevice().CreateSwapchainFramebuffers(m_MainPass))
+      m_SwapchainFramebuffers(m_VulkanInstance.GetActiveDevice().CreateSwapchainFramebuffers(m_MainPass)),
+      m_GraphicsCommandBuffer(m_VulkanInstance.GetActiveDevice().CreateGraphicsCommandBufferPool().CreateCommandBuffer())
 {
+    
 }
 
 App::~App()
@@ -35,6 +37,7 @@ void App::RunRenderLoop()
     while (!m_Window.ShouldClose())
     {
         m_Window.PollEvents();
+        RecordCommandBuffer(0);
     }
 }
 
@@ -42,4 +45,11 @@ RasterPipeline App::LoadShaderPipeline(LogicalVulkanDevice &vulkanDevice, const 
 {
     return vulkanDevice.CreateRasterPipeline(
         RasterPipelineBuilder("spirv/triangle.vert.spv", "spirv/triangle.frag.spv"), renderPass);
+}
+
+void App::RecordCommandBuffer(uint32_t swapchainImageIndex)
+{
+    m_GraphicsCommandBuffer.Begin();
+    m_GraphicsCommandBuffer.Draw(m_SwapchainFramebuffers[swapchainImageIndex], m_MainPass, m_RenderFullscreen);
+    m_GraphicsCommandBuffer.End();
 }

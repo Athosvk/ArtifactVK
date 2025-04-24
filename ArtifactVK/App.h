@@ -10,6 +10,8 @@
 #include "backend/Pipeline.h"
 #include "backend/RenderPass.h"
 
+class CommandBufferPool;
+
 class App
 {
   public:
@@ -20,10 +22,12 @@ class App
 
   private:
     RasterPipeline LoadShaderPipeline(LogicalVulkanDevice &vulkanDevice, const RenderPass& renderPass) const;
+    void RecordCommandBuffer(uint32_t swapchainImageIndex);
 
     Window m_Window;
     VulkanInstance m_VulkanInstance;
     RenderPass m_MainPass;
     RasterPipeline m_RenderFullscreen;
     std::span<Framebuffer> m_SwapchainFramebuffers;
+    CommandBuffer &m_GraphicsCommandBuffer;
 };

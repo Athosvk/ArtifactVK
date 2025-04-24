@@ -21,9 +21,9 @@ Swapchain::Swapchain(const SwapchainCreateInfo &createInfo, const VkSurfaceKHR &
     vkCreateInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
     auto queueFamilies = vulkanDevice.GetQueueFamilies();
-    if (queueFamilies.GraphicsFamily != queueFamilies.PresentFamily)
+    if (queueFamilies.GraphicsFamilyIndex != queueFamilies.PresentFamilyIndex)
     {
-        uint32_t indices[] = {queueFamilies.GraphicsFamily.value(), queueFamilies.PresentFamily.value()};
+        uint32_t indices[] = {queueFamilies.GraphicsFamilyIndex.value(), queueFamilies.PresentFamilyIndex.value()};
         vkCreateInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
         vkCreateInfo.queueFamilyIndexCount = 2;
         vkCreateInfo.pQueueFamilyIndices = indices;
@@ -115,7 +115,7 @@ Viewport Swapchain::GetViewportDescription() const
     return {viewport, scissorRect};
 }
 
-VkAttachmentDescription Swapchain::AttchmentDescription() const
+VkAttachmentDescription Swapchain::AttachmentDescription() const
 {
     VkAttachmentDescription attachmentDescription;
 
@@ -137,7 +137,8 @@ std::vector<Framebuffer> Swapchain::CreateFramebuffersFor(const RenderPass& rend
     framebuffers.reserve(m_ImageViews.size());
     for (const auto& imageView : m_ImageViews) 
     {
-        framebuffers.emplace_back(Framebuffer (m_VkDevice, FramebufferCreateInfo{ renderPass, imageView, m_OriginalCreateInfo.Extents}));
+        framebuffers.emplace_back(
+            Framebuffer(m_VkDevice, FramebufferCreateInfo{renderPass, imageView, GetViewportDescription()}));
     }
     return framebuffers;
 }

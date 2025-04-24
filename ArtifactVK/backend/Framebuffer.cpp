@@ -3,7 +3,8 @@
 
 #include <stdexcept>
 
-Framebuffer::Framebuffer(VkDevice device, const FramebufferCreateInfo &createInfo) : m_Device(device)
+Framebuffer::Framebuffer(VkDevice device, const FramebufferCreateInfo &createInfo)
+    : m_Device(device), m_OriginalCreateInfo(createInfo)
 {
 	VkImageView swapchainColorAttachment[] = {createInfo.ImageView};
 	VkFramebufferCreateInfo framebufferCreateInfo{}; 
@@ -11,8 +12,8 @@ Framebuffer::Framebuffer(VkDevice device, const FramebufferCreateInfo &createInf
 	framebufferCreateInfo.renderPass = createInfo.RenderPass.Get();
 	framebufferCreateInfo.attachmentCount = 1;
 	framebufferCreateInfo.pAttachments = swapchainColorAttachment;
-	framebufferCreateInfo.width = createInfo.Extents.width;
-	framebufferCreateInfo.height = createInfo.Extents.height;
+	framebufferCreateInfo.width = static_cast<uint32_t>(createInfo.Viewport.Viewport.width);
+	framebufferCreateInfo.height = static_cast<uint32_t>(createInfo.Viewport.Viewport.height);
 	framebufferCreateInfo.layers = 1;
 
 	if (vkCreateFramebuffer(device, &framebufferCreateInfo, nullptr, &m_Framebuffer) != VK_SUCCESS)
@@ -22,7 +23,8 @@ Framebuffer::Framebuffer(VkDevice device, const FramebufferCreateInfo &createInf
 }
 
 Framebuffer::Framebuffer(Framebuffer &&other) : 
-	m_Framebuffer(std::exchange(other.m_Framebuffer, VK_NULL_HANDLE)), m_Device(other.m_Device)
+	m_Framebuffer(std::exchange(other.m_Framebuffer, VK_NULL_HANDLE)), m_Device(other.m_Device),
+    m_OriginalCreateInfo(other.m_OriginalCreateInfo)
 {
 }
 
@@ -32,4 +34,14 @@ Framebuffer::~Framebuffer()
     {
         vkDestroyFramebuffer(m_Device, m_Framebuffer, nullptr);
 	}
+}
+
+VkFramebuffer Framebuffer::Get() const
+{
+    return m_Framebuffer;
+}
+
+Viewport Framebuffer::GetViewport() const
+{
+    return m_OriginalCreateInfo.Viewport;
 }
