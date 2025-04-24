@@ -10,8 +10,6 @@
 #include "backend/Pipeline.h"
 #include "backend/RenderPass.h"
 
-class CommandBufferPool;
-
 class App
 {
   public:
