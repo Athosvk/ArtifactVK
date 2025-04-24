@@ -13,7 +13,14 @@ Semaphore::Semaphore(VkDevice device) :
     }
 }
 
+Semaphore::Semaphore(Semaphore &&other) : m_Device(other.m_Device), m_Semaphore(std::exchange(other.m_Semaphore, VK_NULL_HANDLE))
+{
+}
+
 Semaphore::~Semaphore()
 {
-    vkDestroySemaphore(m_Device, m_Semaphore, nullptr);
+    if (m_Semaphore != VK_NULL_HANDLE)
+    {
+        vkDestroySemaphore(m_Device, m_Semaphore, nullptr);
+    }
 }

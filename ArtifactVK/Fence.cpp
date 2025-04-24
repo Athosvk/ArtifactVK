@@ -13,7 +13,15 @@ Fence::Fence(VkDevice device) : m_Device(device)
     }
 }
 
+Fence::Fence(Fence &&other) : m_Device(other.m_Device), m_Fence(std::exchange(other.m_Fence, VK_NULL_HANDLE))
+{
+
+}
+
 Fence::~Fence()
 {
-    vkDestroyFence(m_Device, m_Fence, nullptr);
+    if (m_Fence != VK_NULL_HANDLE)
+    {
+        vkDestroyFence(m_Device, m_Fence, nullptr);
+    }
 }

@@ -4,6 +4,9 @@ class Fence
 {
   public:
     Fence(VkDevice device);
+    Fence(const Fence &) = delete;
+    Fence(Fence&& other);
+    
     ~Fence();
 
   private:
