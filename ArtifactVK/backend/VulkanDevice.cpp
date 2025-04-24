@@ -464,6 +464,16 @@ CommandBufferPool &LogicalVulkanDevice::CreateGraphicsCommandBufferPool()
     return m_CommandBufferPools.emplace_back(m_Device, createInfo);
 }
 
+Semaphore &LogicalVulkanDevice::CreateSemaphore()
+{
+    return m_Semaphores.emplace_back(m_Device);
+}
+
+Fence &LogicalVulkanDevice::CreateFence()
+{
+    return m_Fences.emplace_back(m_Device);
+}
+
 std::vector<VkDeviceQueueCreateInfo> LogicalVulkanDevice::GetQueueCreateInfos(const VulkanDevice &physicalDevice)
 {
     std::set<uint32_t> uniqueQueueIndices = physicalDevice.GetQueueFamilies().GetUniqueQueues();

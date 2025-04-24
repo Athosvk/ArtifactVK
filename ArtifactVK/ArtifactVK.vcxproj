@@ -92,6 +92,7 @@
     <ClCompile Include="backend\DeviceExtensionMapping.cpp" />
     <ClCompile Include="backend\Framebuffer.cpp" />
     <ClCompile Include="backend\CommandBufferPool.cpp" />
+    <ClCompile Include="backend\Fence.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="backend\Window.cpp" />
     <ClCompile Include="backend\VulkanInstance.cpp" />
@@ -103,6 +104,7 @@
     <ClCompile Include="backend\Pipeline.cpp" />
     <ClCompile Include="backend\ShaderModule.cpp" />
     <ClCompile Include="backend\RenderPass.cpp" />
+    <ClCompile Include="backend\Semaphore.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="App.h" />
@@ -116,11 +118,13 @@
     <ClInclude Include="backend\Swapchain.h" />
     <ClInclude Include="backend\Framebuffer.h" />
     <ClInclude Include="backend\CommandBufferPool.h" />
+    <ClInclude Include="backend\Fence.h" />
     <ClInclude Include="ManualScope.h" />
     <ClInclude Include="backend\Pipeline.h" />
     <ClInclude Include="backend\ShaderModule.h" />
     <ClInclude Include="backend\RenderPass.h" />
     <ClInclude Include="backend\Viewport.h" />
+    <ClInclude Include="backend\Semaphore.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\.clang-format" />

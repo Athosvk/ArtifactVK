@@ -10,8 +10,6 @@
 #include "backend/Pipeline.h"
 #include "backend/RenderPass.h"
 
-class CommandBufferPool;
-
 class App
 {
   public:
@@ -30,4 +28,7 @@ class App
     RasterPipeline m_RenderFullscreen;
     std::span<Framebuffer> m_SwapchainFramebuffers;
     CommandBuffer &m_GraphicsCommandBuffer;
+    Semaphore &m_ImageAvailable;
+    Semaphore &m_RenderFinished;
+    Fence &m_CommandBufferInFlightFence;
 };

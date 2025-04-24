@@ -13,6 +13,8 @@
 #include "Swapchain.h"
 #include "Pipeline.h"
 #include "CommandBufferPool.h"
+#include "Fence.h"
+#include "Semaphore.h"
 
 class VulkanDevice;
 struct GLFWwindow;
@@ -41,6 +43,8 @@ class LogicalVulkanDevice
     RenderPass CreateRenderPass();
     std::span<Framebuffer> CreateSwapchainFramebuffers(const RenderPass &renderpass);
     CommandBufferPool &CreateGraphicsCommandBufferPool();
+    Semaphore &CreateSemaphore();
+    Fence &CreateFence();
   private:
     ShaderModule LoadShaderModule(const std::filesystem::path &filename);
     static std::vector<VkDeviceQueueCreateInfo> GetQueueCreateInfos(const VulkanDevice &physicalDevice);
@@ -55,6 +59,8 @@ class LogicalVulkanDevice
     std::optional<Swapchain> m_Swapchain = std::nullopt;
     std::vector<Framebuffer> m_Framebuffers;
     std::vector<CommandBufferPool> m_CommandBufferPools;
+    std::vector<Semaphore> m_Semaphores;
+    std::vector<Fence> m_Fences;
 };
 
 class VulkanDevice
