@@ -6,6 +6,7 @@
 
 class VulkanDevice;
 class RenderPass;
+class Semaphore;
 
 struct SwapchainCreateInfo
 {
@@ -18,7 +19,7 @@ struct SwapchainCreateInfo
 class Swapchain
 {
   public:
-    Swapchain(const SwapchainCreateInfo& createInfo, const VkSurfaceKHR& surface, const VkDevice& device, const VulkanDevice& vulkanDevice);
+    Swapchain(const SwapchainCreateInfo& createInfo, const VkSurfaceKHR& surface, VkDevice device, const VulkanDevice& vulkanDevice);
     Swapchain(const Swapchain &other) = delete;
     Swapchain(Swapchain &&other);
     ~Swapchain();
@@ -26,10 +27,10 @@ class Swapchain
     Viewport GetViewportDescription() const;
     VkAttachmentDescription AttachmentDescription() const;
     std::vector<Framebuffer> CreateFramebuffersFor(const RenderPass& renderPass);
+    uint32_t Acquire(const Semaphore& semaphore);
   private:
-
     VkSwapchainKHR m_Swapchain;
-    const VkDevice &m_VkDevice;
+    VkDevice m_Device;
     SwapchainCreateInfo m_OriginalCreateInfo;
     std::vector<VkImage> m_Images;
     std::vector<VkImageView> m_ImageViews;

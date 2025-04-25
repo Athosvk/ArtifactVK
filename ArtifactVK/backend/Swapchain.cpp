@@ -5,10 +5,11 @@
 
 #include "VulkanSurface.h"
 #include "VulkanDevice.h"
+#include "Semaphore.h"
 
-Swapchain::Swapchain(const SwapchainCreateInfo &createInfo, const VkSurfaceKHR &surface, const VkDevice &device,
+Swapchain::Swapchain(const SwapchainCreateInfo &createInfo, const VkSurfaceKHR &surface, VkDevice device,
                      const VulkanDevice &vulkanDevice)
-    : m_VkDevice(device), m_OriginalCreateInfo(createInfo)
+    : m_Device(device), m_OriginalCreateInfo(createInfo)
 {
     VkSwapchainCreateInfoKHR vkCreateInfo{};
     vkCreateInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
@@ -50,9 +51,9 @@ Swapchain::Swapchain(const SwapchainCreateInfo &createInfo, const VkSurfaceKHR &
     }
 
     uint32_t imageCount = 0;
-    vkGetSwapchainImagesKHR(m_VkDevice, m_Swapchain, &imageCount, nullptr);
+    vkGetSwapchainImagesKHR(m_Device, m_Swapchain, &imageCount, nullptr);
     std::vector<VkImage> images(imageCount);
-    vkGetSwapchainImagesKHR(m_VkDevice, m_Swapchain, &imageCount, images.data());
+    vkGetSwapchainImagesKHR(m_Device, m_Swapchain, &imageCount, images.data());
     m_Images = std::move(images);
 
     m_ImageViews.reserve(images.size());
@@ -73,7 +74,7 @@ Swapchain::Swapchain(const SwapchainCreateInfo &createInfo, const VkSurfaceKHR &
         imageCreateInfo.subresourceRange.layerCount = 1;
 
         VkImageView imageView;
-        if (vkCreateImageView(m_VkDevice, &imageCreateInfo, nullptr, &imageView) != VK_SUCCESS)
+        if (vkCreateImageView(m_Device, &imageCreateInfo, nullptr, &imageView) != VK_SUCCESS)
         {
             throw std::runtime_error("Could not create image view for swapchain image");
         }
@@ -82,7 +83,7 @@ Swapchain::Swapchain(const SwapchainCreateInfo &createInfo, const VkSurfaceKHR &
 }
 
 Swapchain::Swapchain(Swapchain &&other)
-    : m_Swapchain(std::exchange(other.m_Swapchain, VK_NULL_HANDLE)), m_VkDevice(other.m_VkDevice),
+    : m_Swapchain(std::exchange(other.m_Swapchain, VK_NULL_HANDLE)), m_Device(other.m_Device),
       m_Images(std::move(other.m_Images)), m_ImageViews(std::move(other.m_ImageViews))
 {
 }
@@ -93,9 +94,9 @@ Swapchain::~Swapchain()
     {
         for (auto imageView : m_ImageViews) 
         {
-            vkDestroyImageView(m_VkDevice, imageView, nullptr);
+            vkDestroyImageView(m_Device, imageView, nullptr);
         }
-        vkDestroySwapchainKHR(m_VkDevice, m_Swapchain, nullptr);
+        vkDestroySwapchainKHR(m_Device, m_Swapchain, nullptr);
     }
 }
 
@@ -138,7 +139,18 @@ std::vector<Framebuffer> Swapchain::CreateFramebuffersFor(const RenderPass& rend
     for (const auto& imageView : m_ImageViews) 
     {
         framebuffers.emplace_back(
-            Framebuffer(m_VkDevice, FramebufferCreateInfo{renderPass, imageView, GetViewportDescription()}));
+            Framebuffer(m_Device, FramebufferCreateInfo{renderPass, imageView, GetViewportDescription()}));
     }
     return framebuffers;
+}
+
+uint32_t Swapchain::Acquire(const Semaphore& semaphore)
+{
+    uint32_t imageIndex;
+    if (vkAcquireNextImageKHR(m_Device, m_Swapchain, std::numeric_limits<uint64_t>::max(), semaphore.Get(),
+                              VK_NULL_HANDLE, &imageIndex) != VkResult::VK_SUCCESS)
+    {
+        throw std::runtime_error("Acquire next image failed");
+    }
+    return imageIndex;
 }
