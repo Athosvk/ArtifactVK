@@ -24,3 +24,8 @@ Semaphore::~Semaphore()
         vkDestroySemaphore(m_Device, m_Semaphore, nullptr);
     }
 }
+
+VkSemaphore Semaphore::Get() const
+{
+    return m_Semaphore;
+}
