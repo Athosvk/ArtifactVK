@@ -1,6 +1,9 @@
 #pragma once
 #include <vulkan/vulkan.h>
 #include <vector>
+#include <span>
+
+#include "Semaphore.h"
 
 class Framebuffer;
 class RenderPass;
@@ -18,7 +21,7 @@ struct CommandBuffer
     CommandBuffer(VkCommandBuffer &&commandBuffer);
     void Begin();
     void Draw(const Framebuffer& frameBuffer, const RenderPass& renderPass, const RasterPipeline& pipeline);
-    void End();
+    void EndAndReset(std::span<Semaphore> waitSemaphores, std::span<Semaphore> signalSemaphores);
   private:
     VkCommandBuffer m_CommandBuffer;
 };

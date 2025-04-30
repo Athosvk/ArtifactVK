@@ -46,12 +46,53 @@ void CommandBuffer::Draw(const Framebuffer& frameBuffer, const RenderPass& rende
     vkCmdEndRenderPass(m_CommandBuffer);
 }
 
-void CommandBuffer::End()
+
+void CommandBuffer::EndAndReset(std::span<Semaphore> waitSemaphores, std::span<Semaphore> signalSemaphores)
 {
     if (vkEndCommandBuffer(m_CommandBuffer) != VK_SUCCESS)
     {
         throw std::runtime_error("Could not end command buffer");
     }
+    
+    // TODO: Ugly allocation, cache this somehow? Or reinterpret_cast
+    // this somehow
+    std::vector<VkSemaphore> waitSemaphoreHandles;
+    waitSemaphoreHandles.reserve(waitSemaphores.size());
+    for (const auto& semaphore : waitSemaphores)
+    {
+        waitSemaphoreHandles.emplace_back(semaphore.Get());
+    }
+
+    // TODO: Ugly allocation, cache this somehow? Or reinterpret_cast
+    // this somehow
+    std::vector<VkSemaphore> signalSemaphoreHandles;
+    signalSemaphoreHandles.reserve(signalSemaphores.size());
+    for (const auto& semaphore : signalSemaphores)
+    {
+        signalSemaphoreHandles.emplace_back(semaphore.Get());
+    }
+
+    // TODO: Expose to caller, next: cache from last inserted command
+    // in previous cmd buffer
+    VkPipelineStageFlags waitStages[] = {VkPipelineStageFlagBits::VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
+
+    VkSubmitInfo submitInfo{};
+    submitInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+    submitInfo.waitSemaphoreCount = static_cast<uint32_t>(waitSemaphoreHandles.size());
+    submitInfo.pWaitSemaphores = waitSemaphoreHandles.data();
+    submitInfo.pWaitDstStageMask = waitStages;
+
+    
+    submitInfo.signalSemaphoreCount = static_cast<uint32_t>(signalSemaphoreHandles.size());
+    submitInfo.pSignalSemaphores = signalSemaphoreHandles.data();
+
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &m_CommandBuffer;
+
+    // TODO: This is wrong since there's no fence between the submit and reset, while
+    // reset is not allowed to be called prior to the command buffer passing the "pending"
+    // state (i.e. before it has fully executed)
     vkResetCommandBuffer(m_CommandBuffer, 0);
 }
 

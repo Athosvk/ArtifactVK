@@ -58,6 +58,6 @@ void App::RecordCommandBuffer(uint32_t swapchainImageIndex)
     // m_CommandBufferInFlightFence.Wait();
     m_GraphicsCommandBuffer.Begin();
     m_GraphicsCommandBuffer.Draw(m_SwapchainFramebuffers.GetCurrent(), m_MainPass, m_RenderFullscreen);
-    m_GraphicsCommandBuffer.End();
+    m_GraphicsCommandBuffer.EndAndReset(std::span{ &m_ImageAvailable, 1 }, std::span{ &m_RenderFinished, 1 });
     m_CommandBufferInFlightFence.Wait();
 }
