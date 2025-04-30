@@ -36,6 +36,9 @@ Fence::~Fence()
 
 void Fence::Wait()
 {
+    // TODO: Don't insert wait into the created device through this, it's not obvious
+    // that this will insert into the command buffer. This should probably be a function on
+    // the device or cmd buffer
     vkWaitForFences(m_Device, 1, &m_Fence, VK_TRUE, std::numeric_limits<uint64_t>::max());
     vkResetFences(m_Device, 1, &m_Fence);
 }

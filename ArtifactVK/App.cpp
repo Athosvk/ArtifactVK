@@ -52,7 +52,10 @@ RasterPipeline App::LoadShaderPipeline(LogicalVulkanDevice &vulkanDevice, const 
 
 void App::RecordCommandBuffer(uint32_t swapchainImageIndex)
 {
-    //m_CommandBufferInFlight.Wait();
+    // TODO?: The tutorial says to do this and start the fence signaled, but we could just...
+    // not do that and wait at the end of a frame (this seems much more sane). Uncomment
+    // this if it doesn't work.
+    // m_CommandBufferInFlightFence.Wait();
     m_GraphicsCommandBuffer.Begin();
     m_GraphicsCommandBuffer.Draw(m_SwapchainFramebuffers.GetCurrent(), m_MainPass, m_RenderFullscreen);
     m_GraphicsCommandBuffer.End();
