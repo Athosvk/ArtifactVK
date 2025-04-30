@@ -52,6 +52,7 @@ void CommandBuffer::End()
     {
         throw std::runtime_error("Could not end command buffer");
     }
+    vkResetCommandBuffer(m_CommandBuffer, 0);
 }
 
 CommandBufferPool::CommandBufferPool(VkDevice device, CommandBufferPoolCreateInfo createInfo) : m_Device(device)
