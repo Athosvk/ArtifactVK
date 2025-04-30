@@ -54,7 +54,7 @@ void App::RecordCommandBuffer(uint32_t swapchainImageIndex)
 {
     //m_CommandBufferInFlight.Wait();
     m_GraphicsCommandBuffer.Begin();
-    m_GraphicsCommandBuffer.Draw(m_SwapchainFramebuffers[swapchainImageIndex], m_MainPass, m_RenderFullscreen);
+    m_GraphicsCommandBuffer.Draw(m_SwapchainFramebuffers.GetCurrent(), m_MainPass, m_RenderFullscreen);
     m_GraphicsCommandBuffer.End();
     m_CommandBufferInFlightFence.Wait();
 }

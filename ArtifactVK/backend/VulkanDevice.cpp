@@ -411,7 +411,7 @@ LogicalVulkanDevice::~LogicalVulkanDevice()
     // Explicitly order destruction of vulkan objects
     // Prior to swapchain destruction, since framebuffers may be 
     // to swapchain images
-    m_Framebuffers.clear();
+    m_SwapchainFramebuffers.clear();
 
     m_Swapchain.reset();
     m_CommandBufferPools.clear();
@@ -445,12 +445,10 @@ RenderPass LogicalVulkanDevice::CreateRenderPass()
     return RenderPass(m_Device, RenderPassCreateInfo{ attachmentDescription });
 }
 
-std::span<Framebuffer> LogicalVulkanDevice::CreateSwapchainFramebuffers(const RenderPass &renderpass)
+const SwapchainFramebuffer& LogicalVulkanDevice::CreateSwapchainFramebuffers(const RenderPass &renderpass)
 {
-    assert(m_Swapchain.has_value());
-    std::vector<Framebuffer> framebuffers = m_Swapchain->CreateFramebuffersFor(renderpass);
-    std::move(framebuffers.begin(), framebuffers.end(), std::back_inserter(m_Framebuffers));
-    return std::span{m_Framebuffers.end() - framebuffers.size(), m_Framebuffers.end() };
+    assert(m_Swapchain.has_value() && "No swapchain to create framebuffers for");
+    return m_SwapchainFramebuffers.emplace(renderpass.Get(), m_Swapchain->CreateFramebuffersFor(renderpass)).first->second;
 }
 
 CommandBufferPool &LogicalVulkanDevice::CreateGraphicsCommandBufferPool()

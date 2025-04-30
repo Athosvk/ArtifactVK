@@ -9,6 +9,7 @@
 #include "backend/Window.h"
 #include "backend/Pipeline.h"
 #include "backend/RenderPass.h"
+#include "backend/Swapchain.h"
 
 class App
 {
@@ -26,7 +27,7 @@ class App
     VulkanInstance m_VulkanInstance;
     RenderPass m_MainPass;
     RasterPipeline m_RenderFullscreen;
-    std::span<Framebuffer> m_SwapchainFramebuffers;
+    const SwapchainFramebuffer& m_SwapchainFramebuffers;
     CommandBuffer &m_GraphicsCommandBuffer;
     Semaphore &m_ImageAvailable;
     Semaphore &m_RenderFinished;

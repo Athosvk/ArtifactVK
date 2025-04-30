@@ -12,26 +12,26 @@ Swapchain::Swapchain(const SwapchainCreateInfo &createInfo, const VkSurfaceKHR &
     : m_Device(device), m_OriginalCreateInfo(createInfo)
 {
     VkSwapchainCreateInfoKHR vkCreateInfo{};
-    vkCreateInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+    vkCreateInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
     vkCreateInfo.surface = surface;
     vkCreateInfo.minImageCount = createInfo.MinImageCount;
     vkCreateInfo.imageFormat = createInfo.SurfaceFormat.format;
     vkCreateInfo.imageColorSpace = createInfo.SurfaceFormat.colorSpace;
     vkCreateInfo.imageExtent = createInfo.Extents;
     vkCreateInfo.imageArrayLayers = 1;
-    vkCreateInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+    vkCreateInfo.imageUsage = VkImageUsageFlagBits::VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
     auto queueFamilies = vulkanDevice.GetQueueFamilies();
     if (queueFamilies.GraphicsFamilyIndex != queueFamilies.PresentFamilyIndex)
     {
         uint32_t indices[] = {queueFamilies.GraphicsFamilyIndex.value(), queueFamilies.PresentFamilyIndex.value()};
-        vkCreateInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
+        vkCreateInfo.imageSharingMode = VkSharingMode::VK_SHARING_MODE_CONCURRENT;
         vkCreateInfo.queueFamilyIndexCount = 2;
         vkCreateInfo.pQueueFamilyIndices = indices;
     }
     else
     {
-        vkCreateInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        vkCreateInfo.imageSharingMode = VkSharingMode::VK_SHARING_MODE_EXCLUSIVE;
         // Just filler, no need to provide these in exclusive mode
         vkCreateInfo.queueFamilyIndexCount = 0;
         vkCreateInfo.pQueueFamilyIndices = nullptr;
@@ -45,7 +45,7 @@ Swapchain::Swapchain(const SwapchainCreateInfo &createInfo, const VkSurfaceKHR &
     vkCreateInfo.clipped = VK_TRUE;
     vkCreateInfo.oldSwapchain = VK_NULL_HANDLE;
 
-    if (vkCreateSwapchainKHR(device, &vkCreateInfo, nullptr, &m_Swapchain) != VK_SUCCESS)
+    if (vkCreateSwapchainKHR(device, &vkCreateInfo, nullptr, &m_Swapchain) != VkResult::VK_SUCCESS)
     {
         throw std::runtime_error("Could not create swapchain");
     }
@@ -54,9 +54,9 @@ Swapchain::Swapchain(const SwapchainCreateInfo &createInfo, const VkSurfaceKHR &
     vkGetSwapchainImagesKHR(m_Device, m_Swapchain, &imageCount, nullptr);
     std::vector<VkImage> images(imageCount);
     vkGetSwapchainImagesKHR(m_Device, m_Swapchain, &imageCount, images.data());
-    m_Images = std::move(images);
 
     m_ImageViews.reserve(images.size());
+    m_Images = std::move(images);
     for (auto &image : m_Images)
     {
         VkImageViewCreateInfo imageCreateInfo{};
@@ -132,7 +132,7 @@ VkAttachmentDescription Swapchain::AttachmentDescription() const
     return attachmentDescription;
 }
 
-std::vector<Framebuffer> Swapchain::CreateFramebuffersFor(const RenderPass& renderPass)
+SwapchainFramebuffer Swapchain::CreateFramebuffersFor(const RenderPass &renderPass) const
 {
     std::vector<Framebuffer> framebuffers;
     framebuffers.reserve(m_ImageViews.size());
@@ -141,16 +141,30 @@ std::vector<Framebuffer> Swapchain::CreateFramebuffersFor(const RenderPass& rend
         framebuffers.emplace_back(
             Framebuffer(m_Device, FramebufferCreateInfo{renderPass, imageView, GetViewportDescription()}));
     }
-    return framebuffers;
+    return SwapchainFramebuffer(*this, std::move(framebuffers));
 }
 
-uint32_t Swapchain::Acquire(const Semaphore& semaphore)
+uint32_t Swapchain::CurrentIndex() const
 {
-    uint32_t imageIndex;
+    return m_CurrentImageIndex;
+}
+
+VkImageView Swapchain::AcquireNext(const Semaphore& semaphore)
+{
     if (vkAcquireNextImageKHR(m_Device, m_Swapchain, std::numeric_limits<uint64_t>::max(), semaphore.Get(),
-                              VK_NULL_HANDLE, &imageIndex) != VkResult::VK_SUCCESS)
+                              VK_NULL_HANDLE, &m_CurrentImageIndex) != VkResult::VK_SUCCESS)
     {
         throw std::runtime_error("Acquire next image failed");
     }
-    return imageIndex;
+    return m_ImageViews[m_CurrentImageIndex];
+}
+
+SwapchainFramebuffer::SwapchainFramebuffer(const Swapchain& swapchain, std::vector<Framebuffer>&& swapchainFramebuffers) : 
+    m_Swapchain(swapchain), m_Framebuffers(std::move(swapchainFramebuffers))
+{
+}
+
+const Framebuffer& SwapchainFramebuffer::GetCurrent() const
+{
+    return m_Framebuffers[m_Swapchain.CurrentIndex()];
 }
