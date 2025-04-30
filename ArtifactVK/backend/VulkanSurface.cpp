@@ -62,7 +62,7 @@ const VkSurfaceKHR &VulkanSurface::Get() const
 VkSurfaceKHR VulkanSurface::CreateSurface(const VkInstance &instance, GLFWwindow &internalWindow)
 {
     VkSurfaceKHR surface;
-    if (glfwCreateWindowSurface(instance, &internalWindow, nullptr, &surface) != VK_SUCCESS)
+    if (glfwCreateWindowSurface(instance, &internalWindow, nullptr, &surface) != VkResult::VK_SUCCESS)
     {
         throw std::runtime_error("Could not create surface for rendering");
     }
