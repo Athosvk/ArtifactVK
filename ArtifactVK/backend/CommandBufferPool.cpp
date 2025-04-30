@@ -41,6 +41,7 @@ void CommandBuffer::Draw(const Framebuffer& frameBuffer, const RenderPass& rende
     
     vkCmdBeginRenderPass(m_CommandBuffer, &renderPassBeginInfo, VkSubpassContents::VK_SUBPASS_CONTENTS_INLINE);
     pipeline.Bind(m_CommandBuffer, viewport);
+    // TODO: Give user control over what to draw
     vkCmdDraw(m_CommandBuffer, 3, 1, 0, 0);
     vkCmdEndRenderPass(m_CommandBuffer);
 }
