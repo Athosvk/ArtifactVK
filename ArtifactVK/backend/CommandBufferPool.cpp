@@ -9,7 +9,7 @@
 
 CommandBuffer::CommandBuffer(VkCommandBuffer &&commandBuffer, VkDevice device) : m_CommandBuffer(commandBuffer), 
     // Start the Fence signaled so that we can query for correct usage prior to beginning the command buffer (again)
-    m_InFlight(Fence(device, true))
+    m_InFlight(Fence(device))
 {
 }
 
@@ -21,7 +21,7 @@ CommandBuffer::~CommandBuffer()
 
 void CommandBuffer::Begin()
 {
-    assert(m_InFlight.QuerySignaled() && "Attempting to begin a command buffer that is still in flight. Wait for the returned fence");
+    assert(m_InFlight.WasReset() && "Attempting to begin a command buffer that may still be in fligh. Wait for the returned fence");
     if (m_Status == CommandBufferStatus::Submitted)
     {
         // Reset in case this command buffer was previously submitted

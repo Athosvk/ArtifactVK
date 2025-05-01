@@ -38,8 +38,10 @@ void App::RunRenderLoop()
 {
     while (!m_Window.ShouldClose())
     {
+        std::cout << "\nRendering frame " << m_CurrentFrameIndex << "\n"; 
         m_Window.PollEvents();
         RecordCommandBuffer();
+        m_CurrentFrameIndex += 1;
     }
 }
 

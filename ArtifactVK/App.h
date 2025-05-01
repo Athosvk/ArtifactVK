@@ -31,4 +31,5 @@ class App
     CommandBuffer &m_GraphicsCommandBuffer;
     Semaphore &m_ImageAvailable;
     Semaphore &m_RenderFinished;
+    uint32_t m_CurrentFrameIndex = 0;
 };

@@ -13,6 +13,11 @@ Fence::Fence(VkDevice device, bool startSignaled) : m_Device(device)
     if (startSignaled)
     {
         createInfo.flags = VkFenceCreateFlagBits::VK_FENCE_CREATE_SIGNALED_BIT;
+        m_Status = FenceStatus::Signaled;
+    } 
+    else
+    {
+        m_Status = FenceStatus::Reset;
     }
 
     if (vkCreateFence(device, &createInfo, nullptr, &m_Fence) != VkResult::VK_SUCCESS)
@@ -41,6 +46,7 @@ void Fence::Wait()
     // the device or cmd buffer
     vkWaitForFences(m_Device, 1, &m_Fence, VK_TRUE, std::numeric_limits<uint64_t>::max());
     vkResetFences(m_Device, 1, &m_Fence);
+    m_Status = FenceStatus::Reset;
 }
 
 VkFence Fence::Get() const
@@ -48,19 +54,26 @@ VkFence Fence::Get() const
     return m_Fence;
 }
 
-bool Fence::QuerySignaled() const
+bool Fence::QuerySignaled()
 {
     VkResult result = vkWaitForFences(m_Device, 1, &m_Fence, VK_TRUE, 0);
     if (result == VkResult::VK_SUCCESS)
     {
+        m_Status = FenceStatus::Signaled;
         return true;
     }
     else if (result == VkResult::VK_TIMEOUT)
     {
+        m_Status = FenceStatus::Unsignaled;
         return false;
     }
     else
     {
         throw std::runtime_error("Fence wait failed");
     }
+}
+
+bool Fence::WasReset() const
+{
+    return m_Status == FenceStatus::Reset;
 }
