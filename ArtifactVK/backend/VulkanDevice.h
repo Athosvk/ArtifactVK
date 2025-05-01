@@ -57,10 +57,10 @@ class LogicalVulkanDevice
     VkQueue m_GraphicsQueue;
     VkQueue m_PresentQueue;
     std::optional<Swapchain> m_Swapchain = std::nullopt;
-    std::vector<CommandBufferPool> m_CommandBufferPools;
+    std::vector<std::unique_ptr<CommandBufferPool>> m_CommandBufferPools;
     // TODO: Don't hold the semaphores here (unless for pooling).
     // Let objects logically decide if they need to provide one.
-    std::vector<Semaphore> m_Semaphores;
+    std::vector<std::unique_ptr<Semaphore>> m_Semaphores;
     // TODO: Manage this better using a delete queue/stack so that 
     // this doesn't have to manually manage these handles
     std::unordered_map<VkRenderPass, SwapchainFramebuffer> m_SwapchainFramebuffers;

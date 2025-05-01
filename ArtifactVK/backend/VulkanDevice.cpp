@@ -462,12 +462,12 @@ CommandBufferPool &LogicalVulkanDevice::CreateGraphicsCommandBufferPool()
 
     CommandBufferPoolCreateInfo createInfo{VkCommandPoolCreateFlagBits::VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
                                            familyIndices.GraphicsFamilyIndex.value()};
-    return m_CommandBufferPools.emplace_back(m_Device, createInfo);
+    return *m_CommandBufferPools.emplace_back(std::make_unique<CommandBufferPool>(m_Device, createInfo));
 }
 
 Semaphore &LogicalVulkanDevice::CreateSemaphore()
 {
-    return m_Semaphores.emplace_back(m_Device);
+    return *m_Semaphores.emplace_back(std::make_unique<Semaphore>(m_Device));
 }
 
 VkQueue LogicalVulkanDevice::GetGraphicsQueue() const
