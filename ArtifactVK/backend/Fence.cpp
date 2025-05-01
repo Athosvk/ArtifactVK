@@ -42,3 +42,25 @@ void Fence::Wait()
     vkWaitForFences(m_Device, 1, &m_Fence, VK_TRUE, std::numeric_limits<uint64_t>::max());
     vkResetFences(m_Device, 1, &m_Fence);
 }
+
+VkFence Fence::Get() const
+{
+    return m_Fence;
+}
+
+bool Fence::QuerySignaled() const
+{
+    VkResult result = vkWaitForFences(m_Device, 1, &m_Fence, VK_TRUE, 0);
+    if (result == VkResult::VK_SUCCESS)
+    {
+        return true;
+    }
+    else if (result == VkResult::VK_TIMEOUT)
+    {
+        return false;
+    }
+    else
+    {
+        throw std::runtime_error("Fence wait failed");
+    }
+}

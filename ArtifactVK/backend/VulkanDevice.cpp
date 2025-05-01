@@ -397,7 +397,10 @@ LogicalVulkanDevice::LogicalVulkanDevice(const VulkanDevice &physicalDevice, con
 LogicalVulkanDevice::LogicalVulkanDevice(LogicalVulkanDevice &&other)
     : m_Device(std::exchange(other.m_Device, VK_NULL_HANDLE)), m_PhysicalDevice(other.m_PhysicalDevice),
       m_GraphicsQueue(other.m_GraphicsQueue), m_PresentQueue(other.m_PresentQueue),
-      m_Swapchain(std::move(other.m_Swapchain))
+      m_Swapchain(std::move(other.m_Swapchain)), 
+      m_CommandBufferPools(std::move(other.m_CommandBufferPools)),
+      m_Semaphores(std::move(other.m_Semaphores)),
+      m_SwapchainFramebuffers(std::move(other.m_SwapchainFramebuffers))
 {
 }
 
@@ -467,9 +470,9 @@ Semaphore &LogicalVulkanDevice::CreateSemaphore()
     return m_Semaphores.emplace_back(m_Device);
 }
 
-Fence &LogicalVulkanDevice::CreateFence()
+VkQueue LogicalVulkanDevice::GetGraphicsQueue() const
 {
-    return m_Fences.emplace_back(m_Device);
+    return m_GraphicsQueue;
 }
 
 std::vector<VkDeviceQueueCreateInfo> LogicalVulkanDevice::GetQueueCreateInfos(const VulkanDevice &physicalDevice)

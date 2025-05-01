@@ -24,8 +24,7 @@ App::App()
       m_SwapchainFramebuffers(m_VulkanInstance.GetActiveDevice().CreateSwapchainFramebuffers(m_MainPass)),
       m_GraphicsCommandBuffer(m_VulkanInstance.GetActiveDevice().CreateGraphicsCommandBufferPool().CreateCommandBuffer()),
       m_ImageAvailable(m_VulkanInstance.GetActiveDevice().CreateSemaphore()),
-      m_RenderFinished(m_VulkanInstance.GetActiveDevice().CreateSemaphore()),
-      m_CommandBufferInFlightFence(m_VulkanInstance.GetActiveDevice().CreateFence())
+      m_RenderFinished(m_VulkanInstance.GetActiveDevice().CreateSemaphore())
 {
     
 }
@@ -58,6 +57,7 @@ void App::RecordCommandBuffer(uint32_t swapchainImageIndex)
     // m_CommandBufferInFlightFence.Wait();
     m_GraphicsCommandBuffer.Begin();
     m_GraphicsCommandBuffer.Draw(m_SwapchainFramebuffers.GetCurrent(), m_MainPass, m_RenderFullscreen);
-    m_GraphicsCommandBuffer.EndAndReset(std::span{ &m_ImageAvailable, 1 }, std::span{ &m_RenderFinished, 1 });
-    m_CommandBufferInFlightFence.Wait();
+    Fence& inFlight = m_GraphicsCommandBuffer.End(std::span{ &m_ImageAvailable, 1 }, std::span{ &m_RenderFinished, 1 }, 
+        m_VulkanInstance.GetActiveDevice().GetGraphicsQueue());
+    inFlight.Wait();
 }

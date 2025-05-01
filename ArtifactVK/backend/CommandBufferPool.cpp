@@ -7,12 +7,26 @@
 #include <vulkan/vulkan.h>
 #include <stdexcept>
 
-CommandBuffer::CommandBuffer(VkCommandBuffer &&commandBuffer) : m_CommandBuffer(commandBuffer)
+CommandBuffer::CommandBuffer(VkCommandBuffer &&commandBuffer, VkDevice device) : m_CommandBuffer(commandBuffer), 
+    // Start the Fence signaled so that we can query for correct usage prior to beginning the command buffer (again)
+    m_InFlight(Fence(device, true))
 {
+}
+
+CommandBuffer::~CommandBuffer()
+{
+    assert(m_InFlight.QuerySignaled() && "Attempting to delete a command buffer that is still in flight."
+        "Wait for the returned fence in `CommandBuffer::End`");
 }
 
 void CommandBuffer::Begin()
 {
+    assert(m_InFlight.QuerySignaled() && "Attempting to begin a command buffer that is still in flight. Wait for the returned fence");
+    if (m_Status == CommandBufferStatus::Submitted)
+    {
+        // Reset in case this command buffer was previously submitted
+        Reset();
+    }
     VkCommandBufferBeginInfo beginInfo{};
     beginInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     beginInfo.flags = 0;
@@ -47,7 +61,7 @@ void CommandBuffer::Draw(const Framebuffer& frameBuffer, const RenderPass& rende
 }
 
 
-void CommandBuffer::EndAndReset(std::span<Semaphore> waitSemaphores, std::span<Semaphore> signalSemaphores)
+Fence& CommandBuffer::End(std::span<Semaphore> waitSemaphores, std::span<Semaphore> signalSemaphores, VkQueue queue)
 {
     if (vkEndCommandBuffer(m_CommandBuffer) != VK_SUCCESS)
     {
@@ -82,18 +96,23 @@ void CommandBuffer::EndAndReset(std::span<Semaphore> waitSemaphores, std::span<S
     submitInfo.waitSemaphoreCount = static_cast<uint32_t>(waitSemaphoreHandles.size());
     submitInfo.pWaitSemaphores = waitSemaphoreHandles.data();
     submitInfo.pWaitDstStageMask = waitStages;
-
     
     submitInfo.signalSemaphoreCount = static_cast<uint32_t>(signalSemaphoreHandles.size());
     submitInfo.pSignalSemaphores = signalSemaphoreHandles.data();
 
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &m_CommandBuffer;
+    if (vkQueueSubmit(queue, 1, &submitInfo, m_InFlight.Get()) != VkResult::VK_SUCCESS) {
+        throw std::runtime_error("Faied to submit cmd buffer to queue");
+    }
+    m_Status = CommandBufferStatus::Submitted;
+    return m_InFlight;
+}
 
-    // TODO: This is wrong since there's no fence between the submit and reset, while
-    // reset is not allowed to be called prior to the command buffer passing the "pending"
-    // state (i.e. before it has fully executed)
+void CommandBuffer::Reset()
+{
     vkResetCommandBuffer(m_CommandBuffer, 0);
+    m_Status = CommandBufferStatus::Reset;
 }
 
 CommandBufferPool::CommandBufferPool(VkDevice device, CommandBufferPoolCreateInfo createInfo) : m_Device(device)
@@ -111,7 +130,8 @@ CommandBufferPool::CommandBufferPool(VkDevice device, CommandBufferPoolCreateInf
 
 CommandBufferPool::CommandBufferPool(CommandBufferPool &&other) : 
     m_Device(other.m_Device),
-    m_CommandBufferPool(std::exchange(other.m_CommandBufferPool, VK_NULL_HANDLE))
+    m_CommandBufferPool(std::exchange(other.m_CommandBufferPool, VK_NULL_HANDLE)),
+    m_CommandBuffers(std::move(other.m_CommandBuffers))
 {
 }
 
@@ -127,11 +147,12 @@ CommandBuffer &CommandBufferPool::CreateCommandBuffer()
     allocationInfo.commandBufferCount = 1;
     allocationInfo.commandPool = m_CommandBufferPool;
     allocationInfo.level = VkCommandBufferLevel::VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    
+
     VkCommandBuffer commandBuffer;
+
     if (vkAllocateCommandBuffers(m_Device, &allocationInfo, &commandBuffer) != VkResult::VK_SUCCESS)
     {
         throw std::runtime_error("Failed to allocate command buffer");
     }
-    return m_CommandBuffers.emplace_back(std::move(commandBuffer));
+    return m_CommandBuffers.emplace_back(std::move(commandBuffer), m_Device);
 }

@@ -4,6 +4,7 @@
 #include <span>
 
 #include "Semaphore.h"
+#include "Fence.h"
 
 class Framebuffer;
 class RenderPass;
@@ -17,13 +18,29 @@ struct CommandBufferPoolCreateInfo
 
 struct CommandBuffer
 {
+	enum class CommandBufferStatus
+	{
+		Recording,
+		Submitted,
+		Reset
+	};
+
   public:
-    CommandBuffer(VkCommandBuffer &&commandBuffer);
+    CommandBuffer(VkCommandBuffer &&commandBuffer, VkDevice device);
+    CommandBuffer(CommandBuffer &&) = default;
+    ~CommandBuffer();
+
     void Begin();
     void Draw(const Framebuffer& frameBuffer, const RenderPass& renderPass, const RasterPipeline& pipeline);
-    void EndAndReset(std::span<Semaphore> waitSemaphores, std::span<Semaphore> signalSemaphores);
+    Fence& End(std::span<Semaphore> waitSemaphores, std::span<Semaphore> signalSemaphores, VkQueue queue);
+
   private:
+    void Reset();
+
     VkCommandBuffer m_CommandBuffer;
+    // TODO: Pool these fences in the CommandBufferPool
+    Fence m_InFlight;
+    CommandBufferStatus m_Status;
 };
 
 class CommandBufferPool

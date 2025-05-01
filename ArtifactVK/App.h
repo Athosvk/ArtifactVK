@@ -31,5 +31,4 @@ class App
     CommandBuffer &m_GraphicsCommandBuffer;
     Semaphore &m_ImageAvailable;
     Semaphore &m_RenderFinished;
-    Fence &m_CommandBufferInFlightFence;
 };

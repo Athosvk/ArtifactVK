@@ -44,7 +44,7 @@ class LogicalVulkanDevice
     const SwapchainFramebuffer& CreateSwapchainFramebuffers(const RenderPass &renderpass);
     CommandBufferPool &CreateGraphicsCommandBufferPool();
     Semaphore &CreateSemaphore();
-    Fence &CreateFence();
+    VkQueue GetGraphicsQueue() const;
   private:
     ShaderModule LoadShaderModule(const std::filesystem::path &filename);
     static std::vector<VkDeviceQueueCreateInfo> GetQueueCreateInfos(const VulkanDevice &physicalDevice);
@@ -58,8 +58,9 @@ class LogicalVulkanDevice
     VkQueue m_PresentQueue;
     std::optional<Swapchain> m_Swapchain = std::nullopt;
     std::vector<CommandBufferPool> m_CommandBufferPools;
+    // TODO: Don't hold the semaphores here (unless for pooling).
+    // Let objects logically decide if they need to provide one.
     std::vector<Semaphore> m_Semaphores;
-    std::vector<Fence> m_Fences;
     // TODO: Manage this better using a delete queue/stack so that 
     // this doesn't have to manually manage these handles
     std::unordered_map<VkRenderPass, SwapchainFramebuffer> m_SwapchainFramebuffers;
