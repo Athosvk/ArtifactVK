@@ -21,7 +21,7 @@ class App
 
   private:
     RasterPipeline LoadShaderPipeline(LogicalVulkanDevice &vulkanDevice, const RenderPass& renderPass) const;
-    void RecordCommandBuffer(uint32_t swapchainImageIndex);
+    void RecordCommandBuffer();
 
     Window m_Window;
     VulkanInstance m_VulkanInstance;

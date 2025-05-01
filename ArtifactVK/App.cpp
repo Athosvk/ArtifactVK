@@ -39,7 +39,7 @@ void App::RunRenderLoop()
     while (!m_Window.ShouldClose())
     {
         m_Window.PollEvents();
-        RecordCommandBuffer(0);
+        RecordCommandBuffer();
     }
 }
 
@@ -49,7 +49,7 @@ RasterPipeline App::LoadShaderPipeline(LogicalVulkanDevice &vulkanDevice, const 
         RasterPipelineBuilder("spirv/triangle.vert.spv", "spirv/triangle.frag.spv"), renderPass);
 }
 
-void App::RecordCommandBuffer(uint32_t swapchainImageIndex)
+void App::RecordCommandBuffer()
 {
     // TODO?: The tutorial says to do this and start the fence signaled, but we could just...
     // not do that and wait at the end of a frame (this seems much more sane). Uncomment
