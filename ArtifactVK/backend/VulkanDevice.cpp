@@ -152,7 +152,12 @@ VkExtent2D LogicalVulkanDevice::SelectSwapchainExtent(GLFWwindow& window) const
     }
 }
 
-Swapchain& LogicalVulkanDevice::CreateSwapchain(GLFWwindow& window, const VulkanSurface& surface)
+void LogicalVulkanDevice::WaitForIdle() const
+{
+    vkDeviceWaitIdle(m_Device);
+}
+
+Swapchain &LogicalVulkanDevice::CreateSwapchain(GLFWwindow &window, const VulkanSurface &surface)
 {
     auto maxImageCount = m_PhysicalDevice.GetSurfaceProperties().Capabilities.maxImageCount == 0 ? std::numeric_limits<uint32_t>::max()
                              : m_PhysicalDevice.GetSurfaceProperties().Capabilities.maxImageCount;

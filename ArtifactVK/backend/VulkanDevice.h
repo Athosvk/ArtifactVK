@@ -38,6 +38,7 @@ class LogicalVulkanDevice
     LogicalVulkanDevice(LogicalVulkanDevice &&other);
     ~LogicalVulkanDevice();
 
+    void WaitForIdle() const;
     Swapchain& CreateSwapchain(GLFWwindow& window, const VulkanSurface& surface);
     Swapchain &GetSwapchain();
     RasterPipeline CreateRasterPipeline(RasterPipelineBuilder &&pipelineBuilder, const RenderPass& renderPass);
