@@ -38,12 +38,13 @@ class LogicalVulkanDevice
     LogicalVulkanDevice(LogicalVulkanDevice &&other);
     ~LogicalVulkanDevice();
 
-    void CreateSwapchain(GLFWwindow& window, const VulkanSurface& surface);
+    Swapchain& CreateSwapchain(GLFWwindow& window, const VulkanSurface& surface);
+    Swapchain &GetSwapchain();
     RasterPipeline CreateRasterPipeline(RasterPipelineBuilder &&pipelineBuilder, const RenderPass& renderPass);
     RenderPass CreateRenderPass();
     const SwapchainFramebuffer& CreateSwapchainFramebuffers(const RenderPass &renderpass);
     CommandBufferPool &CreateGraphicsCommandBufferPool();
-    Semaphore &CreateSemaphore();
+    Semaphore &CreateDeviceSemaphore();
     VkQueue GetGraphicsQueue() const;
   private:
     ShaderModule LoadShaderModule(const std::filesystem::path &filename);

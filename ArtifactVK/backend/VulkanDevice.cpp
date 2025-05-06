@@ -152,7 +152,7 @@ VkExtent2D LogicalVulkanDevice::SelectSwapchainExtent(GLFWwindow& window) const
     }
 }
 
-void LogicalVulkanDevice::CreateSwapchain(GLFWwindow& window, const VulkanSurface& surface)
+Swapchain& LogicalVulkanDevice::CreateSwapchain(GLFWwindow& window, const VulkanSurface& surface)
 {
     auto maxImageCount = m_PhysicalDevice.GetSurfaceProperties().Capabilities.maxImageCount == 0 ? std::numeric_limits<uint32_t>::max()
                              : m_PhysicalDevice.GetSurfaceProperties().Capabilities.maxImageCount;
@@ -165,7 +165,13 @@ void LogicalVulkanDevice::CreateSwapchain(GLFWwindow& window, const VulkanSurfac
             maxImageCount)
     };
        
-    m_Swapchain.emplace(Swapchain(createInfo, surface.Get(), m_Device, m_PhysicalDevice));
+    return m_Swapchain.emplace(Swapchain(createInfo, surface.Get(), m_Device, m_PhysicalDevice, m_PresentQueue));
+}
+
+Swapchain &LogicalVulkanDevice::GetSwapchain()
+{
+    assert(m_Swapchain.has_value() && "Need an active swapchain. Create one through CreateSwapchain");
+    return *m_Swapchain;
 }
 
 ShaderModule LogicalVulkanDevice::LoadShaderModule(const std::filesystem::path &filename)
@@ -418,6 +424,8 @@ LogicalVulkanDevice::~LogicalVulkanDevice()
 
     m_Swapchain.reset();
     m_CommandBufferPools.clear();
+    m_Semaphores.clear();
+
     std::condition_variable destroyed;
     std::mutex destroyMutex;
     std::thread destroyThread([this, &destroyed, &destroyMutex] {
@@ -465,7 +473,7 @@ CommandBufferPool &LogicalVulkanDevice::CreateGraphicsCommandBufferPool()
     return *m_CommandBufferPools.emplace_back(std::make_unique<CommandBufferPool>(m_Device, createInfo));
 }
 
-Semaphore &LogicalVulkanDevice::CreateSemaphore()
+Semaphore &LogicalVulkanDevice::CreateDeviceSemaphore()
 {
     return *m_Semaphores.emplace_back(std::make_unique<Semaphore>(m_Device));
 }
