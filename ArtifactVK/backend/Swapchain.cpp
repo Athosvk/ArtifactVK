@@ -2,14 +2,16 @@
 
 #include <stdexcept>
 #include <algorithm>
+#include <iostream>
 
 #include "VulkanSurface.h"
 #include "VulkanDevice.h"
 #include "Semaphore.h"
 
 Swapchain::Swapchain(const SwapchainCreateInfo &createInfo, const VkSurfaceKHR &surface, VkDevice device,
-                     const VulkanDevice &vulkanDevice)
-    : m_Device(device), m_OriginalCreateInfo(createInfo)
+                     const VulkanDevice &vulkanDevice,
+                     VkQueue targetPresentQueue)
+    : m_Device(device), m_OriginalCreateInfo(createInfo), m_TargetPresentQueue(targetPresentQueue)
 {
     VkSwapchainCreateInfoKHR vkCreateInfo{};
     vkCreateInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
@@ -22,6 +24,7 @@ Swapchain::Swapchain(const SwapchainCreateInfo &createInfo, const VkSurfaceKHR &
     vkCreateInfo.imageUsage = VkImageUsageFlagBits::VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
     auto queueFamilies = vulkanDevice.GetQueueFamilies();
+    // TODO: Is this check correct?
     if (queueFamilies.GraphicsFamilyIndex != queueFamilies.PresentFamilyIndex)
     {
         uint32_t indices[] = {queueFamilies.GraphicsFamilyIndex.value(), queueFamilies.PresentFamilyIndex.value()};
@@ -83,9 +86,15 @@ Swapchain::Swapchain(const SwapchainCreateInfo &createInfo, const VkSurfaceKHR &
 }
 
 Swapchain::Swapchain(Swapchain &&other)
-    : m_Swapchain(std::exchange(other.m_Swapchain, VK_NULL_HANDLE)), m_Device(other.m_Device),
-      m_Images(std::move(other.m_Images)), m_ImageViews(std::move(other.m_ImageViews))
+    : m_Swapchain(std::exchange(other.m_Swapchain, VK_NULL_HANDLE)), 
+      m_Device(other.m_Device),
+      m_OriginalCreateInfo(other.m_OriginalCreateInfo),
+      m_Images(std::move(other.m_Images)),
+      m_ImageViews(std::move(other.m_ImageViews)),
+      m_CurrentImageIndex(std::move(other.m_CurrentImageIndex)),
+      m_TargetPresentQueue(std::move(other.m_TargetPresentQueue))
 {
+    std::cout << "Move swapchain";
 }
 
 Swapchain::~Swapchain()
@@ -149,14 +158,46 @@ uint32_t Swapchain::CurrentIndex() const
     return m_CurrentImageIndex;
 }
 
-VkImageView Swapchain::AcquireNext(const Semaphore& semaphore)
+VkImageView Swapchain::AcquireNext(const Semaphore& toSignal)
 {
-    if (vkAcquireNextImageKHR(m_Device, m_Swapchain, std::numeric_limits<uint64_t>::max(), semaphore.Get(),
+    if (vkAcquireNextImageKHR(m_Device, m_Swapchain, std::numeric_limits<uint64_t>::max(), toSignal.Get(),
                               VK_NULL_HANDLE, &m_CurrentImageIndex) != VkResult::VK_SUCCESS)
     {
         throw std::runtime_error("Acquire next image failed");
     }
     return m_ImageViews[m_CurrentImageIndex];
+}
+
+void Swapchain::Present(std::span<Semaphore> waitSempahores) const
+{
+    std::vector<VkSemaphore> semaphoreHandles;
+    semaphoreHandles.reserve(waitSempahores.size());
+    // TODO: Remove ugly allocation
+    for (const auto &semaphore : waitSempahores)
+    {
+        //semaphoreHandles.emplace_back(semaphore.Get());
+    }
+
+    VkPresentInfoKHR presentInfo{};
+    presentInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+    presentInfo.waitSemaphoreCount = static_cast<uint32_t>(semaphoreHandles.size());
+    presentInfo.pWaitSemaphores = semaphoreHandles.data();
+
+    VkSwapchainKHR swapchains[] = {m_Swapchain};
+    presentInfo.swapchainCount = 1;
+    presentInfo.pSwapchains = swapchains;
+    presentInfo.pImageIndices = &m_CurrentImageIndex;
+    presentInfo.pResults = nullptr;
+
+    VkResult result = vkQueuePresentKHR(m_TargetPresentQueue, &presentInfo);
+    if (result == VkResult::VK_SUBOPTIMAL_KHR)
+    {
+        std::cout << "Recreate swapchain is optimal here";
+    }
+    else if (result != VkResult::VK_SUCCESS)
+    {
+        throw std::runtime_error("Could not present to target queue");
+    }
 }
 
 SwapchainFramebuffer::SwapchainFramebuffer(const Swapchain& swapchain, std::vector<Framebuffer>&& swapchainFramebuffers) : 

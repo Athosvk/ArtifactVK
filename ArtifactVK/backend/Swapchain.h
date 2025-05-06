@@ -1,6 +1,7 @@
 #pragma once
 #include <vulkan/vulkan.h>
 #include <vector>
+#include <span>
 
 #include "Framebuffer.h"
 
@@ -34,7 +35,7 @@ class SwapchainFramebuffer
 class Swapchain
 {
   public:
-    Swapchain(const SwapchainCreateInfo& createInfo, const VkSurfaceKHR& surface, VkDevice device, const VulkanDevice& vulkanDevice);
+    Swapchain(const SwapchainCreateInfo& createInfo, const VkSurfaceKHR& surface, VkDevice device, const VulkanDevice& vulkanDevice, VkQueue targetPresentQueue);
     Swapchain(const Swapchain &other) = delete;
     Swapchain(Swapchain &&other);
     ~Swapchain();
@@ -44,12 +45,14 @@ class Swapchain
     SwapchainFramebuffer CreateFramebuffersFor(const RenderPass &renderPass) const;
     uint32_t CurrentIndex() const;
     
-    VkImageView AcquireNext(const Semaphore& semaphore);
+    VkImageView AcquireNext(const Semaphore& toSignal);
+    void Present(std::span<Semaphore> waitSempahores) const;
   private:
-    VkSwapchainKHR m_Swapchain;
+    VkSwapchainKHR m_Swapchain = VK_NULL_HANDLE;
     VkDevice m_Device;
     SwapchainCreateInfo m_OriginalCreateInfo;
     std::vector<VkImage> m_Images;
     std::vector<VkImageView> m_ImageViews;
     uint32_t m_CurrentImageIndex;
+    VkQueue m_TargetPresentQueue;
 };
