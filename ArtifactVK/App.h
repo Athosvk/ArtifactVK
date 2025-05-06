@@ -32,4 +32,5 @@ class App
     Semaphore &m_ImageAvailable;
     Semaphore &m_RenderFinished;
     uint32_t m_CurrentFrameIndex = 0;
+    Swapchain &m_Swapchain;
 };

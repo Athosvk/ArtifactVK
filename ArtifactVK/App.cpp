@@ -23,10 +23,10 @@ App::App()
       m_RenderFullscreen(LoadShaderPipeline(m_VulkanInstance.GetActiveDevice(), m_MainPass)),
       m_SwapchainFramebuffers(m_VulkanInstance.GetActiveDevice().CreateSwapchainFramebuffers(m_MainPass)),
       m_GraphicsCommandBuffer(m_VulkanInstance.GetActiveDevice().CreateGraphicsCommandBufferPool().CreateCommandBuffer()),
-      m_ImageAvailable(m_VulkanInstance.GetActiveDevice().CreateSemaphore()),
-      m_RenderFinished(m_VulkanInstance.GetActiveDevice().CreateSemaphore())
+      m_ImageAvailable(m_VulkanInstance.GetActiveDevice().CreateDeviceSemaphore()),
+      m_RenderFinished(m_VulkanInstance.GetActiveDevice().CreateDeviceSemaphore()),
+      m_Swapchain(m_VulkanInstance.GetActiveDevice().GetSwapchain())
 {
-    
 }
 
 App::~App()
@@ -57,9 +57,12 @@ void App::RecordCommandBuffer()
     // not do that and wait at the end of a frame (this seems much more sane). Uncomment
     // this if it doesn't work.
     // m_CommandBufferInFlightFence.Wait();
+    m_Swapchain.AcquireNext(m_ImageAvailable);
     m_GraphicsCommandBuffer.Begin();
     m_GraphicsCommandBuffer.Draw(m_SwapchainFramebuffers.GetCurrent(), m_MainPass, m_RenderFullscreen);
     Fence& inFlight = m_GraphicsCommandBuffer.End(std::span{ &m_ImageAvailable, 1 }, std::span{ &m_RenderFinished, 1 }, 
         m_VulkanInstance.GetActiveDevice().GetGraphicsQueue());
-    inFlight.Wait();
+    
+    m_Swapchain.Present(std::span{&m_ImageAvailable, 1});
+    inFlight.WaitAndReset();
 }
