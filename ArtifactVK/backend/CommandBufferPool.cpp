@@ -15,7 +15,7 @@ CommandBuffer::CommandBuffer(VkCommandBuffer &&commandBuffer, VkDevice device) :
 
 CommandBuffer::~CommandBuffer()
 {
-    assert(m_InFlight.QuerySignaled() && "Attempting to delete a command buffer that is still in flight."
+    assert(m_InFlight.QueryStatus() != FenceStatus::UnsignaledOrReset && "Attempting to delete a command buffer that is still in flight."
         "Wait for the returned fence in `CommandBuffer::End`");
 }
 
