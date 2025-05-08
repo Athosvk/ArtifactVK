@@ -140,19 +140,22 @@ CommandBufferPool::~CommandBufferPool()
     vkDestroyCommandPool(m_Device, m_CommandBufferPool, nullptr);
 }
 
-CommandBuffer &CommandBufferPool::CreateCommandBuffer()
+std::vector<std::reference_wrapper<CommandBuffer>> CommandBufferPool::CreateCommandBuffers(uint32_t count)
 {
     VkCommandBufferAllocateInfo allocationInfo{};
     allocationInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    allocationInfo.commandBufferCount = 1;
+    allocationInfo.commandBufferCount = count;
     allocationInfo.commandPool = m_CommandBufferPool;
     allocationInfo.level = VkCommandBufferLevel::VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 
-    VkCommandBuffer commandBuffer;
+    std::vector<VkCommandBuffer> commandBuffers;
+    commandBuffers.reserve(count);
 
-    if (vkAllocateCommandBuffers(m_Device, &allocationInfo, &commandBuffer) != VkResult::VK_SUCCESS)
+    if (vkAllocateCommandBuffers(m_Device, &allocationInfo, commandBuffers.data()) != VkResult::VK_SUCCESS)
     {
         throw std::runtime_error("Failed to allocate command buffer");
     }
-    return m_CommandBuffers.emplace_back(std::move(commandBuffer), m_Device);
+    
+    auto startNewCommandbuffers = m_CommandBuffers.insert(m_CommandBuffers.begin(), commandBuffers.begin(), commandBuffers.end());
+    return std::vector<std::reference_wrapper<CommandBuffer>>(startNewCommandbuffers, m_CommandBuffers.end());
 }

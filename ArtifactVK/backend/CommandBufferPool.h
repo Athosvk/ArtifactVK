@@ -2,6 +2,7 @@
 #include <vulkan/vulkan.h>
 #include <vector>
 #include <span>
+#include <functional>
 
 #include "Semaphore.h"
 #include "Fence.h"
@@ -51,7 +52,7 @@ class CommandBufferPool
     CommandBufferPool(CommandBufferPool &&other);
     ~CommandBufferPool();
     
-    CommandBuffer &CreateCommandBuffer();
+    std::vector<std::reference_wrapper<CommandBuffer>> CreateCommandBuffers(uint32_t count);
   private:
     VkDevice m_Device;
     VkCommandPool m_CommandBufferPool;

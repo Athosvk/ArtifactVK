@@ -4,12 +4,15 @@
 #include <cstdlib>
 #include <iostream>
 #include <stdexcept>
+#include <functional>
 
 #include "backend/VulkanInstance.h"
 #include "backend/Window.h"
 #include "backend/Pipeline.h"
 #include "backend/RenderPass.h"
 #include "backend/Swapchain.h"
+
+const uint32_t MAX_FRAMES_IN_FLIGHT = 2;
 
 class App
 {
@@ -28,9 +31,9 @@ class App
     RenderPass m_MainPass;
     RasterPipeline m_RenderFullscreen;
     const SwapchainFramebuffer& m_SwapchainFramebuffers;
-    CommandBuffer &m_GraphicsCommandBuffer;
-    Semaphore &m_ImageAvailable;
-    Semaphore &m_RenderFinished;
+    std::vector<std::reference_wrapper<CommandBuffer>> m_GraphicsCommandBuffers;
+    std::vector<std::reference_wrapper<Semaphore>> m_ImageAvailable;
+    std::vector<std::reference_wrapper<Semaphore>> m_RenderFinished;
     uint32_t m_CurrentFrameIndex = 0;
     Swapchain &m_Swapchain;
 };
