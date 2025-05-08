@@ -9,6 +9,7 @@
 #include "backend/Window.h"
 #include "backend/Pipeline.h"
 #include "backend/RenderPass.h"
+#include "backend/Swapchain.h"
 
 class App
 {
@@ -20,15 +21,16 @@ class App
 
   private:
     RasterPipeline LoadShaderPipeline(LogicalVulkanDevice &vulkanDevice, const RenderPass& renderPass) const;
-    void RecordCommandBuffer(uint32_t swapchainImageIndex);
+    void RecordCommandBuffer();
 
     Window m_Window;
     VulkanInstance m_VulkanInstance;
     RenderPass m_MainPass;
     RasterPipeline m_RenderFullscreen;
-    std::span<Framebuffer> m_SwapchainFramebuffers;
+    const SwapchainFramebuffer& m_SwapchainFramebuffers;
     CommandBuffer &m_GraphicsCommandBuffer;
     Semaphore &m_ImageAvailable;
     Semaphore &m_RenderFinished;
-    Fence &m_CommandBufferInFlightFence;
+    uint32_t m_CurrentFrameIndex = 0;
+    Swapchain &m_Swapchain;
 };

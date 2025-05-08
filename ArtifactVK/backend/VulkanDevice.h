@@ -38,13 +38,15 @@ class LogicalVulkanDevice
     LogicalVulkanDevice(LogicalVulkanDevice &&other);
     ~LogicalVulkanDevice();
 
-    void CreateSwapchain(GLFWwindow& window, const VulkanSurface& surface);
+    void WaitForIdle() const;
+    Swapchain& CreateSwapchain(GLFWwindow& window, const VulkanSurface& surface);
+    Swapchain &GetSwapchain();
     RasterPipeline CreateRasterPipeline(RasterPipelineBuilder &&pipelineBuilder, const RenderPass& renderPass);
     RenderPass CreateRenderPass();
-    std::span<Framebuffer> CreateSwapchainFramebuffers(const RenderPass &renderpass);
+    const SwapchainFramebuffer& CreateSwapchainFramebuffers(const RenderPass &renderpass);
     CommandBufferPool &CreateGraphicsCommandBufferPool();
-    Semaphore &CreateSemaphore();
-    Fence &CreateFence();
+    Semaphore &CreateDeviceSemaphore();
+    VkQueue GetGraphicsQueue() const;
   private:
     ShaderModule LoadShaderModule(const std::filesystem::path &filename);
     static std::vector<VkDeviceQueueCreateInfo> GetQueueCreateInfos(const VulkanDevice &physicalDevice);
@@ -57,10 +59,13 @@ class LogicalVulkanDevice
     VkQueue m_GraphicsQueue;
     VkQueue m_PresentQueue;
     std::optional<Swapchain> m_Swapchain = std::nullopt;
-    std::vector<Framebuffer> m_Framebuffers;
-    std::vector<CommandBufferPool> m_CommandBufferPools;
-    std::vector<Semaphore> m_Semaphores;
-    std::vector<Fence> m_Fences;
+    std::vector<std::unique_ptr<CommandBufferPool>> m_CommandBufferPools;
+    // TODO: Don't hold the semaphores here (unless for pooling).
+    // Let objects logically decide if they need to provide one.
+    std::vector<std::unique_ptr<Semaphore>> m_Semaphores;
+    // TODO: Manage this better using a delete queue/stack so that 
+    // this doesn't have to manually manage these handles
+    std::unordered_map<VkRenderPass, SwapchainFramebuffer> m_SwapchainFramebuffers;
 };
 
 class VulkanDevice

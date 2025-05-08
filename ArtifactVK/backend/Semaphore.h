@@ -9,6 +9,8 @@ class Semaphore
     Semaphore(Semaphore && other);
     ~Semaphore();
 
+    VkSemaphore Get() const;
+
   private:
     VkSemaphore m_Semaphore;
     VkDevice m_Device;

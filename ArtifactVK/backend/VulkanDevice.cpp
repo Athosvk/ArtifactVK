@@ -152,7 +152,12 @@ VkExtent2D LogicalVulkanDevice::SelectSwapchainExtent(GLFWwindow& window) const
     }
 }
 
-void LogicalVulkanDevice::CreateSwapchain(GLFWwindow& window, const VulkanSurface& surface)
+void LogicalVulkanDevice::WaitForIdle() const
+{
+    vkDeviceWaitIdle(m_Device);
+}
+
+Swapchain &LogicalVulkanDevice::CreateSwapchain(GLFWwindow &window, const VulkanSurface &surface)
 {
     auto maxImageCount = m_PhysicalDevice.GetSurfaceProperties().Capabilities.maxImageCount == 0 ? std::numeric_limits<uint32_t>::max()
                              : m_PhysicalDevice.GetSurfaceProperties().Capabilities.maxImageCount;
@@ -165,7 +170,13 @@ void LogicalVulkanDevice::CreateSwapchain(GLFWwindow& window, const VulkanSurfac
             maxImageCount)
     };
        
-    m_Swapchain.emplace(Swapchain(createInfo, surface.Get(), m_Device, m_PhysicalDevice));
+    return m_Swapchain.emplace(Swapchain(createInfo, surface.Get(), m_Device, m_PhysicalDevice, m_PresentQueue));
+}
+
+Swapchain &LogicalVulkanDevice::GetSwapchain()
+{
+    assert(m_Swapchain.has_value() && "Need an active swapchain. Create one through CreateSwapchain");
+    return *m_Swapchain;
 }
 
 ShaderModule LogicalVulkanDevice::LoadShaderModule(const std::filesystem::path &filename)
@@ -397,7 +408,10 @@ LogicalVulkanDevice::LogicalVulkanDevice(const VulkanDevice &physicalDevice, con
 LogicalVulkanDevice::LogicalVulkanDevice(LogicalVulkanDevice &&other)
     : m_Device(std::exchange(other.m_Device, VK_NULL_HANDLE)), m_PhysicalDevice(other.m_PhysicalDevice),
       m_GraphicsQueue(other.m_GraphicsQueue), m_PresentQueue(other.m_PresentQueue),
-      m_Swapchain(std::move(other.m_Swapchain))
+      m_Swapchain(std::move(other.m_Swapchain)), 
+      m_CommandBufferPools(std::move(other.m_CommandBufferPools)),
+      m_Semaphores(std::move(other.m_Semaphores)),
+      m_SwapchainFramebuffers(std::move(other.m_SwapchainFramebuffers))
 {
 }
 
@@ -411,10 +425,12 @@ LogicalVulkanDevice::~LogicalVulkanDevice()
     // Explicitly order destruction of vulkan objects
     // Prior to swapchain destruction, since framebuffers may be 
     // to swapchain images
-    m_Framebuffers.clear();
+    m_SwapchainFramebuffers.clear();
 
     m_Swapchain.reset();
     m_CommandBufferPools.clear();
+    m_Semaphores.clear();
+
     std::condition_variable destroyed;
     std::mutex destroyMutex;
     std::thread destroyThread([this, &destroyed, &destroyMutex] {
@@ -445,12 +461,10 @@ RenderPass LogicalVulkanDevice::CreateRenderPass()
     return RenderPass(m_Device, RenderPassCreateInfo{ attachmentDescription });
 }
 
-std::span<Framebuffer> LogicalVulkanDevice::CreateSwapchainFramebuffers(const RenderPass &renderpass)
+const SwapchainFramebuffer& LogicalVulkanDevice::CreateSwapchainFramebuffers(const RenderPass &renderpass)
 {
-    assert(m_Swapchain.has_value());
-    std::vector<Framebuffer> framebuffers = m_Swapchain->CreateFramebuffersFor(renderpass);
-    std::move(framebuffers.begin(), framebuffers.end(), std::back_inserter(m_Framebuffers));
-    return std::span{m_Framebuffers.end() - framebuffers.size(), m_Framebuffers.end() };
+    assert(m_Swapchain.has_value() && "No swapchain to create framebuffers for");
+    return m_SwapchainFramebuffers.emplace(renderpass.Get(), m_Swapchain->CreateFramebuffersFor(renderpass)).first->second;
 }
 
 CommandBufferPool &LogicalVulkanDevice::CreateGraphicsCommandBufferPool()
@@ -461,17 +475,17 @@ CommandBufferPool &LogicalVulkanDevice::CreateGraphicsCommandBufferPool()
 
     CommandBufferPoolCreateInfo createInfo{VkCommandPoolCreateFlagBits::VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
                                            familyIndices.GraphicsFamilyIndex.value()};
-    return m_CommandBufferPools.emplace_back(m_Device, createInfo);
+    return *m_CommandBufferPools.emplace_back(std::make_unique<CommandBufferPool>(m_Device, createInfo));
 }
 
-Semaphore &LogicalVulkanDevice::CreateSemaphore()
+Semaphore &LogicalVulkanDevice::CreateDeviceSemaphore()
 {
-    return m_Semaphores.emplace_back(m_Device);
+    return *m_Semaphores.emplace_back(std::make_unique<Semaphore>(m_Device));
 }
 
-Fence &LogicalVulkanDevice::CreateFence()
+VkQueue LogicalVulkanDevice::GetGraphicsQueue() const
 {
-    return m_Fences.emplace_back(m_Device);
+    return m_GraphicsQueue;
 }
 
 std::vector<VkDeviceQueueCreateInfo> LogicalVulkanDevice::GetQueueCreateInfos(const VulkanDevice &physicalDevice)

@@ -24,3 +24,12 @@ Semaphore::~Semaphore()
         vkDestroySemaphore(m_Device, m_Semaphore, nullptr);
     }
 }
+
+VkSemaphore Semaphore::Get() const
+{
+    if (m_Semaphore == VK_NULL_HANDLE)
+    {
+        throw std::runtime_error("Not a valid handle");
+    }
+    return m_Semaphore;
+}
