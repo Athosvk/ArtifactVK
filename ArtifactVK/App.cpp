@@ -23,8 +23,8 @@ App::App()
       m_RenderFullscreen(LoadShaderPipeline(m_VulkanInstance.GetActiveDevice(), m_MainPass)),
       m_SwapchainFramebuffers(m_VulkanInstance.GetActiveDevice().CreateSwapchainFramebuffers(m_MainPass)),
       m_GraphicsCommandBuffers(m_VulkanInstance.GetActiveDevice().CreateGraphicsCommandBufferPool().CreateCommandBuffers(2)),
-      m_ImageAvailable(m_VulkanInstance.GetActiveDevice().CreateDeviceSemaphore()),
-      m_RenderFinished(m_VulkanInstance.GetActiveDevice().CreateDeviceSemaphore()),
+      m_ImageAvailable(CreateSemaphorePerInFlightFrame()),
+      m_RenderFinished(CreateSemaphorePerInFlightFrame()),
       m_Swapchain(m_VulkanInstance.GetActiveDevice().GetSwapchain())
 {
 }
@@ -65,4 +65,14 @@ void App::RecordCommandBuffer()
     
     m_Swapchain.Present(std::span{&m_ImageAvailable, 1});
     inFlight.WaitAndReset();
+}
+
+std::vector<std::reference_wrapper<Semaphore>> App::CreateSemaphorePerInFlightFrame()
+{
+    std::vector<std::reference_wrapper<Semaphore>> semaphores;
+    for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
+    {
+        semaphores.emplace_back(m_VulkanInstance.GetActiveDevice().CreateDeviceSemaphore());
+    }
+    return semaphores;
 }
