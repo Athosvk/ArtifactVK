@@ -28,7 +28,7 @@ struct CommandBuffer
 
   public:
     CommandBuffer(VkCommandBuffer &&commandBuffer, VkDevice device);
-    CommandBuffer(CommandBuffer &&) = default;
+    CommandBuffer(CommandBuffer && other);
     ~CommandBuffer();
 
     void Begin();
@@ -38,10 +38,11 @@ struct CommandBuffer
   private:
     void Reset();
 
+    bool m_Moved = false;
     VkCommandBuffer m_CommandBuffer;
     // TODO: Pool these fences in the CommandBufferPool
     Fence m_InFlight;
-    CommandBufferStatus m_Status;
+    CommandBufferStatus m_Status = CommandBufferStatus::Reset;
 };
 
 class CommandBufferPool
