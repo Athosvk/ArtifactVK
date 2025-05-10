@@ -27,7 +27,8 @@ Fence::Fence(VkDevice device, bool startSignaled) : m_Device(device)
     }
 }
 
-Fence::Fence(Fence &&other) : m_Device(other.m_Device), m_Fence(std::exchange(other.m_Fence, VK_NULL_HANDLE))
+Fence::Fence(Fence &&other)
+    : m_Device(other.m_Device), m_Fence(std::exchange(other.m_Fence, VK_NULL_HANDLE)), m_Status(other.m_Status)
 {
 
 }
