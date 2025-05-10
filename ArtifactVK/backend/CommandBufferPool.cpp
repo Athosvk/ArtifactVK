@@ -156,6 +156,10 @@ std::vector<std::reference_wrapper<CommandBuffer>> CommandBufferPool::CreateComm
         throw std::runtime_error("Failed to allocate command buffer");
     }
     
-    auto startNewCommandbuffers = m_CommandBuffers.insert(m_CommandBuffers.begin(), commandBuffers.begin(), commandBuffers.end());
-    return std::vector<std::reference_wrapper<CommandBuffer>>(startNewCommandbuffers, m_CommandBuffers.end());
+    for (auto&& vkCommandBuffer : commandBuffers)
+    {
+        m_CommandBuffers.emplace_back(CommandBuffer(std::move(vkCommandBuffer), m_Device));
+    }
+    
+    return std::vector<std::reference_wrapper<CommandBuffer>>(m_CommandBuffers.begin(), m_CommandBuffers.end());
 }
