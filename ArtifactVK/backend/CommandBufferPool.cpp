@@ -29,6 +29,15 @@ CommandBuffer::~CommandBuffer()
     }
 }
 
+void CommandBuffer::WaitFence()
+{
+    // No use in waitiung for a fence that cannot possibly have been signaled
+    if (m_Status == CommandBufferStatus::Submitted) 
+    {
+        m_InFlight.WaitAndReset();
+    }
+}
+
 void CommandBuffer::Begin()
 {
     assert(m_InFlight.WasReset() && "Attempting to begin a command buffer that may still be in flight. Wait for the returned fence");

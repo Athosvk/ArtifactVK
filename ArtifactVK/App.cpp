@@ -29,6 +29,10 @@ App::App()
 
 App::~App()
 {
+    for (auto &perFrameState : m_PerFrameState)
+    {
+        perFrameState.CommandBuffer.WaitFence();
+    }
     glfwTerminate();
 }
 
@@ -51,18 +55,14 @@ RasterPipeline App::LoadShaderPipeline(LogicalVulkanDevice &vulkanDevice, const 
 
 void App::RecordFrame(PerFrameState& state)
 {
-    // TODO?: The tutorial says to do this and start the fence signaled, but we could just...
-    // not do that and wait at the end of a frame (this seems much more sane). Uncomment
-    // this if it doesn't work.
-    // m_CommandBufferInFlightFence.Wait();
+    state.CommandBuffer.WaitFence();
     m_Swapchain.AcquireNext(state.ImageAvailable);
     state.CommandBuffer.Begin();
     state.CommandBuffer.Draw(m_SwapchainFramebuffers.GetCurrent(), m_MainPass, m_RenderFullscreen);
-    Fence& inFlight = state.CommandBuffer.End(std::span{ &state.ImageAvailable, 1 }, std::span{ &state.RenderFinished, 1 }, 
+    state.CommandBuffer.End(std::span{ &state.ImageAvailable, 1 }, std::span{ &state.RenderFinished, 1 }, 
         m_VulkanInstance.GetActiveDevice().GetGraphicsQueue());
     
     m_Swapchain.Present(std::span{&state.RenderFinished, 1});
-    inFlight.WaitAndReset();
 }
 
 std::vector<std::reference_wrapper<Semaphore>> App::CreateSemaphorePerInFlightFrame()
