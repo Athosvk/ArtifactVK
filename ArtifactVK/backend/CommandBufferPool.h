@@ -2,6 +2,7 @@
 #include <vulkan/vulkan.h>
 #include <vector>
 #include <span>
+#include <functional>
 
 #include "Semaphore.h"
 #include "Fence.h"
@@ -27,9 +28,10 @@ struct CommandBuffer
 
   public:
     CommandBuffer(VkCommandBuffer &&commandBuffer, VkDevice device);
-    CommandBuffer(CommandBuffer &&) = default;
+    CommandBuffer(CommandBuffer && other);
     ~CommandBuffer();
 
+    void WaitFence();
     void Begin();
     void Draw(const Framebuffer& frameBuffer, const RenderPass& renderPass, const RasterPipeline& pipeline);
     Fence& End(std::span<Semaphore> waitSemaphores, std::span<Semaphore> signalSemaphores, VkQueue queue);
@@ -37,10 +39,11 @@ struct CommandBuffer
   private:
     void Reset();
 
+    bool m_Moved = false;
     VkCommandBuffer m_CommandBuffer;
     // TODO: Pool these fences in the CommandBufferPool
     Fence m_InFlight;
-    CommandBufferStatus m_Status;
+    CommandBufferStatus m_Status = CommandBufferStatus::Reset;
 };
 
 class CommandBufferPool
@@ -51,7 +54,7 @@ class CommandBufferPool
     CommandBufferPool(CommandBufferPool &&other);
     ~CommandBufferPool();
     
-    CommandBuffer &CreateCommandBuffer();
+    std::vector<std::reference_wrapper<CommandBuffer>> CreateCommandBuffers(uint32_t count);
   private:
     VkDevice m_Device;
     VkCommandPool m_CommandBufferPool;

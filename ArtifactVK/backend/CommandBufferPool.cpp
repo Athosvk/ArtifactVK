@@ -13,15 +13,34 @@ CommandBuffer::CommandBuffer(VkCommandBuffer &&commandBuffer, VkDevice device) :
 {
 }
 
+CommandBuffer::CommandBuffer(CommandBuffer &&other)
+    : m_CommandBuffer(other.m_CommandBuffer), m_InFlight(std::move(other.m_InFlight)), m_Status(other.m_Status)
+{
+    other.m_Moved = true;
+}
+
 CommandBuffer::~CommandBuffer()
 {
-    assert(m_InFlight.QueryStatus() != FenceStatus::UnsignaledOrReset && "Attempting to delete a command buffer that is still in flight."
-        "Wait for the returned fence in `CommandBuffer::End`");
+    if (!m_Moved)
+    {
+        assert(m_InFlight.QueryStatus() != FenceStatus::UnsignaledOrReset &&
+               "Attempting to delete a command buffer that is still in flight."
+               "Wait for the returned fence in `CommandBuffer::End`");
+    }
+}
+
+void CommandBuffer::WaitFence()
+{
+    // No use in waitiung for a fence that cannot possibly have been signaled
+    if (m_Status == CommandBufferStatus::Submitted) 
+    {
+        m_InFlight.WaitAndReset();
+    }
 }
 
 void CommandBuffer::Begin()
 {
-    assert(m_InFlight.WasReset() && "Attempting to begin a command buffer that may still be in fligh. Wait for the returned fence");
+    assert(m_InFlight.WasReset() && "Attempting to begin a command buffer that may still be in flight. Wait for the returned fence");
     if (m_Status == CommandBufferStatus::Submitted)
     {
         // Reset in case this command buffer was previously submitted
@@ -140,19 +159,25 @@ CommandBufferPool::~CommandBufferPool()
     vkDestroyCommandPool(m_Device, m_CommandBufferPool, nullptr);
 }
 
-CommandBuffer &CommandBufferPool::CreateCommandBuffer()
+std::vector<std::reference_wrapper<CommandBuffer>> CommandBufferPool::CreateCommandBuffers(uint32_t count)
 {
     VkCommandBufferAllocateInfo allocationInfo{};
     allocationInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    allocationInfo.commandBufferCount = 1;
+    allocationInfo.commandBufferCount = count;
     allocationInfo.commandPool = m_CommandBufferPool;
     allocationInfo.level = VkCommandBufferLevel::VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 
-    VkCommandBuffer commandBuffer;
+    std::vector<VkCommandBuffer> commandBuffers(count);
 
-    if (vkAllocateCommandBuffers(m_Device, &allocationInfo, &commandBuffer) != VkResult::VK_SUCCESS)
+    if (vkAllocateCommandBuffers(m_Device, &allocationInfo, commandBuffers.data()) != VkResult::VK_SUCCESS)
     {
         throw std::runtime_error("Failed to allocate command buffer");
     }
-    return m_CommandBuffers.emplace_back(std::move(commandBuffer), m_Device);
+    
+    for (auto&& vkCommandBuffer : commandBuffers)
+    {
+        m_CommandBuffers.emplace_back(CommandBuffer(std::move(vkCommandBuffer), m_Device));
+    }
+    
+    return std::vector<std::reference_wrapper<CommandBuffer>>(m_CommandBuffers.begin(), m_CommandBuffers.end());
 }

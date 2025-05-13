@@ -22,15 +22,17 @@ App::App()
       m_MainPass(m_VulkanInstance.GetActiveDevice().CreateRenderPass()),
       m_RenderFullscreen(LoadShaderPipeline(m_VulkanInstance.GetActiveDevice(), m_MainPass)),
       m_SwapchainFramebuffers(m_VulkanInstance.GetActiveDevice().CreateSwapchainFramebuffers(m_MainPass)),
-      m_GraphicsCommandBuffer(m_VulkanInstance.GetActiveDevice().CreateGraphicsCommandBufferPool().CreateCommandBuffer()),
-      m_ImageAvailable(m_VulkanInstance.GetActiveDevice().CreateDeviceSemaphore()),
-      m_RenderFinished(m_VulkanInstance.GetActiveDevice().CreateDeviceSemaphore()),
+      m_PerFrameState(CreatePerFrameState(m_VulkanInstance.GetActiveDevice())),
       m_Swapchain(m_VulkanInstance.GetActiveDevice().GetSwapchain())
 {
 }
 
 App::~App()
 {
+    for (auto &perFrameState : m_PerFrameState)
+    {
+        perFrameState.CommandBuffer.WaitFence();
+    }
     glfwTerminate();
 }
 
@@ -40,7 +42,7 @@ void App::RunRenderLoop()
     {
         std::cout << "\nRendering frame " << m_CurrentFrameIndex << "\n"; 
         m_Window.PollEvents();
-        RecordCommandBuffer();
+        RecordFrame(m_PerFrameState[m_CurrentFrameIndex % 2]);
         m_CurrentFrameIndex += 1;
     }
 }
@@ -51,18 +53,37 @@ RasterPipeline App::LoadShaderPipeline(LogicalVulkanDevice &vulkanDevice, const 
         RasterPipelineBuilder("spirv/triangle.vert.spv", "spirv/triangle.frag.spv"), renderPass);
 }
 
-void App::RecordCommandBuffer()
+void App::RecordFrame(PerFrameState& state)
 {
-    // TODO?: The tutorial says to do this and start the fence signaled, but we could just...
-    // not do that and wait at the end of a frame (this seems much more sane). Uncomment
-    // this if it doesn't work.
-    // m_CommandBufferInFlightFence.Wait();
-    m_Swapchain.AcquireNext(m_ImageAvailable);
-    m_GraphicsCommandBuffer.Begin();
-    m_GraphicsCommandBuffer.Draw(m_SwapchainFramebuffers.GetCurrent(), m_MainPass, m_RenderFullscreen);
-    Fence& inFlight = m_GraphicsCommandBuffer.End(std::span{ &m_ImageAvailable, 1 }, std::span{ &m_RenderFinished, 1 }, 
+    state.CommandBuffer.WaitFence();
+    m_Swapchain.AcquireNext(state.ImageAvailable);
+    state.CommandBuffer.Begin();
+    state.CommandBuffer.Draw(m_SwapchainFramebuffers.GetCurrent(), m_MainPass, m_RenderFullscreen);
+    state.CommandBuffer.End(std::span{ &state.ImageAvailable, 1 }, std::span{ &state.RenderFinished, 1 }, 
         m_VulkanInstance.GetActiveDevice().GetGraphicsQueue());
     
-    m_Swapchain.Present(std::span{&m_ImageAvailable, 1});
-    inFlight.WaitAndReset();
+    m_Swapchain.Present(std::span{&state.RenderFinished, 1});
+}
+
+std::vector<std::reference_wrapper<Semaphore>> App::CreateSemaphorePerInFlightFrame()
+{
+    std::vector<std::reference_wrapper<Semaphore>> semaphores;
+    for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
+    {
+        semaphores.emplace_back(m_VulkanInstance.GetActiveDevice().CreateDeviceSemaphore());
+    }
+    return semaphores;
+}
+
+std::vector<PerFrameState> App::CreatePerFrameState(LogicalVulkanDevice &vulkanDevice)
+{
+    std::vector<PerFrameState> perFrameState;
+    auto commandBuffers = vulkanDevice.CreateGraphicsCommandBufferPool().CreateCommandBuffers(MAX_FRAMES_IN_FLIGHT);
+    perFrameState.reserve(MAX_FRAMES_IN_FLIGHT);
+    for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
+    {
+        perFrameState.emplace_back(PerFrameState{vulkanDevice.CreateDeviceSemaphore(),
+                                                 vulkanDevice.CreateDeviceSemaphore(), commandBuffers[i]});
+    }
+    return perFrameState;
 }
