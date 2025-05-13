@@ -6,6 +6,7 @@
 #include <cassert>
 #include <vulkan/vulkan.h>
 #include <stdexcept>
+#include <iostream>
 
 CommandBuffer::CommandBuffer(VkCommandBuffer &&commandBuffer, VkDevice device) : m_CommandBuffer(commandBuffer), 
     // Start the Fence signaled so that we can query for correct usage prior to beginning the command buffer (again)
@@ -29,17 +30,19 @@ CommandBuffer::~CommandBuffer()
     }
 }
 
-void CommandBuffer::WaitFence()
+void CommandBuffer::WaitFence(bool log)
 {
-    // No use in waitiung for a fence that cannot possibly have been signaled
-    if (m_Status == CommandBufferStatus::Submitted) 
+    // No use in waiting for a fence that cannot possibly have been signaled
+    if (m_Status != CommandBufferStatus::Reset) 
     {
         m_InFlight.WaitAndReset();
     }
 }
 
+// TODO: Consider doing begin on first command invocation
 void CommandBuffer::Begin()
 {
+    assert(m_Status == CommandBufferStatus::Recording && "Command buffer already recording");
     assert(m_InFlight.WasReset() && "Attempting to begin a command buffer that may still be in flight. Wait for the returned fence");
     if (m_Status == CommandBufferStatus::Submitted)
     {
@@ -54,11 +57,13 @@ void CommandBuffer::Begin()
     {
         throw std::runtime_error("Could not begin command buffer");
     }
+    m_Status = CommandBufferStatus::Recording;
 }
 
 void CommandBuffer::Draw(const Framebuffer& frameBuffer, const RenderPass& renderPass, 
     const RasterPipeline& pipeline)
 {
+    assert(m_Status == CommandBufferStatus::Recording && "Calling draw before starting recording of command buffer");
     VkRenderPassBeginInfo renderPassBeginInfo{};
     renderPassBeginInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
     renderPassBeginInfo.framebuffer = frameBuffer.Get();
@@ -79,8 +84,8 @@ void CommandBuffer::Draw(const Framebuffer& frameBuffer, const RenderPass& rende
     vkCmdEndRenderPass(m_CommandBuffer);
 }
 
-
-Fence& CommandBuffer::End(std::span<Semaphore> waitSemaphores, std::span<Semaphore> signalSemaphores, VkQueue queue)
+// TODO: Bind command buffer to a queue at creation time
+Fence& CommandBuffer::End(std::span<Semaphore> waitSemaphores, std::span<Semaphore> signalSemaphores, Queue queue)
 {
     if (vkEndCommandBuffer(m_CommandBuffer) != VK_SUCCESS)
     {
@@ -121,7 +126,8 @@ Fence& CommandBuffer::End(std::span<Semaphore> waitSemaphores, std::span<Semapho
 
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &m_CommandBuffer;
-    if (vkQueueSubmit(queue, 1, &submitInfo, m_InFlight.Get()) != VkResult::VK_SUCCESS) {
+    if (vkQueueSubmit(queue.Get(), 1, &submitInfo, m_InFlight.Get()) != VkResult::VK_SUCCESS)
+    {
         throw std::runtime_error("Faied to submit cmd buffer to queue");
     }
     m_Status = CommandBufferStatus::Submitted;

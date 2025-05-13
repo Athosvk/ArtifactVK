@@ -15,6 +15,7 @@
 #include "CommandBufferPool.h"
 #include "Fence.h"
 #include "Semaphore.h"
+#include "Queue.h"
 
 class VulkanDevice;
 struct GLFWwindow;
@@ -46,7 +47,7 @@ class LogicalVulkanDevice
     const SwapchainFramebuffer& CreateSwapchainFramebuffers(const RenderPass &renderpass);
     CommandBufferPool &CreateGraphicsCommandBufferPool();
     Semaphore &CreateDeviceSemaphore();
-    VkQueue GetGraphicsQueue() const;
+    Queue GetGraphicsQueue() const;
   private:
     ShaderModule LoadShaderModule(const std::filesystem::path &filename);
     static std::vector<VkDeviceQueueCreateInfo> GetQueueCreateInfos(const VulkanDevice &physicalDevice);
@@ -56,8 +57,8 @@ class LogicalVulkanDevice
 
     VkDevice m_Device;
     const VulkanDevice &m_PhysicalDevice;
-    VkQueue m_GraphicsQueue;
-    VkQueue m_PresentQueue;
+    std::optional<Queue> m_GraphicsQueue;
+    std::optional<Queue> m_PresentQueue;
     std::optional<Swapchain> m_Swapchain = std::nullopt;
     std::vector<std::unique_ptr<CommandBufferPool>> m_CommandBufferPools;
     // TODO: Don't hold the semaphores here (unless for pooling).
