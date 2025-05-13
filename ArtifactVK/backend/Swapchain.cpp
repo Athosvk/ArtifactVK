@@ -175,7 +175,7 @@ void Swapchain::Present(std::span<Semaphore> waitSempahores) const
     // TODO: Remove ugly allocation
     for (const auto &semaphore : waitSempahores)
     {
-        //semaphoreHandles.emplace_back(semaphore.Get());
+        semaphoreHandles.emplace_back(semaphore.Get());
     }
 
     VkPresentInfoKHR presentInfo{};
