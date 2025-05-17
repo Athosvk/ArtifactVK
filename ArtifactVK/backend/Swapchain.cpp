@@ -94,7 +94,6 @@ Swapchain::Swapchain(Swapchain &&other)
       m_CurrentImageIndex(std::move(other.m_CurrentImageIndex)),
       m_TargetPresentQueue(std::move(other.m_TargetPresentQueue))
 {
-    std::cout << "Move swapchain";
 }
 
 Swapchain::~Swapchain()
