@@ -6,6 +6,7 @@
 
 #include "Semaphore.h"
 #include "Fence.h"
+#include "Queue.h"
 
 class Framebuffer;
 class RenderPass;
@@ -31,11 +32,14 @@ struct CommandBuffer
     CommandBuffer(CommandBuffer && other);
     ~CommandBuffer();
 
-    void WaitFence();
+    void WaitFence(bool log = false);
     void Begin();
     void Draw(const Framebuffer& frameBuffer, const RenderPass& renderPass, const RasterPipeline& pipeline);
-    Fence& End(std::span<Semaphore> waitSemaphores, std::span<Semaphore> signalSemaphores, VkQueue queue);
-
+    Fence& End(std::span<Semaphore> waitSemaphores, std::span<Semaphore> signalSemaphores, Queue queue);
+    VkFence Get() const
+    {
+        return m_InFlight.Get();
+    }
   private:
     void Reset();
 

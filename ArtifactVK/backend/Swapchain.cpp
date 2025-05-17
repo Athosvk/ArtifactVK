@@ -10,7 +10,7 @@
 
 Swapchain::Swapchain(const SwapchainCreateInfo &createInfo, const VkSurfaceKHR &surface, VkDevice device,
                      const VulkanDevice &vulkanDevice,
-                     VkQueue targetPresentQueue)
+                     Queue targetPresentQueue)
     : m_Device(device), m_OriginalCreateInfo(createInfo), m_TargetPresentQueue(targetPresentQueue)
 {
     VkSwapchainCreateInfoKHR vkCreateInfo{};
@@ -94,7 +94,6 @@ Swapchain::Swapchain(Swapchain &&other)
       m_CurrentImageIndex(std::move(other.m_CurrentImageIndex)),
       m_TargetPresentQueue(std::move(other.m_TargetPresentQueue))
 {
-    std::cout << "Move swapchain";
 }
 
 Swapchain::~Swapchain()
@@ -189,7 +188,7 @@ void Swapchain::Present(std::span<Semaphore> waitSempahores) const
     presentInfo.pImageIndices = &m_CurrentImageIndex;
     presentInfo.pResults = nullptr;
 
-    VkResult result = vkQueuePresentKHR(m_TargetPresentQueue, &presentInfo);
+    VkResult result = vkQueuePresentKHR(m_TargetPresentQueue.Get(), &presentInfo);
     if (result == VkResult::VK_SUBOPTIMAL_KHR)
     {
         std::cout << "Recreate swapchain is optimal here";

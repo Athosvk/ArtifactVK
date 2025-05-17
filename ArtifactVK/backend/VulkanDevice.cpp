@@ -170,7 +170,8 @@ Swapchain &LogicalVulkanDevice::CreateSwapchain(GLFWwindow &window, const Vulkan
             maxImageCount)
     };
        
-    return m_Swapchain.emplace(Swapchain(createInfo, surface.Get(), m_Device, m_PhysicalDevice, m_PresentQueue));
+    assert(m_PresentQueue.has_value() && "Device has no present queue to present swapchain to");
+    return m_Swapchain.emplace(Swapchain(createInfo, surface.Get(), m_Device, m_PhysicalDevice, m_PresentQueue.value()));
 }
 
 Swapchain &LogicalVulkanDevice::GetSwapchain()
@@ -400,9 +401,9 @@ LogicalVulkanDevice::LogicalVulkanDevice(const VulkanDevice &physicalDevice, con
     {
         throw std::runtime_error("Could not create logical device");
     }
-    // Assertion: physical device has a graphics family queue
-    vkGetDeviceQueue(m_Device, physicalDevice.GetQueueFamilies().GraphicsFamilyIndex.value(), 0, &m_GraphicsQueue);
-    vkGetDeviceQueue(m_Device, physicalDevice.GetQueueFamilies().PresentFamilyIndex.value(), 0, &m_PresentQueue);
+    // Assertion: physical device has a graphics and present family queue
+    m_GraphicsQueue = Queue(m_Device, physicalDevice.GetQueueFamilies().GraphicsFamilyIndex.value());
+    m_PresentQueue = Queue(m_Device, physicalDevice.GetQueueFamilies().PresentFamilyIndex.value());
 }
 
 LogicalVulkanDevice::LogicalVulkanDevice(LogicalVulkanDevice &&other)
@@ -421,6 +422,15 @@ LogicalVulkanDevice::~LogicalVulkanDevice()
     {
         // Moved
         return;
+    }
+    if (m_PresentQueue.has_value())
+    {
+        // The present queue may still be in the process of performing
+        // present calls. There is no sema or fence to wait for these explicitly,
+        // so just wait for all its operations to complete.
+        // This is valid for other queues, but we should prefer explicitly
+        // ordering through semaphores and fences for specific operations instead.
+        m_PresentQueue->Wait();
     }
     // Explicitly order destruction of vulkan objects
     // Prior to swapchain destruction, since framebuffers may be 
@@ -483,9 +493,10 @@ Semaphore &LogicalVulkanDevice::CreateDeviceSemaphore()
     return *m_Semaphores.emplace_back(std::make_unique<Semaphore>(m_Device));
 }
 
-VkQueue LogicalVulkanDevice::GetGraphicsQueue() const
+Queue LogicalVulkanDevice::GetGraphicsQueue() const
 {
-    return m_GraphicsQueue;
+    assert(m_GraphicsQueue.has_value() && "Device has no graphics queue");
+    return m_GraphicsQueue.value();
 }
 
 std::vector<VkDeviceQueueCreateInfo> LogicalVulkanDevice::GetQueueCreateInfos(const VulkanDevice &physicalDevice)

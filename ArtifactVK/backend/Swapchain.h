@@ -4,6 +4,7 @@
 #include <span>
 
 #include "Framebuffer.h"
+#include "Queue.h"
 
 class VulkanDevice;
 class RenderPass;
@@ -35,7 +36,7 @@ class SwapchainFramebuffer
 class Swapchain
 {
   public:
-    Swapchain(const SwapchainCreateInfo& createInfo, const VkSurfaceKHR& surface, VkDevice device, const VulkanDevice& vulkanDevice, VkQueue targetPresentQueue);
+    Swapchain(const SwapchainCreateInfo& createInfo, const VkSurfaceKHR& surface, VkDevice device, const VulkanDevice& vulkanDevice, Queue targetPresentQueue);
     Swapchain(const Swapchain &other) = delete;
     Swapchain(Swapchain &&other);
     ~Swapchain();
@@ -54,5 +55,5 @@ class Swapchain
     std::vector<VkImage> m_Images;
     std::vector<VkImageView> m_ImageViews;
     uint32_t m_CurrentImageIndex;
-    VkQueue m_TargetPresentQueue;
+    Queue m_TargetPresentQueue;
 };

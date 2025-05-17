@@ -31,7 +31,7 @@ App::~App()
 {
     for (auto &perFrameState : m_PerFrameState)
     {
-        perFrameState.CommandBuffer.WaitFence();
+        perFrameState.CommandBuffer.WaitFence(true);
     }
     glfwTerminate();
 }
@@ -63,6 +63,8 @@ void App::RecordFrame(PerFrameState& state)
         m_VulkanInstance.GetActiveDevice().GetGraphicsQueue());
     
     m_Swapchain.Present(std::span{&state.RenderFinished, 1});
+    std::cout << "Rendering with semaphores imageAvailable: " << state.ImageAvailable.Get() << " and renderFinished "
+              << state.RenderFinished.Get() << "\n";
 }
 
 std::vector<std::reference_wrapper<Semaphore>> App::CreateSemaphorePerInFlightFrame()
