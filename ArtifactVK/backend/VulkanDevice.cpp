@@ -423,6 +423,15 @@ LogicalVulkanDevice::~LogicalVulkanDevice()
         // Moved
         return;
     }
+    if (m_PresentQueue.has_value())
+    {
+        // The present queue may still be in the process of performing
+        // present calls. There is no sema or fence to wait for these explicitly,
+        // so just wait for all its operations to complete.
+        // This is valid for other queues, but we should prefer explicitly
+        // ordering through semaphores and fences for specific operations instead.
+        m_PresentQueue->Wait();
+    }
     // Explicitly order destruction of vulkan objects
     // Prior to swapchain destruction, since framebuffers may be 
     // to swapchain images

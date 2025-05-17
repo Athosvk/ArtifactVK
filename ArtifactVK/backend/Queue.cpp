@@ -9,3 +9,8 @@ VkQueue Queue::Get() const
 {
     return m_Queue;
 }
+
+void Queue::Wait() const
+{
+    vkQueueWaitIdle(m_Queue);
+}

@@ -7,6 +7,7 @@ class Queue
     Queue(VkDevice device, uint32_t queueIndex);
 
     VkQueue Get() const;
+    void Wait() const;
   private:
     VkQueue m_Queue;
 };
