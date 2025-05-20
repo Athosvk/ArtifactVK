@@ -131,7 +131,7 @@ void Swapchain::Present(std::span<Semaphore> waitSempahores) const
     }
 }
 
-SwapchainFramebuffer Swapchain::Recreate(SwapchainFramebuffer &&oldFramebuffers)
+SwapchainFramebuffer Swapchain::Recreate(SwapchainFramebuffer&& oldFramebuffers, VkExtent2D newExtents)
 {
     const RenderPass &renderPass = oldFramebuffers.GetRenderPass();
     // Explicitly destruct
@@ -139,11 +139,13 @@ SwapchainFramebuffer Swapchain::Recreate(SwapchainFramebuffer &&oldFramebuffers)
         SwapchainFramebuffer oldFramebuffers = std::move(oldFramebuffers);
     }
     Destroy();
-    Create(m_OriginalCreateInfo, m_Surface, m_Device, m_VulkanDevice);
+    SwapchainCreateInfo createInfo = m_OriginalCreateInfo;
+    createInfo.Extents = newExtents;
+    Create(createInfo, m_Surface, m_Device, m_VulkanDevice);
     return CreateFramebuffersFor(renderPass);
 }
 
-VkSwapchainKHR Swapchain::Create(const SwapchainCreateInfo &createInfo, const VkSurfaceKHR &surface, VkDevice device,
+void Swapchain::Create(const SwapchainCreateInfo &createInfo, const VkSurfaceKHR &surface, VkDevice device,
                                  const VulkanDevice &vulkanDevice)
 {
     VkSwapchainCreateInfoKHR vkCreateInfo{};

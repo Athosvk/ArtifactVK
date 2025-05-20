@@ -53,9 +53,9 @@ class Swapchain
     
     VkImageView AcquireNext(const Semaphore& toSignal);
     void Present(std::span<Semaphore> waitSempahores) const;
-    SwapchainFramebuffer Recreate(SwapchainFramebuffer&& oldFramebuffers);
+    SwapchainFramebuffer Recreate(SwapchainFramebuffer&& oldFramebuffers, VkExtent2D newExtents);
   private:
-    VkSwapchainKHR Create(const SwapchainCreateInfo& createInfo, const VkSurfaceKHR& surface, VkDevice device, const VulkanDevice& vulkanDevice);
+    void Create(const SwapchainCreateInfo& createInfo, const VkSurfaceKHR& surface, VkDevice device, const VulkanDevice& vulkanDevice);
     void Destroy();
 
     VkSwapchainKHR m_Swapchain = VK_NULL_HANDLE;

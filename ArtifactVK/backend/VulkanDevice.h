@@ -49,6 +49,7 @@ class LogicalVulkanDevice
     Semaphore &CreateDeviceSemaphore();
     Queue GetGraphicsQueue() const;
   private:
+    void RecreateSwapchain();
     ShaderModule LoadShaderModule(const std::filesystem::path &filename);
     static std::vector<VkDeviceQueueCreateInfo> GetQueueCreateInfos(const VulkanDevice &physicalDevice);
     VkSurfaceFormatKHR SelectSurfaceFormat() const;

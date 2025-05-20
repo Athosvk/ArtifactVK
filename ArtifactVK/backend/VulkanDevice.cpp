@@ -180,6 +180,12 @@ Swapchain &LogicalVulkanDevice::GetSwapchain()
     return *m_Swapchain;
 }
 
+void LogicalVulkanDevice::RecreateSwapchain()
+{
+    // TODO: Remove this through proper syncing with old swapchain
+    WaitForIdle();
+}
+
 ShaderModule LogicalVulkanDevice::LoadShaderModule(const std::filesystem::path &filename)
 {
     return ShaderModule::LoadFromDisk(m_Device, filename);
