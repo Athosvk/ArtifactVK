@@ -66,7 +66,7 @@ class LogicalVulkanDevice
     std::vector<std::unique_ptr<Semaphore>> m_Semaphores;
     // TODO: Manage this better using a delete queue/stack so that 
     // this doesn't have to manually manage these handles
-    std::unordered_map<VkRenderPass, SwapchainFramebuffer> m_SwapchainFramebuffers;
+    std::unordered_map<VkRenderPass, std::unique_ptr<SwapchainFramebuffer>> m_SwapchainFramebuffers;
 };
 
 class VulkanDevice

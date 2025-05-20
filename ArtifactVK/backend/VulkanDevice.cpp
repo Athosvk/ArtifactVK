@@ -474,7 +474,7 @@ RenderPass LogicalVulkanDevice::CreateRenderPass()
 const SwapchainFramebuffer& LogicalVulkanDevice::CreateSwapchainFramebuffers(const RenderPass &renderpass)
 {
     assert(m_Swapchain.has_value() && "No swapchain to create framebuffers for");
-    return m_SwapchainFramebuffers.emplace(renderpass.Get(), m_Swapchain->CreateFramebuffersFor(renderpass)).first->second;
+    return *m_SwapchainFramebuffers.emplace(renderpass.Get(), std::make_unique<SwapchainFramebuffer>(m_Swapchain->CreateFramebuffersFor(renderpass))).first->second;
 }
 
 CommandBufferPool &LogicalVulkanDevice::CreateGraphicsCommandBufferPool()
