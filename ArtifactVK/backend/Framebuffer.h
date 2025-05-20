@@ -20,6 +20,9 @@ class Framebuffer
     Framebuffer(Framebuffer &&other);
     ~Framebuffer();
 
+    Framebuffer &operator=(const Framebuffer &other) = delete;
+    Framebuffer &operator=(Framebuffer &&other);
+
     VkFramebuffer Get() const;
     Viewport GetViewport() const;
   private:
