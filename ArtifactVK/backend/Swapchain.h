@@ -22,15 +22,20 @@ struct SwapchainCreateInfo
 class SwapchainFramebuffer
 {
   public:
-    SwapchainFramebuffer(const Swapchain& swapchain, std::vector<Framebuffer>&& m_SwapchainFramebuffers);
+    SwapchainFramebuffer(const Swapchain& swapchain, std::vector<Framebuffer>&& m_SwapchainFramebuffers, const RenderPass& renderPass);
     SwapchainFramebuffer(const SwapchainFramebuffer&) = delete;
     SwapchainFramebuffer(SwapchainFramebuffer&&) = default;
 
+    SwapchainFramebuffer &operator=(SwapchainFramebuffer &&other) = default;
+    SwapchainFramebuffer &operator=(const SwapchainFramebuffer& other) = delete;
+
     const Framebuffer& GetCurrent() const;
+    const RenderPass &GetRenderPass() const;
   private:
     // TODO: Make this a weak ptr for validation reasons?
     const Swapchain &m_Swapchain;
     std::vector<Framebuffer> m_Framebuffers;
+    const RenderPass &m_Renderpass;
 };
 
 class Swapchain
@@ -48,12 +53,18 @@ class Swapchain
     
     VkImageView AcquireNext(const Semaphore& toSignal);
     void Present(std::span<Semaphore> waitSempahores) const;
+    SwapchainFramebuffer Recreate(SwapchainFramebuffer&& oldFramebuffers);
   private:
+    VkSwapchainKHR Create(const SwapchainCreateInfo& createInfo, const VkSurfaceKHR& surface, VkDevice device, const VulkanDevice& vulkanDevice);
+    void Destroy();
+
     VkSwapchainKHR m_Swapchain = VK_NULL_HANDLE;
+    VkSurfaceKHR m_Surface;
     VkDevice m_Device;
+    const VulkanDevice& m_VulkanDevice;
     SwapchainCreateInfo m_OriginalCreateInfo;
     std::vector<VkImage> m_Images;
     std::vector<VkImageView> m_ImageViews;
-    uint32_t m_CurrentImageIndex;
+    uint32_t m_CurrentImageIndex = 0xFFFFFFFF;
     Queue m_TargetPresentQueue;
 };
