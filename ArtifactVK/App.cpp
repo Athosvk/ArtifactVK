@@ -56,13 +56,13 @@ RasterPipeline App::LoadShaderPipeline(LogicalVulkanDevice &vulkanDevice, const 
 void App::RecordFrame(PerFrameState& state)
 {
     state.CommandBuffer.WaitFence();
-    m_Swapchain.AcquireNext(state.ImageAvailable);
+    auto state = m_Swapchain.AcquireNext(state.ImageAvailable);
     state.CommandBuffer.Begin();
     state.CommandBuffer.Draw(m_SwapchainFramebuffers.GetCurrent(), m_MainPass, m_RenderFullscreen);
     state.CommandBuffer.End(std::span{ &state.ImageAvailable, 1 }, std::span{ &state.RenderFinished, 1 }, 
         m_VulkanInstance.GetActiveDevice().GetGraphicsQueue());
     
-    m_Swapchain.Present(std::span{&state.RenderFinished, 1});
+    auto state = m_Swapchain.Present(std::span{&state.RenderFinished, 1});
     std::cout << "Rendering with semaphores imageAvailable: " << state.ImageAvailable.Get() << " and renderFinished "
               << state.RenderFinished.Get() << "\n";
 }

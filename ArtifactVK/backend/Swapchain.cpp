@@ -7,6 +7,7 @@
 #include "VulkanSurface.h"
 #include "VulkanDevice.h"
 #include "Semaphore.h"
+#include <cassert>
 
 Swapchain::Swapchain(const SwapchainCreateInfo &createInfo, const VkSurfaceKHR &surface, VkDevice device,
                      const VulkanDevice &vulkanDevice,
@@ -14,7 +15,8 @@ Swapchain::Swapchain(const SwapchainCreateInfo &createInfo, const VkSurfaceKHR &
     : m_Device(device), 
     m_VulkanDevice(vulkanDevice),
     m_OriginalCreateInfo(createInfo), 
-    m_TargetPresentQueue(targetPresentQueue)
+    m_TargetPresentQueue(targetPresentQueue), 
+    m_State(SwapchainState::Optimal)
 {
     Create(createInfo, surface, device, vulkanDevice);
 }
@@ -28,7 +30,8 @@ Swapchain::Swapchain(Swapchain &&other)
       m_Images(std::move(other.m_Images)),
       m_ImageViews(std::move(other.m_ImageViews)),
       m_CurrentImageIndex(std::move(other.m_CurrentImageIndex)),
-      m_TargetPresentQueue(std::move(other.m_TargetPresentQueue))
+      m_TargetPresentQueue(std::move(other.m_TargetPresentQueue)), 
+      m_State(std::move(other.m_State))
 {
 }
 
@@ -86,21 +89,22 @@ SwapchainFramebuffer Swapchain::CreateFramebuffersFor(const RenderPass &renderPa
 
 uint32_t Swapchain::CurrentIndex() const
 {
+    assert(m_State != SwapchainState::OutOfDate);
     return m_CurrentImageIndex;
 }
 
-VkImageView Swapchain::AcquireNext(const Semaphore& toSignal)
+SwapchainState Swapchain::AcquireNext(const Semaphore& toSignal)
 {
-    if (vkAcquireNextImageKHR(m_Device, m_Swapchain, std::numeric_limits<uint64_t>::max(), toSignal.Get(),
-                              VK_NULL_HANDLE, &m_CurrentImageIndex) != VkResult::VK_SUCCESS)
-    {
-        throw std::runtime_error("Acquire next image failed");
-    }
-    return m_ImageViews[m_CurrentImageIndex];
+    assert(m_State != SwapchainState::OutOfDate);
+    auto result = vkAcquireNextImageKHR(m_Device, m_Swapchain, std::numeric_limits<uint64_t>::max(), toSignal.Get(),
+                                        VK_NULL_HANDLE, &m_CurrentImageIndex);
+    m_State = MapResultToState(result);
+    return m_State;
 }
 
-void Swapchain::Present(std::span<Semaphore> waitSempahores) const
+SwapchainState Swapchain::Present(std::span<Semaphore> waitSempahores)
 {
+    assert(m_State != SwapchainState::OutOfDate);
     std::vector<VkSemaphore> semaphoreHandles;
     semaphoreHandles.reserve(waitSempahores.size());
     // TODO: Remove ugly allocation
@@ -121,14 +125,8 @@ void Swapchain::Present(std::span<Semaphore> waitSempahores) const
     presentInfo.pResults = nullptr;
 
     VkResult result = vkQueuePresentKHR(m_TargetPresentQueue.Get(), &presentInfo);
-    if (result == VkResult::VK_SUBOPTIMAL_KHR)
-    {
-        std::cout << "Recreate swapchain is optimal here";
-    }
-    else if (result != VkResult::VK_SUCCESS)
-    {
-        throw std::runtime_error("Could not present to target queue");
-    }
+    m_State = MapResultToState(result);
+    return m_State;
 }
 
 SwapchainFramebuffer Swapchain::Recreate(SwapchainFramebuffer&& oldFramebuffers, VkExtent2D newExtents)
@@ -143,6 +141,11 @@ SwapchainFramebuffer Swapchain::Recreate(SwapchainFramebuffer&& oldFramebuffers,
     createInfo.Extents = newExtents;
     Create(createInfo, m_Surface, m_Device, m_VulkanDevice);
     return CreateFramebuffersFor(renderPass);
+}
+
+SwapchainState Swapchain::GetCurrentState() const
+{
+    return m_State;
 }
 
 void Swapchain::Create(const SwapchainCreateInfo &createInfo, const VkSurfaceKHR &surface, VkDevice device,
@@ -227,6 +230,21 @@ void Swapchain::Destroy()
 		vkDestroyImageView(m_Device, imageView, nullptr);
 	}
 	vkDestroySwapchainKHR(m_Device, m_Swapchain, nullptr);
+}
+
+SwapchainState Swapchain::MapResultToState(VkResult result) const
+{
+    switch (result)
+    {
+    case VkResult::VK_SUBOPTIMAL_KHR:
+        return SwapchainState::Suboptimal;    
+    case VkResult::VK_ERROR_OUT_OF_DATE_KHR:
+        return SwapchainState::OutOfDate;
+    case VkResult::VK_SUCCESS:
+        return SwapchainState::Optimal;
+    default:
+        throw std::runtime_error("Swapchain in invalid state or TDR");
+    }
 }
 
 SwapchainFramebuffer::SwapchainFramebuffer(const Swapchain& swapchain, std::vector<Framebuffer>&& swapchainFramebuffers, const RenderPass& renderPass) : 
