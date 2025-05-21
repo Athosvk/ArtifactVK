@@ -48,6 +48,7 @@ class LogicalVulkanDevice
     CommandBufferPool &CreateGraphicsCommandBufferPool();
     Semaphore &CreateDeviceSemaphore();
     Queue GetGraphicsQueue() const;
+    void AcquireNext(const Semaphore& toSignal);
   private:
     void RecreateSwapchain();
     ShaderModule LoadShaderModule(const std::filesystem::path &filename);
@@ -57,6 +58,7 @@ class LogicalVulkanDevice
     VkExtent2D SelectSwapchainExtent(GLFWwindow& window) const;
 
     VkDevice m_Device;
+    GLFWwindow &m_Window;
     const VulkanDevice &m_PhysicalDevice;
     std::optional<Queue> m_GraphicsQueue;
     std::optional<Queue> m_PresentQueue;
@@ -67,7 +69,7 @@ class LogicalVulkanDevice
     std::vector<std::unique_ptr<Semaphore>> m_Semaphores;
     // TODO: Manage this better using a delete queue/stack so that 
     // this doesn't have to manually manage these handles
-    std::unordered_map<VkRenderPass, std::unique_ptr<SwapchainFramebuffer>> m_SwapchainFramebuffers;
+    std::vector<std::unique_ptr<SwapchainFramebuffer>> m_SwapchainFramebuffers;
 };
 
 class VulkanDevice

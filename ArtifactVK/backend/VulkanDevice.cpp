@@ -184,6 +184,8 @@ void LogicalVulkanDevice::RecreateSwapchain()
 {
     // TODO: Remove this through proper syncing with old swapchain
     WaitForIdle();
+
+    m_Swapchain->Recreate(m_SwapchainFramebuffers, SelectSwapchainExtent(m_Window));
 }
 
 ShaderModule LogicalVulkanDevice::LoadShaderModule(const std::filesystem::path &filename)
@@ -375,7 +377,7 @@ QueueFamilyIndices VulkanDevice::FindQueueFamilies(
 LogicalVulkanDevice::LogicalVulkanDevice(const VulkanDevice &physicalDevice, const VkPhysicalDevice &physicalDeviceHandle,
                         const std::vector<const char *> &validationLayers, std::vector<EDeviceExtension> extensions,
                         const DeviceExtensionMapping &deviceExtensionMapping, GLFWwindow& window)
-    : m_PhysicalDevice(physicalDevice)
+    : m_PhysicalDevice(physicalDevice), m_Window(window)
 {
     assert(physicalDevice.IsValid() && "Need a valid physical device");
 
@@ -418,7 +420,7 @@ LogicalVulkanDevice::LogicalVulkanDevice(LogicalVulkanDevice &&other)
       m_Swapchain(std::move(other.m_Swapchain)), 
       m_CommandBufferPools(std::move(other.m_CommandBufferPools)),
       m_Semaphores(std::move(other.m_Semaphores)),
-      m_SwapchainFramebuffers(std::move(other.m_SwapchainFramebuffers))
+      m_SwapchainFramebuffers(std::move(other.m_SwapchainFramebuffers)), m_Window(other.m_Window)
 {
 }
 
@@ -480,7 +482,7 @@ RenderPass LogicalVulkanDevice::CreateRenderPass()
 const SwapchainFramebuffer& LogicalVulkanDevice::CreateSwapchainFramebuffers(const RenderPass &renderpass)
 {
     assert(m_Swapchain.has_value() && "No swapchain to create framebuffers for");
-    return *m_SwapchainFramebuffers.emplace(renderpass.Get(), std::make_unique<SwapchainFramebuffer>(m_Swapchain->CreateFramebuffersFor(renderpass))).first->second;
+    return *m_SwapchainFramebuffers.emplace_back(std::make_unique<SwapchainFramebuffer>(m_Swapchain->CreateFramebuffersFor(renderpass)));
 }
 
 CommandBufferPool &LogicalVulkanDevice::CreateGraphicsCommandBufferPool()
@@ -503,6 +505,15 @@ Queue LogicalVulkanDevice::GetGraphicsQueue() const
 {
     assert(m_GraphicsQueue.has_value() && "Device has no graphics queue");
     return m_GraphicsQueue.value();
+}
+
+void LogicalVulkanDevice::AcquireNext(const Semaphore& toSignal)
+{
+    assert(m_Swapchain.has_value());
+    while (m_Swapchain->AcquireNext(toSignal) == SwapchainState::OutOfDate)
+    {
+        RecreateSwapchain();
+    }
 }
 
 std::vector<VkDeviceQueueCreateInfo> LogicalVulkanDevice::GetQueueCreateInfos(const VulkanDevice &physicalDevice)

@@ -129,18 +129,28 @@ SwapchainState Swapchain::Present(std::span<Semaphore> waitSempahores)
     return m_State;
 }
 
-SwapchainFramebuffer Swapchain::Recreate(SwapchainFramebuffer&& oldFramebuffers, VkExtent2D newExtents)
+void Swapchain::Recreate(std::vector<std::unique_ptr<SwapchainFramebuffer>>& oldFramebuffers, VkExtent2D newExtents)
 {
-    const RenderPass &renderPass = oldFramebuffers.GetRenderPass();
-    // Explicitly destruct
+    std::vector<const RenderPass *> renderPasses;
+    renderPasses.reserve(oldFramebuffers.size());
+    for (const auto &framebuffer : oldFramebuffers)
     {
-        SwapchainFramebuffer oldFramebuffers = std::move(oldFramebuffers);
+        renderPasses.emplace_back(&framebuffer->GetRenderPass());
+    }
+    for (auto& swapchainFramebuffer : oldFramebuffers)
+    {
+        swapchainFramebuffer.reset();
     }
     Destroy();
     SwapchainCreateInfo createInfo = m_OriginalCreateInfo;
     createInfo.Extents = newExtents;
     Create(createInfo, m_Surface, m_Device, m_VulkanDevice);
-    return CreateFramebuffersFor(renderPass);
+
+    for (size_t i = 0; i < renderPasses.size(); i++) 
+    {
+        (* oldFramebuffers[i]) = std::move(CreateFramebuffersFor(*renderPasses[i]));
+    }
+    return ;
 }
 
 SwapchainState Swapchain::GetCurrentState() const
@@ -252,7 +262,12 @@ SwapchainFramebuffer::SwapchainFramebuffer(const Swapchain& swapchain, std::vect
 {
 }
 
-const Framebuffer& SwapchainFramebuffer::GetCurrent() const
+SwapchainFramebuffer &SwapchainFramebuffer::operator=(SwapchainFramebuffer &&other)
+{
+    *this = std::move(other);
+}
+
+const Framebuffer &SwapchainFramebuffer::GetCurrent() const
 {
     return m_Framebuffers[m_Swapchain.CurrentIndex()];
 }

@@ -3,6 +3,7 @@
 #include <vector>
 #include <span>
 #include <optional>
+#include <memory>
 
 #include "Framebuffer.h"
 #include "Queue.h"
@@ -27,8 +28,7 @@ class SwapchainFramebuffer
     SwapchainFramebuffer(const SwapchainFramebuffer&) = delete;
     SwapchainFramebuffer(SwapchainFramebuffer&&) = default;
 
-    SwapchainFramebuffer &operator=(SwapchainFramebuffer &&other) = default;
-    SwapchainFramebuffer &operator=(const SwapchainFramebuffer& other) = delete;
+    SwapchainFramebuffer &operator=(SwapchainFramebuffer &&other);
 
     const Framebuffer& GetCurrent() const;
     const RenderPass &GetRenderPass() const;
@@ -65,7 +65,7 @@ class Swapchain
     // Callers should check that the SwapchainState != SwapchainState::OutOfDate
     [[nodiscard]] 
         SwapchainState Present(std::span<Semaphore> waitSempahores);
-    SwapchainFramebuffer Recreate(SwapchainFramebuffer&& oldFramebuffers, VkExtent2D newExtents);
+    void Recreate(std::vector<std::unique_ptr<SwapchainFramebuffer>>& oldFramebuffers, VkExtent2D newExtents);
     SwapchainState GetCurrentState() const;
   private:
     void Create(const SwapchainCreateInfo& createInfo, const VkSurfaceKHR& surface, VkDevice device, const VulkanDevice& vulkanDevice);
