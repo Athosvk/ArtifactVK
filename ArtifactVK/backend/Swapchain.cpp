@@ -148,9 +148,8 @@ void Swapchain::Recreate(std::vector<std::unique_ptr<SwapchainFramebuffer>>& old
 
     for (size_t i = 0; i < renderPasses.size(); i++) 
     {
-        (* oldFramebuffers[i]) = std::move(CreateFramebuffersFor(*renderPasses[i]));
+        (*oldFramebuffers[i]) = std::move(CreateFramebuffersFor(*renderPasses[i]));
     }
-    return ;
 }
 
 SwapchainState Swapchain::GetCurrentState() const
