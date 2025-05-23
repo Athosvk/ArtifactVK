@@ -146,7 +146,7 @@ void Swapchain::Recreate(std::vector<std::unique_ptr<SwapchainFramebuffer>>& old
     Destroy();
     SwapchainCreateInfo createInfo = m_OriginalCreateInfo;
     createInfo.Extents = newExtents;
-    Create(m_OriginalCreateInfo, m_Surface, m_Device, m_VulkanDevice, VK_NULL_HANDLE);
+    Create(createInfo, m_Surface, m_Device, m_VulkanDevice, VK_NULL_HANDLE);
 
     for (size_t i = 0; i < renderPasses.size(); i++) 
     {
