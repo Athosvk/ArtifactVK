@@ -49,6 +49,7 @@ class LogicalVulkanDevice
     Semaphore &CreateDeviceSemaphore();
     Queue GetGraphicsQueue() const;
     void AcquireNext(const Semaphore& toSignal);
+    void Present(std::span<Semaphore> waitSemaphores);
   private:
     void RecreateSwapchain();
     ShaderModule LoadShaderModule(const std::filesystem::path &filename);

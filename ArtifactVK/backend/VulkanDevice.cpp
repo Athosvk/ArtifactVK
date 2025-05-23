@@ -516,6 +516,15 @@ void LogicalVulkanDevice::AcquireNext(const Semaphore& toSignal)
     }
 }
 
+void LogicalVulkanDevice::Present(std::span<Semaphore> waitSemaphores)
+{
+    assert(m_Swapchain.has_value());
+    if (m_Swapchain->Present(waitSemaphores) != SwapchainState::Optimal)
+    {
+        RecreateSwapchain();
+    }
+}
+
 std::vector<VkDeviceQueueCreateInfo> LogicalVulkanDevice::GetQueueCreateInfos(const VulkanDevice &physicalDevice)
 {
     std::set<uint32_t> uniqueQueueIndices = physicalDevice.GetQueueFamilies().GetUniqueQueues();

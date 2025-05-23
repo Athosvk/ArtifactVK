@@ -55,14 +55,14 @@ RasterPipeline App::LoadShaderPipeline(LogicalVulkanDevice &vulkanDevice, const 
 
 void App::RecordFrame(PerFrameState& state)
 {
+    m_VulkanInstance.GetActiveDevice().AcquireNext(state.ImageAvailable);
     state.CommandBuffer.WaitFence();
     state.CommandBuffer.Begin();
     state.CommandBuffer.Draw(m_SwapchainFramebuffers.GetCurrent(), m_MainPass, m_RenderFullscreen);
     state.CommandBuffer.End(std::span{ &state.ImageAvailable, 1 }, std::span{ &state.RenderFinished, 1 }, 
         m_VulkanInstance.GetActiveDevice().GetGraphicsQueue());
     
-    auto swapChainState = m_Swapchain.Present(std::span{&state.RenderFinished, 1});
-    __noop(swapChainState);
+    m_VulkanInstance.GetActiveDevice().Present(std::span{&state.RenderFinished, 1});
 }
 
 std::vector<std::reference_wrapper<Semaphore>> App::CreateSemaphorePerInFlightFrame()
