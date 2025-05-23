@@ -53,4 +53,7 @@ VulkanInstance Window::CreateVulkanInstance(const InstanceCreateInfo &createInfo
 void Window::OnWindowResize(WindowResizeEvent resizeEvent)
 {
     m_LastWindowResizeEvent = resizeEvent;
+
+    std::cout << "Resize event size: " << resizeEvent.NewWidth << "," << resizeEvent.NewHeight
+              << "\n";
 }

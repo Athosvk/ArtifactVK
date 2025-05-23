@@ -93,7 +93,7 @@ class VulkanDevice
     LogicalVulkanDevice CreateLogicalDevice(const std::vector<const char *>& validationLayers,
                                             std::vector<EDeviceExtension> extensions, GLFWwindow& window);
 
-    const SurfaceProperties& GetSurfaceProperties() const;
+    SurfaceProperties GetSurfaceProperties() const;
   private:
     bool Validate(std::span<const EDeviceExtension> requiredExtensions) const;
     bool AllExtensionsAvailable(std::span<const EDeviceExtension> extensions) const;
@@ -110,5 +110,6 @@ class VulkanDevice
     VkPhysicalDeviceFeatures m_Features;
     SurfaceProperties m_SurfaceProperties;
     std::set<EDeviceExtension> m_AvailableExtensions;
+    std::optional<std::reference_wrapper<const VulkanSurface>> m_TargetSurface;
     bool m_Valid;
 };

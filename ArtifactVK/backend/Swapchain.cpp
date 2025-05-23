@@ -197,6 +197,8 @@ void Swapchain::Create(const SwapchainCreateInfo &createInfo, const VkSurfaceKHR
     vkCreateInfo.clipped = VK_TRUE;
     vkCreateInfo.oldSwapchain = oldSwapchain;
 
+    std::cout << "Create swap size: " << createInfo.Extents.width << "," << createInfo.Extents.height
+              << "\n";
     if (vkCreateSwapchainKHR(device, &vkCreateInfo, nullptr, &m_Swapchain) != VkResult::VK_SUCCESS)
     {
         throw std::runtime_error("Could not create swapchain");

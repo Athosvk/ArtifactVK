@@ -28,7 +28,8 @@ VulkanDevice::VulkanDevice(VkPhysicalDevice physicalDevice,
     : m_ExtensionMapping(extensionMapping), m_PhysicalDevice(physicalDevice),
       m_QueueFamilies(FindQueueFamilies(targetSurface)), m_Properties(QueryDeviceProperties()),
       m_Features(QueryDeviceFeatures()), m_SurfaceProperties(QuerySurfaceProperties(targetSurface)),
-      m_AvailableExtensions(QueryExtensions(extensionMapping)), m_Valid(Validate(requestedExtensions))
+      m_AvailableExtensions(QueryExtensions(extensionMapping)), m_Valid(Validate(requestedExtensions)),
+      m_TargetSurface(targetSurface)
 {
 }
 
@@ -70,9 +71,9 @@ LogicalVulkanDevice VulkanDevice::CreateLogicalDevice(const std::vector<const ch
     return LogicalVulkanDevice(*this, m_PhysicalDevice, validationLayers, extensions, m_ExtensionMapping, window);
 }
 
-const SurfaceProperties& VulkanDevice::GetSurfaceProperties() const
+SurfaceProperties VulkanDevice::GetSurfaceProperties() const
 {
-    return m_SurfaceProperties;
+    return QuerySurfaceProperties(m_TargetSurface);
 }
 
 VkPhysicalDeviceProperties VulkanDevice::QueryDeviceProperties() const
