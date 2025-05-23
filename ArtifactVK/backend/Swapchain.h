@@ -28,15 +28,15 @@ class SwapchainFramebuffer
     SwapchainFramebuffer(const SwapchainFramebuffer&) = delete;
     SwapchainFramebuffer(SwapchainFramebuffer&&) = default;
 
-    SwapchainFramebuffer &operator=(SwapchainFramebuffer &&other);
+    SwapchainFramebuffer &operator=(SwapchainFramebuffer &&other) = default;
 
     const Framebuffer& GetCurrent() const;
     const RenderPass &GetRenderPass() const;
   private:
     // TODO: Make this a weak ptr for validation reasons?
-    const Swapchain &m_Swapchain;
+    std::reference_wrapper<const Swapchain> m_Swapchain;
     std::vector<Framebuffer> m_Framebuffers;
-    const RenderPass &m_Renderpass;
+    std::reference_wrapper<const RenderPass> m_Renderpass;
 };
 
 enum class SwapchainState
@@ -64,11 +64,11 @@ class Swapchain
         SwapchainState AcquireNext(const Semaphore& toSignal);
     // Callers should check that the SwapchainState != SwapchainState::OutOfDate
     [[nodiscard]] 
-        SwapchainState Present(std::span<Semaphore> waitSempahores);
+        SwapchainState Present(std::span<Semaphore> waitSemaphores);
     void Recreate(std::vector<std::unique_ptr<SwapchainFramebuffer>>& oldFramebuffers, VkExtent2D newExtents);
     SwapchainState GetCurrentState() const;
   private:
-    void Create(const SwapchainCreateInfo& createInfo, const VkSurfaceKHR& surface, VkDevice device, const VulkanDevice& vulkanDevice);
+    void Create(const SwapchainCreateInfo& createInfo, const VkSurfaceKHR& surface, VkDevice device, const VulkanDevice& vulkanDevice, VkSwapchainKHR oldSwapchain);
     void Destroy();
     SwapchainState MapResultToState(VkResult result) const;
 

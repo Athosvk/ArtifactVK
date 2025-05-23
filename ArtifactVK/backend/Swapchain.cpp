@@ -9,6 +9,8 @@
 #include "Semaphore.h"
 #include <cassert>
 
+const static uint32_t InvalidImageIndex = 0xFFFFFFFF;
+
 Swapchain::Swapchain(const SwapchainCreateInfo &createInfo, const VkSurfaceKHR &surface, VkDevice device,
                      const VulkanDevice &vulkanDevice,
                      Queue targetPresentQueue)
@@ -18,7 +20,7 @@ Swapchain::Swapchain(const SwapchainCreateInfo &createInfo, const VkSurfaceKHR &
     m_TargetPresentQueue(targetPresentQueue), 
     m_State(SwapchainState::Optimal)
 {
-    Create(createInfo, surface, device, vulkanDevice);
+    Create(createInfo, surface, device, vulkanDevice, VK_NULL_HANDLE);
 }
 
 Swapchain::Swapchain(Swapchain &&other)
@@ -90,6 +92,7 @@ SwapchainFramebuffer Swapchain::CreateFramebuffersFor(const RenderPass &renderPa
 uint32_t Swapchain::CurrentIndex() const
 {
     assert(m_State != SwapchainState::OutOfDate);
+    assert(m_CurrentImageIndex != InvalidImageIndex && "Image index invalid, make sure you called AcquireNextImage");
     return m_CurrentImageIndex;
 }
 
@@ -104,6 +107,7 @@ SwapchainState Swapchain::AcquireNext(const Semaphore& toSignal)
 
 SwapchainState Swapchain::Present(std::span<Semaphore> waitSempahores)
 {
+    assert(m_CurrentImageIndex != InvalidImageIndex && "Image index invalid, make sure you called AcquireNextImage");
     assert(m_State != SwapchainState::OutOfDate);
     std::vector<VkSemaphore> semaphoreHandles;
     semaphoreHandles.reserve(waitSempahores.size());
@@ -126,6 +130,8 @@ SwapchainState Swapchain::Present(std::span<Semaphore> waitSempahores)
 
     VkResult result = vkQueuePresentKHR(m_TargetPresentQueue.Get(), &presentInfo);
     m_State = MapResultToState(result);
+    // Reset it so that we can assert `AcquireNextImage` has always been called
+    m_CurrentImageIndex = InvalidImageIndex;
     return m_State;
 }
 
@@ -144,11 +150,11 @@ void Swapchain::Recreate(std::vector<std::unique_ptr<SwapchainFramebuffer>>& old
     Destroy();
     SwapchainCreateInfo createInfo = m_OriginalCreateInfo;
     createInfo.Extents = newExtents;
-    Create(createInfo, m_Surface, m_Device, m_VulkanDevice);
+    Create(createInfo, m_Surface, m_Device, m_VulkanDevice, VK_NULL_HANDLE);
 
     for (size_t i = 0; i < renderPasses.size(); i++) 
     {
-        (*oldFramebuffers[i]) = std::move(CreateFramebuffersFor(*renderPasses[i]));
+        (*oldFramebuffers[i]) = CreateFramebuffersFor(*renderPasses[i]);
     }
 }
 
@@ -158,7 +164,7 @@ SwapchainState Swapchain::GetCurrentState() const
 }
 
 void Swapchain::Create(const SwapchainCreateInfo &createInfo, const VkSurfaceKHR &surface, VkDevice device,
-                                 const VulkanDevice &vulkanDevice)
+                                 const VulkanDevice &vulkanDevice, VkSwapchainKHR oldSwapchain)
 {
     VkSwapchainCreateInfoKHR vkCreateInfo{};
     vkCreateInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
@@ -193,7 +199,7 @@ void Swapchain::Create(const SwapchainCreateInfo &createInfo, const VkSurfaceKHR
     vkCreateInfo.compositeAlpha = VkCompositeAlphaFlagBitsKHR::VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
     vkCreateInfo.presentMode = createInfo.PresentMode;
     vkCreateInfo.clipped = VK_TRUE;
-    vkCreateInfo.oldSwapchain = VK_NULL_HANDLE;
+    vkCreateInfo.oldSwapchain = oldSwapchain;
 
     if (vkCreateSwapchainKHR(device, &vkCreateInfo, nullptr, &m_Swapchain) != VkResult::VK_SUCCESS)
     {
@@ -261,14 +267,9 @@ SwapchainFramebuffer::SwapchainFramebuffer(const Swapchain& swapchain, std::vect
 {
 }
 
-SwapchainFramebuffer &SwapchainFramebuffer::operator=(SwapchainFramebuffer &&other)
-{
-    *this = std::move(other);
-}
-
 const Framebuffer &SwapchainFramebuffer::GetCurrent() const
 {
-    return m_Framebuffers[m_Swapchain.CurrentIndex()];
+    return m_Framebuffers[m_Swapchain.get().CurrentIndex()];
 }
 
 const RenderPass &SwapchainFramebuffer::GetRenderPass() const
