@@ -42,7 +42,7 @@ void CommandBuffer::WaitFence(bool log)
 // TODO: Consider doing begin on first command invocation
 void CommandBuffer::Begin()
 {
-    assert(m_Status == CommandBufferStatus::Recording && "Command buffer already recording");
+    assert(m_Status != CommandBufferStatus::Recording && "Command buffer already recording");
     assert(m_InFlight.WasReset() && "Attempting to begin a command buffer that may still be in flight. Wait for the returned fence");
     if (m_Status == CommandBufferStatus::Submitted)
     {

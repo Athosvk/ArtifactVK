@@ -18,7 +18,7 @@ Swapchain::Swapchain(const SwapchainCreateInfo &createInfo, const VkSurfaceKHR &
     m_VulkanDevice(vulkanDevice),
     m_OriginalCreateInfo(createInfo), 
     m_TargetPresentQueue(targetPresentQueue), 
-    m_State(SwapchainState::Optimal)
+    m_State(SwapchainState::Optimal), m_Surface(surface)
 {
     Create(createInfo, surface, device, vulkanDevice, VK_NULL_HANDLE);
 }
@@ -143,14 +143,10 @@ void Swapchain::Recreate(std::vector<std::unique_ptr<SwapchainFramebuffer>>& old
     {
         renderPasses.emplace_back(&framebuffer->GetRenderPass());
     }
-    for (auto& swapchainFramebuffer : oldFramebuffers)
-    {
-        swapchainFramebuffer.reset();
-    }
     Destroy();
     SwapchainCreateInfo createInfo = m_OriginalCreateInfo;
     createInfo.Extents = newExtents;
-    Create(createInfo, m_Surface, m_Device, m_VulkanDevice, VK_NULL_HANDLE);
+    Create(m_OriginalCreateInfo, m_Surface, m_Device, m_VulkanDevice, VK_NULL_HANDLE);
 
     for (size_t i = 0; i < renderPasses.size(); i++) 
     {
@@ -244,7 +240,11 @@ void Swapchain::Destroy()
 	{
 		vkDestroyImageView(m_Device, imageView, nullptr);
 	}
+    m_ImageViews.clear();
+    m_Images.clear();
+    
 	vkDestroySwapchainKHR(m_Device, m_Swapchain, nullptr);
+    m_Swapchain = VK_NULL_HANDLE;
 }
 
 SwapchainState Swapchain::MapResultToState(VkResult result) const

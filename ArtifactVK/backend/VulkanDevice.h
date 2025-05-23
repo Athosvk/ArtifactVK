@@ -20,6 +20,7 @@
 class VulkanDevice;
 struct GLFWwindow;
 class ShaderModule;
+struct WindowResizeEvent;
 
 struct QueueFamilyIndices
 {
@@ -50,6 +51,7 @@ class LogicalVulkanDevice
     Queue GetGraphicsQueue() const;
     void AcquireNext(const Semaphore& toSignal);
     void Present(std::span<Semaphore> waitSemaphores);
+    void HandleResizeEvent(const WindowResizeEvent &resizeEvent);
   private:
     void RecreateSwapchain();
     ShaderModule LoadShaderModule(const std::filesystem::path &filename);
@@ -58,6 +60,7 @@ class LogicalVulkanDevice
     VkPresentModeKHR SelectPresentMode() const;
     VkExtent2D SelectSwapchainExtent(GLFWwindow& window) const;
 
+    bool m_ResizeQueued = false;
     VkDevice m_Device;
     GLFWwindow &m_Window;
     const VulkanDevice &m_PhysicalDevice;

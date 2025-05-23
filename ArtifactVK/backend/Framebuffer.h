@@ -21,7 +21,7 @@ class Framebuffer
     ~Framebuffer();
 
     Framebuffer &operator=(const Framebuffer &other) = delete;
-    Framebuffer &operator=(Framebuffer &&other);
+    Framebuffer &operator=(Framebuffer &&other) = default;
 
     VkFramebuffer Get() const;
     Viewport GetViewport() const;

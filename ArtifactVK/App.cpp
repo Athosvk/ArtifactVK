@@ -41,7 +41,12 @@ void App::RunRenderLoop()
     while (!m_Window.ShouldClose())
     {
         std::cout << "\nRendering frame " << m_CurrentFrameIndex << "\n"; 
-        m_Window.PollEvents();
+        auto resizeEvent = m_Window.PollEvents();
+        if (resizeEvent.has_value())
+        {
+            m_VulkanInstance.GetActiveDevice().HandleResizeEvent(*resizeEvent);
+        }
+
         RecordFrame(m_PerFrameState[m_CurrentFrameIndex % 2]);
         m_CurrentFrameIndex += 1;
     }
@@ -56,6 +61,7 @@ RasterPipeline App::LoadShaderPipeline(LogicalVulkanDevice &vulkanDevice, const 
 void App::RecordFrame(PerFrameState& state)
 {
     m_VulkanInstance.GetActiveDevice().AcquireNext(state.ImageAvailable);
+    // TODO: Can probably be moved to CommandBuffer->Begin()
     state.CommandBuffer.WaitFence();
     state.CommandBuffer.Begin();
     state.CommandBuffer.Draw(m_SwapchainFramebuffers.GetCurrent(), m_MainPass, m_RenderFullscreen);

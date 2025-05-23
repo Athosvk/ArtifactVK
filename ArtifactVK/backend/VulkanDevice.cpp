@@ -509,6 +509,13 @@ Queue LogicalVulkanDevice::GetGraphicsQueue() const
 
 void LogicalVulkanDevice::AcquireNext(const Semaphore& toSignal)
 {
+    // TODO: Ensure semaphores in correct state, or more properly,
+    // that we cannot have a recording cmd buffer at this time
+    if (m_ResizeQueued)
+    {
+        RecreateSwapchain();
+        m_ResizeQueued = false;
+    }
     assert(m_Swapchain.has_value());
     while (m_Swapchain->AcquireNext(toSignal) == SwapchainState::OutOfDate)
     {
@@ -523,6 +530,11 @@ void LogicalVulkanDevice::Present(std::span<Semaphore> waitSemaphores)
     {
         RecreateSwapchain();
     }
+}
+
+void LogicalVulkanDevice::HandleResizeEvent(const WindowResizeEvent &)
+{
+    RecreateSwapchain();
 }
 
 std::vector<VkDeviceQueueCreateInfo> LogicalVulkanDevice::GetQueueCreateInfos(const VulkanDevice &physicalDevice)

@@ -36,11 +36,6 @@ Framebuffer::~Framebuffer()
 	}
 }
 
-Framebuffer &Framebuffer::operator=(Framebuffer &&other)
-{
-    *this = std::move(other);
-}
-
 VkFramebuffer Framebuffer::Get() const
 {
     return m_Framebuffer;
