@@ -33,7 +33,7 @@ struct QueueFamilyIndices
 class LogicalVulkanDevice
 {
   public:
-    LogicalVulkanDevice(const VulkanDevice &physicalDevice, const VkPhysicalDevice &physicalDeviceHandle,
+    LogicalVulkanDevice(VulkanDevice &physicalDevice, const VkPhysicalDevice &physicalDeviceHandle,
                         const std::vector<const char *> &validationLayers, std::vector<EDeviceExtension> extensions,
                         const DeviceExtensionMapping &deviceExtensionMapping, GLFWwindow& window);
     LogicalVulkanDevice(const LogicalVulkanDevice &other) = delete;
@@ -53,17 +53,16 @@ class LogicalVulkanDevice
     void Present(std::span<Semaphore> waitSemaphores);
     void HandleResizeEvent(const WindowResizeEvent &resizeEvent);
   private:
-    void RecreateSwapchain();
+    void RecreateSwapchain(VkExtent2D newSize);
     ShaderModule LoadShaderModule(const std::filesystem::path &filename);
     static std::vector<VkDeviceQueueCreateInfo> GetQueueCreateInfos(const VulkanDevice &physicalDevice);
     VkSurfaceFormatKHR SelectSurfaceFormat() const;
     VkPresentModeKHR SelectPresentMode() const;
-    VkExtent2D SelectSwapchainExtent(GLFWwindow& window) const;
+    VkExtent2D SelectSwapchainExtent(GLFWwindow& window, const SurfaceProperties& surfaceProperties) const;
 
-    bool m_ResizeQueued = false;
     VkDevice m_Device;
     GLFWwindow &m_Window;
-    const VulkanDevice &m_PhysicalDevice;
+    VulkanDevice &m_PhysicalDevice;
     std::optional<Queue> m_GraphicsQueue;
     std::optional<Queue> m_PresentQueue;
     std::optional<Swapchain> m_Swapchain = std::nullopt;
@@ -74,6 +73,7 @@ class LogicalVulkanDevice
     // TODO: Manage this better using a delete queue/stack so that 
     // this doesn't have to manually manage these handles
     std::vector<std::unique_ptr<SwapchainFramebuffer>> m_SwapchainFramebuffers;
+    std::optional<VkExtent2D> m_LastUnhandledResize;
 };
 
 class VulkanDevice
@@ -93,7 +93,9 @@ class VulkanDevice
     LogicalVulkanDevice CreateLogicalDevice(const std::vector<const char *>& validationLayers,
                                             std::vector<EDeviceExtension> extensions, GLFWwindow& window);
 
-    SurfaceProperties GetSurfaceProperties() const;
+    // TODO: These are the cached values, but not neccessarily the latest. Need to requery this possibly
+    SurfaceProperties GetCachedSurfaceProperties() const;
+    SurfaceProperties QuerySurfaceProperties();
   private:
     bool Validate(std::span<const EDeviceExtension> requiredExtensions) const;
     bool AllExtensionsAvailable(std::span<const EDeviceExtension> extensions) const;

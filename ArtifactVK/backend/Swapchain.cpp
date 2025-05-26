@@ -144,9 +144,10 @@ void Swapchain::Recreate(std::vector<std::unique_ptr<SwapchainFramebuffer>>& old
         renderPasses.emplace_back(&framebuffer->GetRenderPass());
     }
     Destroy();
-    SwapchainCreateInfo createInfo = m_OriginalCreateInfo;
-    createInfo.Extents = newExtents;
-    Create(createInfo, m_Surface, m_Device, m_VulkanDevice, VK_NULL_HANDLE);
+    
+    // TODO: Maybe name this better or just implement this better altogether
+    m_OriginalCreateInfo.Extents = newExtents;
+    Create(m_OriginalCreateInfo, m_Surface, m_Device, m_VulkanDevice, VK_NULL_HANDLE);
 
     for (size_t i = 0; i < renderPasses.size(); i++) 
     {
@@ -189,7 +190,7 @@ void Swapchain::Create(const SwapchainCreateInfo &createInfo, const VkSurfaceKHR
         vkCreateInfo.pQueueFamilyIndices = nullptr;
     }
 
-    SurfaceProperties surfaceProperties = vulkanDevice.GetSurfaceProperties();
+    SurfaceProperties surfaceProperties = vulkanDevice.GetCachedSurfaceProperties();
     vkCreateInfo.preTransform = surfaceProperties.Capabilities.currentTransform;
 
     vkCreateInfo.compositeAlpha = VkCompositeAlphaFlagBitsKHR::VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;

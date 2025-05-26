@@ -40,7 +40,7 @@ void App::RunRenderLoop()
 {
     while (!m_Window.ShouldClose())
     {
-        std::cout << "\nRendering frame " << m_CurrentFrameIndex << "\n"; 
+        //std::cout << "\nRendering frame " << m_CurrentFrameIndex << "\n"; 
         auto resizeEvent = m_Window.PollEvents();
         if (resizeEvent.has_value())
         {

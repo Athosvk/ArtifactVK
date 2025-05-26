@@ -71,9 +71,15 @@ LogicalVulkanDevice VulkanDevice::CreateLogicalDevice(const std::vector<const ch
     return LogicalVulkanDevice(*this, m_PhysicalDevice, validationLayers, extensions, m_ExtensionMapping, window);
 }
 
-SurfaceProperties VulkanDevice::GetSurfaceProperties() const
+SurfaceProperties VulkanDevice::GetCachedSurfaceProperties() const
 {
-    return QuerySurfaceProperties(m_TargetSurface);
+    return m_SurfaceProperties;
+}
+
+SurfaceProperties VulkanDevice::QuerySurfaceProperties()
+{
+    m_SurfaceProperties = QuerySurfaceProperties(m_TargetSurface);
+    return m_SurfaceProperties;
 }
 
 VkPhysicalDeviceProperties VulkanDevice::QueryDeviceProperties() const
@@ -93,6 +99,7 @@ VkPhysicalDeviceFeatures VulkanDevice::QueryDeviceFeatures() const
 SurfaceProperties VulkanDevice::QuerySurfaceProperties(
     std::optional<std::reference_wrapper<const VulkanSurface>> surface) const
 {
+
     if (surface)
     {
         return surface->get().QueryProperties(m_PhysicalDevice);
@@ -105,7 +112,7 @@ SurfaceProperties VulkanDevice::QuerySurfaceProperties(
 
 VkSurfaceFormatKHR LogicalVulkanDevice::SelectSurfaceFormat() const
 {
-    auto surfaceProperties = m_PhysicalDevice.GetSurfaceProperties();
+    auto surfaceProperties = m_PhysicalDevice.GetCachedSurfaceProperties();
     auto iter = std::find_if(surfaceProperties.Formats.begin(), surfaceProperties.Formats.end(), [](const VkSurfaceFormatKHR& format)
         {
         return format.colorSpace == VkColorSpaceKHR::VK_COLORSPACE_SRGB_NONLINEAR_KHR && format.format ==
@@ -125,14 +132,13 @@ VkSurfaceFormatKHR LogicalVulkanDevice::SelectSurfaceFormat() const
 
 VkPresentModeKHR LogicalVulkanDevice::SelectPresentMode() const
 {
-    auto surfaceProperties = m_PhysicalDevice.GetSurfaceProperties();
+    auto surfaceProperties = m_PhysicalDevice.GetCachedSurfaceProperties();
     return std::find(surfaceProperties.PresentModes.begin(), surfaceProperties.PresentModes.end(), VkPresentModeKHR::VK_PRESENT_MODE_MAILBOX_KHR) != surfaceProperties.PresentModes.end() ?
         VkPresentModeKHR::VK_PRESENT_MODE_MAILBOX_KHR : VkPresentModeKHR::VK_PRESENT_MODE_FIFO_KHR;
 }
 
-VkExtent2D LogicalVulkanDevice::SelectSwapchainExtent(GLFWwindow& window) const
+VkExtent2D LogicalVulkanDevice::SelectSwapchainExtent(GLFWwindow& window, const SurfaceProperties& surfaceProperties) const
 {
-    auto surfaceProperties = m_PhysicalDevice.GetSurfaceProperties();
     if (surfaceProperties.Capabilities.currentExtent.width !=
         std::numeric_limits<uint32_t>::max())
     {
@@ -160,14 +166,14 @@ void LogicalVulkanDevice::WaitForIdle() const
 
 Swapchain &LogicalVulkanDevice::CreateSwapchain(GLFWwindow &window, const VulkanSurface &surface)
 {
-    auto maxImageCount = m_PhysicalDevice.GetSurfaceProperties().Capabilities.maxImageCount == 0 ? std::numeric_limits<uint32_t>::max()
-                             : m_PhysicalDevice.GetSurfaceProperties().Capabilities.maxImageCount;
+    auto maxImageCount = m_PhysicalDevice.GetCachedSurfaceProperties().Capabilities.maxImageCount == 0 ? std::numeric_limits<uint32_t>::max()
+                             : m_PhysicalDevice.GetCachedSurfaceProperties().Capabilities.maxImageCount;
     SwapchainCreateInfo createInfo{
         SelectSurfaceFormat(),
         SelectPresentMode(),
-        SelectSwapchainExtent(window),
+        SelectSwapchainExtent(window, m_PhysicalDevice.GetCachedSurfaceProperties()),
         // Select min image count + 1 if available
-        std::min(m_PhysicalDevice.GetSurfaceProperties().Capabilities.minImageCount + 1,
+        std::min(m_PhysicalDevice.GetCachedSurfaceProperties().Capabilities.minImageCount + 1,
             maxImageCount)
     };
        
@@ -181,12 +187,13 @@ Swapchain &LogicalVulkanDevice::GetSwapchain()
     return *m_Swapchain;
 }
 
-void LogicalVulkanDevice::RecreateSwapchain()
+void LogicalVulkanDevice::RecreateSwapchain(VkExtent2D newSize)
 {
     // TODO: Remove this through proper syncing with old swapchain
     WaitForIdle();
 
-    m_Swapchain->Recreate(m_SwapchainFramebuffers, SelectSwapchainExtent(m_Window));
+    // Re-query surface properties, as they may have changed on resize etc.
+    m_Swapchain->Recreate(m_SwapchainFramebuffers, newSize);
 }
 
 ShaderModule LogicalVulkanDevice::LoadShaderModule(const std::filesystem::path &filename)
@@ -375,7 +382,7 @@ QueueFamilyIndices VulkanDevice::FindQueueFamilies(
     return indices;
 }
 
-LogicalVulkanDevice::LogicalVulkanDevice(const VulkanDevice &physicalDevice, const VkPhysicalDevice &physicalDeviceHandle,
+LogicalVulkanDevice::LogicalVulkanDevice(VulkanDevice &physicalDevice, const VkPhysicalDevice &physicalDeviceHandle,
                         const std::vector<const char *> &validationLayers, std::vector<EDeviceExtension> extensions,
                         const DeviceExtensionMapping &deviceExtensionMapping, GLFWwindow& window)
     : m_PhysicalDevice(physicalDevice), m_Window(window)
@@ -512,15 +519,18 @@ void LogicalVulkanDevice::AcquireNext(const Semaphore& toSignal)
 {
     // TODO: Ensure semaphores in correct state, or more properly,
     // that we cannot have a recording cmd buffer at this time
-    if (m_ResizeQueued)
-    {
-        RecreateSwapchain();
-        m_ResizeQueued = false;
+    if (m_LastUnhandledResize)
+    {   
+        RecreateSwapchain(*m_LastUnhandledResize);
+        m_LastUnhandledResize.reset();
     }
     assert(m_Swapchain.has_value());
+    // Handle non-optimal swapchains in `Present` instead. Assume that reutrn SwapchainState::Suboptimal
+    // as well when AcquireNext does
     while (m_Swapchain->AcquireNext(toSignal) == SwapchainState::OutOfDate)
     {
-        RecreateSwapchain();
+        // TODO?: Check if we need to select a new size or not
+        RecreateSwapchain(SelectSwapchainExtent(m_Window, m_PhysicalDevice.QuerySurfaceProperties()));
     }
 }
 
@@ -529,13 +539,14 @@ void LogicalVulkanDevice::Present(std::span<Semaphore> waitSemaphores)
     assert(m_Swapchain.has_value());
     if (m_Swapchain->Present(waitSemaphores) != SwapchainState::Optimal)
     {
-        RecreateSwapchain();
+        std::cout << "Present recreate\n";
+        RecreateSwapchain(SelectSwapchainExtent(m_Window, m_PhysicalDevice.QuerySurfaceProperties()));
     }
 }
 
-void LogicalVulkanDevice::HandleResizeEvent(const WindowResizeEvent &)
+void LogicalVulkanDevice::HandleResizeEvent(const WindowResizeEvent & resizeEvent)
 {
-    RecreateSwapchain();
+    m_LastUnhandledResize = VkExtent2D{resizeEvent.NewWidth, resizeEvent.NewHeight};
 }
 
 std::vector<VkDeviceQueueCreateInfo> LogicalVulkanDevice::GetQueueCreateInfos(const VulkanDevice &physicalDevice)
