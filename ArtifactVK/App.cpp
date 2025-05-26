@@ -41,7 +41,12 @@ void App::RunRenderLoop()
     while (!m_Window.ShouldClose())
     {
         std::cout << "\nRendering frame " << m_CurrentFrameIndex << "\n"; 
-        m_Window.PollEvents();
+        auto resizeEvent = m_Window.PollEvents();
+        if (resizeEvent.has_value())
+        {
+            m_VulkanInstance.GetActiveDevice().HandleResizeEvent(*resizeEvent);
+        }
+
         RecordFrame(m_PerFrameState[m_CurrentFrameIndex % 2]);
         m_CurrentFrameIndex += 1;
     }
@@ -55,16 +60,15 @@ RasterPipeline App::LoadShaderPipeline(LogicalVulkanDevice &vulkanDevice, const 
 
 void App::RecordFrame(PerFrameState& state)
 {
+    m_VulkanInstance.GetActiveDevice().AcquireNext(state.ImageAvailable);
+    // TODO: Can probably be moved to CommandBuffer->Begin()
     state.CommandBuffer.WaitFence();
-    m_Swapchain.AcquireNext(state.ImageAvailable);
     state.CommandBuffer.Begin();
     state.CommandBuffer.Draw(m_SwapchainFramebuffers.GetCurrent(), m_MainPass, m_RenderFullscreen);
     state.CommandBuffer.End(std::span{ &state.ImageAvailable, 1 }, std::span{ &state.RenderFinished, 1 }, 
         m_VulkanInstance.GetActiveDevice().GetGraphicsQueue());
     
-    m_Swapchain.Present(std::span{&state.RenderFinished, 1});
-    std::cout << "Rendering with semaphores imageAvailable: " << state.ImageAvailable.Get() << " and renderFinished "
-              << state.RenderFinished.Get() << "\n";
+    m_VulkanInstance.GetActiveDevice().Present(std::span{&state.RenderFinished, 1});
 }
 
 std::vector<std::reference_wrapper<Semaphore>> App::CreateSemaphorePerInFlightFrame()

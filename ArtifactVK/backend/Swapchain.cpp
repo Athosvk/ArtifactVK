@@ -7,92 +7,33 @@
 #include "VulkanSurface.h"
 #include "VulkanDevice.h"
 #include "Semaphore.h"
+#include <cassert>
+
+const static uint32_t InvalidImageIndex = 0xFFFFFFFF;
 
 Swapchain::Swapchain(const SwapchainCreateInfo &createInfo, const VkSurfaceKHR &surface, VkDevice device,
                      const VulkanDevice &vulkanDevice,
                      Queue targetPresentQueue)
-    : m_Device(device), m_OriginalCreateInfo(createInfo), m_TargetPresentQueue(targetPresentQueue)
+    : m_Device(device), 
+    m_VulkanDevice(vulkanDevice),
+    m_OriginalCreateInfo(createInfo), 
+    m_TargetPresentQueue(targetPresentQueue), 
+    m_State(SwapchainState::Optimal), m_Surface(surface)
 {
-    VkSwapchainCreateInfoKHR vkCreateInfo{};
-    vkCreateInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-    vkCreateInfo.surface = surface;
-    vkCreateInfo.minImageCount = createInfo.MinImageCount;
-    vkCreateInfo.imageFormat = createInfo.SurfaceFormat.format;
-    vkCreateInfo.imageColorSpace = createInfo.SurfaceFormat.colorSpace;
-    vkCreateInfo.imageExtent = createInfo.Extents;
-    vkCreateInfo.imageArrayLayers = 1;
-    vkCreateInfo.imageUsage = VkImageUsageFlagBits::VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-
-    auto queueFamilies = vulkanDevice.GetQueueFamilies();
-    // TODO: Is this check correct?
-    if (queueFamilies.GraphicsFamilyIndex != queueFamilies.PresentFamilyIndex)
-    {
-        uint32_t indices[] = {queueFamilies.GraphicsFamilyIndex.value(), queueFamilies.PresentFamilyIndex.value()};
-        vkCreateInfo.imageSharingMode = VkSharingMode::VK_SHARING_MODE_CONCURRENT;
-        vkCreateInfo.queueFamilyIndexCount = 2;
-        vkCreateInfo.pQueueFamilyIndices = indices;
-    }
-    else
-    {
-        vkCreateInfo.imageSharingMode = VkSharingMode::VK_SHARING_MODE_EXCLUSIVE;
-        // Just filler, no need to provide these in exclusive mode
-        vkCreateInfo.queueFamilyIndexCount = 0;
-        vkCreateInfo.pQueueFamilyIndices = nullptr;
-    }
-
-    SurfaceProperties surfaceProperties = vulkanDevice.GetSurfaceProperties();
-    vkCreateInfo.preTransform = surfaceProperties.Capabilities.currentTransform;
-
-    vkCreateInfo.compositeAlpha = VkCompositeAlphaFlagBitsKHR::VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-    vkCreateInfo.presentMode = createInfo.PresentMode;
-    vkCreateInfo.clipped = VK_TRUE;
-    vkCreateInfo.oldSwapchain = VK_NULL_HANDLE;
-
-    if (vkCreateSwapchainKHR(device, &vkCreateInfo, nullptr, &m_Swapchain) != VkResult::VK_SUCCESS)
-    {
-        throw std::runtime_error("Could not create swapchain");
-    }
-
-    uint32_t imageCount = 0;
-    vkGetSwapchainImagesKHR(m_Device, m_Swapchain, &imageCount, nullptr);
-    std::vector<VkImage> images(imageCount);
-    vkGetSwapchainImagesKHR(m_Device, m_Swapchain, &imageCount, images.data());
-
-    m_ImageViews.reserve(images.size());
-    m_Images = std::move(images);
-    for (auto &image : m_Images)
-    {
-        VkImageViewCreateInfo imageCreateInfo{};
-        imageCreateInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-        imageCreateInfo.image = image;
-        imageCreateInfo.viewType = VkImageViewType::VK_IMAGE_VIEW_TYPE_2D;
-        imageCreateInfo.format = createInfo.SurfaceFormat.format;
-        imageCreateInfo.components = {
-            VkComponentSwizzle::VK_COMPONENT_SWIZZLE_IDENTITY, VkComponentSwizzle::VK_COMPONENT_SWIZZLE_IDENTITY,
-            VkComponentSwizzle::VK_COMPONENT_SWIZZLE_IDENTITY, VkComponentSwizzle::VK_COMPONENT_SWIZZLE_IDENTITY};
-        imageCreateInfo.subresourceRange.aspectMask = VkImageAspectFlagBits::VK_IMAGE_ASPECT_COLOR_BIT;
-        imageCreateInfo.subresourceRange.baseMipLevel = 0;
-        imageCreateInfo.subresourceRange.levelCount = 1;
-        imageCreateInfo.subresourceRange.baseArrayLayer = 0;
-        imageCreateInfo.subresourceRange.layerCount = 1;
-
-        VkImageView imageView;
-        if (vkCreateImageView(m_Device, &imageCreateInfo, nullptr, &imageView) != VK_SUCCESS)
-        {
-            throw std::runtime_error("Could not create image view for swapchain image");
-        }
-        m_ImageViews.emplace_back(std::move(imageView));
-    }
+    Create(createInfo, surface, device, vulkanDevice, VK_NULL_HANDLE);
 }
 
 Swapchain::Swapchain(Swapchain &&other)
     : m_Swapchain(std::exchange(other.m_Swapchain, VK_NULL_HANDLE)), 
+      m_Surface(std::exchange(other.m_Surface, VK_NULL_HANDLE)),
       m_Device(other.m_Device),
+      m_VulkanDevice(other.m_VulkanDevice),
       m_OriginalCreateInfo(other.m_OriginalCreateInfo),
       m_Images(std::move(other.m_Images)),
       m_ImageViews(std::move(other.m_ImageViews)),
       m_CurrentImageIndex(std::move(other.m_CurrentImageIndex)),
-      m_TargetPresentQueue(std::move(other.m_TargetPresentQueue))
+      m_TargetPresentQueue(std::move(other.m_TargetPresentQueue)), 
+      m_State(std::move(other.m_State))
 {
 }
 
@@ -100,11 +41,7 @@ Swapchain::~Swapchain()
 {
     if (m_Swapchain != VK_NULL_HANDLE) 
     {
-        for (auto imageView : m_ImageViews) 
-        {
-            vkDestroyImageView(m_Device, imageView, nullptr);
-        }
-        vkDestroySwapchainKHR(m_Device, m_Swapchain, nullptr);
+        Destroy();
     }
 }
 
@@ -149,26 +86,29 @@ SwapchainFramebuffer Swapchain::CreateFramebuffersFor(const RenderPass &renderPa
         framebuffers.emplace_back(
             Framebuffer(m_Device, FramebufferCreateInfo{renderPass, imageView, GetViewportDescription()}));
     }
-    return SwapchainFramebuffer(*this, std::move(framebuffers));
+    return SwapchainFramebuffer(*this, std::move(framebuffers), renderPass);
 }
 
 uint32_t Swapchain::CurrentIndex() const
 {
+    assert(m_State != SwapchainState::OutOfDate);
+    assert(m_CurrentImageIndex != InvalidImageIndex && "Image index invalid, make sure you called AcquireNextImage");
     return m_CurrentImageIndex;
 }
 
-VkImageView Swapchain::AcquireNext(const Semaphore& toSignal)
+SwapchainState Swapchain::AcquireNext(const Semaphore& toSignal)
 {
-    if (vkAcquireNextImageKHR(m_Device, m_Swapchain, std::numeric_limits<uint64_t>::max(), toSignal.Get(),
-                              VK_NULL_HANDLE, &m_CurrentImageIndex) != VkResult::VK_SUCCESS)
-    {
-        throw std::runtime_error("Acquire next image failed");
-    }
-    return m_ImageViews[m_CurrentImageIndex];
+    assert(m_State != SwapchainState::OutOfDate);
+    auto result = vkAcquireNextImageKHR(m_Device, m_Swapchain, std::numeric_limits<uint64_t>::max(), toSignal.Get(),
+                                        VK_NULL_HANDLE, &m_CurrentImageIndex);
+    m_State = MapResultToState(result);
+    return m_State;
 }
 
-void Swapchain::Present(std::span<Semaphore> waitSempahores) const
+SwapchainState Swapchain::Present(std::span<Semaphore> waitSempahores)
 {
+    assert(m_CurrentImageIndex != InvalidImageIndex && "Image index invalid, make sure you called AcquireNextImage");
+    assert(m_State != SwapchainState::OutOfDate);
     std::vector<VkSemaphore> semaphoreHandles;
     semaphoreHandles.reserve(waitSempahores.size());
     // TODO: Remove ugly allocation
@@ -189,22 +129,152 @@ void Swapchain::Present(std::span<Semaphore> waitSempahores) const
     presentInfo.pResults = nullptr;
 
     VkResult result = vkQueuePresentKHR(m_TargetPresentQueue.Get(), &presentInfo);
-    if (result == VkResult::VK_SUBOPTIMAL_KHR)
+    m_State = MapResultToState(result);
+    // Reset it so that we can assert `AcquireNextImage` has always been called
+    m_CurrentImageIndex = InvalidImageIndex;
+    return m_State;
+}
+
+void Swapchain::Recreate(std::vector<std::unique_ptr<SwapchainFramebuffer>>& oldFramebuffers, VkExtent2D newExtents)
+{
+    std::vector<const RenderPass *> renderPasses;
+    renderPasses.reserve(oldFramebuffers.size());
+    for (const auto &framebuffer : oldFramebuffers)
     {
-        std::cout << "Recreate swapchain is optimal here";
+        renderPasses.emplace_back(&framebuffer->GetRenderPass());
     }
-    else if (result != VkResult::VK_SUCCESS)
+    Destroy();
+    SwapchainCreateInfo createInfo = m_OriginalCreateInfo;
+    createInfo.Extents = newExtents;
+    Create(createInfo, m_Surface, m_Device, m_VulkanDevice, VK_NULL_HANDLE);
+
+    for (size_t i = 0; i < renderPasses.size(); i++) 
     {
-        throw std::runtime_error("Could not present to target queue");
+        (*oldFramebuffers[i]) = CreateFramebuffersFor(*renderPasses[i]);
     }
 }
 
-SwapchainFramebuffer::SwapchainFramebuffer(const Swapchain& swapchain, std::vector<Framebuffer>&& swapchainFramebuffers) : 
-    m_Swapchain(swapchain), m_Framebuffers(std::move(swapchainFramebuffers))
+SwapchainState Swapchain::GetCurrentState() const
+{
+    return m_State;
+}
+
+void Swapchain::Create(const SwapchainCreateInfo &createInfo, const VkSurfaceKHR &surface, VkDevice device,
+                                 const VulkanDevice &vulkanDevice, VkSwapchainKHR oldSwapchain)
+{
+    VkSwapchainCreateInfoKHR vkCreateInfo{};
+    vkCreateInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+    vkCreateInfo.surface = surface;
+    vkCreateInfo.minImageCount = createInfo.MinImageCount;
+    vkCreateInfo.imageFormat = createInfo.SurfaceFormat.format;
+    vkCreateInfo.imageColorSpace = createInfo.SurfaceFormat.colorSpace;
+    vkCreateInfo.imageExtent = createInfo.Extents;
+    vkCreateInfo.imageArrayLayers = 1;
+    vkCreateInfo.imageUsage = VkImageUsageFlagBits::VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+
+    auto queueFamilies = vulkanDevice.GetQueueFamilies();
+    // TODO: Is this check correct?
+    if (queueFamilies.GraphicsFamilyIndex != queueFamilies.PresentFamilyIndex)
+    {
+        uint32_t indices[] = {queueFamilies.GraphicsFamilyIndex.value(), queueFamilies.PresentFamilyIndex.value()};
+        vkCreateInfo.imageSharingMode = VkSharingMode::VK_SHARING_MODE_CONCURRENT;
+        vkCreateInfo.queueFamilyIndexCount = 2;
+        vkCreateInfo.pQueueFamilyIndices = indices;
+    }
+    else
+    {
+        vkCreateInfo.imageSharingMode = VkSharingMode::VK_SHARING_MODE_EXCLUSIVE;
+        // Just filler, no need to provide these in exclusive mode
+        vkCreateInfo.queueFamilyIndexCount = 0;
+        vkCreateInfo.pQueueFamilyIndices = nullptr;
+    }
+
+    SurfaceProperties surfaceProperties = vulkanDevice.GetSurfaceProperties();
+    vkCreateInfo.preTransform = surfaceProperties.Capabilities.currentTransform;
+
+    vkCreateInfo.compositeAlpha = VkCompositeAlphaFlagBitsKHR::VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+    vkCreateInfo.presentMode = createInfo.PresentMode;
+    vkCreateInfo.clipped = VK_TRUE;
+    vkCreateInfo.oldSwapchain = oldSwapchain;
+
+    std::cout << "Create swap size: " << createInfo.Extents.width << "," << createInfo.Extents.height
+              << "\n";
+    if (vkCreateSwapchainKHR(device, &vkCreateInfo, nullptr, &m_Swapchain) != VkResult::VK_SUCCESS)
+    {
+        throw std::runtime_error("Could not create swapchain");
+    }
+
+    uint32_t imageCount = 0;
+    vkGetSwapchainImagesKHR(m_Device, m_Swapchain, &imageCount, nullptr);
+    std::vector<VkImage> images(imageCount);
+    vkGetSwapchainImagesKHR(m_Device, m_Swapchain, &imageCount, images.data());
+
+    m_ImageViews.reserve(images.size());
+    m_Images = std::move(images);
+    for (auto &image : m_Images)
+    {
+        VkImageViewCreateInfo imageCreateInfo{};
+        imageCreateInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+        imageCreateInfo.image = image;
+        imageCreateInfo.viewType = VkImageViewType::VK_IMAGE_VIEW_TYPE_2D;
+        imageCreateInfo.format = createInfo.SurfaceFormat.format;
+        imageCreateInfo.components = {
+            VkComponentSwizzle::VK_COMPONENT_SWIZZLE_IDENTITY, VkComponentSwizzle::VK_COMPONENT_SWIZZLE_IDENTITY,
+            VkComponentSwizzle::VK_COMPONENT_SWIZZLE_IDENTITY, VkComponentSwizzle::VK_COMPONENT_SWIZZLE_IDENTITY};
+        imageCreateInfo.subresourceRange.aspectMask = VkImageAspectFlagBits::VK_IMAGE_ASPECT_COLOR_BIT;
+        imageCreateInfo.subresourceRange.baseMipLevel = 0;
+        imageCreateInfo.subresourceRange.levelCount = 1;
+        imageCreateInfo.subresourceRange.baseArrayLayer = 0;
+        imageCreateInfo.subresourceRange.layerCount = 1;
+
+        VkImageView imageView;
+        if (vkCreateImageView(m_Device, &imageCreateInfo, nullptr, &imageView) != VK_SUCCESS)
+        {
+            throw std::runtime_error("Could not create image view for swapchain image");
+        }
+        m_ImageViews.emplace_back(std::move(imageView));
+    }
+}
+
+void Swapchain::Destroy()
+{
+	for (auto imageView : m_ImageViews) 
+	{
+		vkDestroyImageView(m_Device, imageView, nullptr);
+	}
+    m_ImageViews.clear();
+    m_Images.clear();
+    
+	vkDestroySwapchainKHR(m_Device, m_Swapchain, nullptr);
+    m_Swapchain = VK_NULL_HANDLE;
+}
+
+SwapchainState Swapchain::MapResultToState(VkResult result) const
+{
+    switch (result)
+    {
+    case VkResult::VK_SUBOPTIMAL_KHR:
+        return SwapchainState::Suboptimal;    
+    case VkResult::VK_ERROR_OUT_OF_DATE_KHR:
+        return SwapchainState::OutOfDate;
+    case VkResult::VK_SUCCESS:
+        return SwapchainState::Optimal;
+    default:
+        throw std::runtime_error("Swapchain in invalid state or TDR");
+    }
+}
+
+SwapchainFramebuffer::SwapchainFramebuffer(const Swapchain& swapchain, std::vector<Framebuffer>&& swapchainFramebuffers, const RenderPass& renderPass) : 
+    m_Swapchain(swapchain), m_Framebuffers(std::move(swapchainFramebuffers)), m_Renderpass(renderPass)
 {
 }
 
-const Framebuffer& SwapchainFramebuffer::GetCurrent() const
+const Framebuffer &SwapchainFramebuffer::GetCurrent() const
 {
-    return m_Framebuffers[m_Swapchain.CurrentIndex()];
+    return m_Framebuffers[m_Swapchain.get().CurrentIndex()];
+}
+
+const RenderPass &SwapchainFramebuffer::GetRenderPass() const
+{
+    return m_Renderpass;
 }

@@ -28,7 +28,8 @@ VulkanDevice::VulkanDevice(VkPhysicalDevice physicalDevice,
     : m_ExtensionMapping(extensionMapping), m_PhysicalDevice(physicalDevice),
       m_QueueFamilies(FindQueueFamilies(targetSurface)), m_Properties(QueryDeviceProperties()),
       m_Features(QueryDeviceFeatures()), m_SurfaceProperties(QuerySurfaceProperties(targetSurface)),
-      m_AvailableExtensions(QueryExtensions(extensionMapping)), m_Valid(Validate(requestedExtensions))
+      m_AvailableExtensions(QueryExtensions(extensionMapping)), m_Valid(Validate(requestedExtensions)),
+      m_TargetSurface(targetSurface)
 {
 }
 
@@ -70,9 +71,9 @@ LogicalVulkanDevice VulkanDevice::CreateLogicalDevice(const std::vector<const ch
     return LogicalVulkanDevice(*this, m_PhysicalDevice, validationLayers, extensions, m_ExtensionMapping, window);
 }
 
-const SurfaceProperties& VulkanDevice::GetSurfaceProperties() const
+SurfaceProperties VulkanDevice::GetSurfaceProperties() const
 {
-    return m_SurfaceProperties;
+    return QuerySurfaceProperties(m_TargetSurface);
 }
 
 VkPhysicalDeviceProperties VulkanDevice::QueryDeviceProperties() const
@@ -178,6 +179,14 @@ Swapchain &LogicalVulkanDevice::GetSwapchain()
 {
     assert(m_Swapchain.has_value() && "Need an active swapchain. Create one through CreateSwapchain");
     return *m_Swapchain;
+}
+
+void LogicalVulkanDevice::RecreateSwapchain()
+{
+    // TODO: Remove this through proper syncing with old swapchain
+    WaitForIdle();
+
+    m_Swapchain->Recreate(m_SwapchainFramebuffers, SelectSwapchainExtent(m_Window));
 }
 
 ShaderModule LogicalVulkanDevice::LoadShaderModule(const std::filesystem::path &filename)
@@ -369,7 +378,7 @@ QueueFamilyIndices VulkanDevice::FindQueueFamilies(
 LogicalVulkanDevice::LogicalVulkanDevice(const VulkanDevice &physicalDevice, const VkPhysicalDevice &physicalDeviceHandle,
                         const std::vector<const char *> &validationLayers, std::vector<EDeviceExtension> extensions,
                         const DeviceExtensionMapping &deviceExtensionMapping, GLFWwindow& window)
-    : m_PhysicalDevice(physicalDevice)
+    : m_PhysicalDevice(physicalDevice), m_Window(window)
 {
     assert(physicalDevice.IsValid() && "Need a valid physical device");
 
@@ -412,7 +421,7 @@ LogicalVulkanDevice::LogicalVulkanDevice(LogicalVulkanDevice &&other)
       m_Swapchain(std::move(other.m_Swapchain)), 
       m_CommandBufferPools(std::move(other.m_CommandBufferPools)),
       m_Semaphores(std::move(other.m_Semaphores)),
-      m_SwapchainFramebuffers(std::move(other.m_SwapchainFramebuffers))
+      m_SwapchainFramebuffers(std::move(other.m_SwapchainFramebuffers)), m_Window(other.m_Window)
 {
 }
 
@@ -474,7 +483,7 @@ RenderPass LogicalVulkanDevice::CreateRenderPass()
 const SwapchainFramebuffer& LogicalVulkanDevice::CreateSwapchainFramebuffers(const RenderPass &renderpass)
 {
     assert(m_Swapchain.has_value() && "No swapchain to create framebuffers for");
-    return m_SwapchainFramebuffers.emplace(renderpass.Get(), m_Swapchain->CreateFramebuffersFor(renderpass)).first->second;
+    return *m_SwapchainFramebuffers.emplace_back(std::make_unique<SwapchainFramebuffer>(m_Swapchain->CreateFramebuffersFor(renderpass)));
 }
 
 CommandBufferPool &LogicalVulkanDevice::CreateGraphicsCommandBufferPool()
@@ -497,6 +506,36 @@ Queue LogicalVulkanDevice::GetGraphicsQueue() const
 {
     assert(m_GraphicsQueue.has_value() && "Device has no graphics queue");
     return m_GraphicsQueue.value();
+}
+
+void LogicalVulkanDevice::AcquireNext(const Semaphore& toSignal)
+{
+    // TODO: Ensure semaphores in correct state, or more properly,
+    // that we cannot have a recording cmd buffer at this time
+    if (m_ResizeQueued)
+    {
+        RecreateSwapchain();
+        m_ResizeQueued = false;
+    }
+    assert(m_Swapchain.has_value());
+    while (m_Swapchain->AcquireNext(toSignal) == SwapchainState::OutOfDate)
+    {
+        RecreateSwapchain();
+    }
+}
+
+void LogicalVulkanDevice::Present(std::span<Semaphore> waitSemaphores)
+{
+    assert(m_Swapchain.has_value());
+    if (m_Swapchain->Present(waitSemaphores) != SwapchainState::Optimal)
+    {
+        RecreateSwapchain();
+    }
+}
+
+void LogicalVulkanDevice::HandleResizeEvent(const WindowResizeEvent &)
+{
+    RecreateSwapchain();
 }
 
 std::vector<VkDeviceQueueCreateInfo> LogicalVulkanDevice::GetQueueCreateInfos(const VulkanDevice &physicalDevice)

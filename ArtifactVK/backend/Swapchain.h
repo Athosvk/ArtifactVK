@@ -2,6 +2,8 @@
 #include <vulkan/vulkan.h>
 #include <vector>
 #include <span>
+#include <optional>
+#include <memory>
 
 #include "Framebuffer.h"
 #include "Queue.h"
@@ -22,15 +24,26 @@ struct SwapchainCreateInfo
 class SwapchainFramebuffer
 {
   public:
-    SwapchainFramebuffer(const Swapchain& swapchain, std::vector<Framebuffer>&& m_SwapchainFramebuffers);
+    SwapchainFramebuffer(const Swapchain& swapchain, std::vector<Framebuffer>&& m_SwapchainFramebuffers, const RenderPass& renderPass);
     SwapchainFramebuffer(const SwapchainFramebuffer&) = delete;
     SwapchainFramebuffer(SwapchainFramebuffer&&) = default;
 
+    SwapchainFramebuffer &operator=(SwapchainFramebuffer &&other) = default;
+
     const Framebuffer& GetCurrent() const;
+    const RenderPass &GetRenderPass() const;
   private:
     // TODO: Make this a weak ptr for validation reasons?
-    const Swapchain &m_Swapchain;
+    std::reference_wrapper<const Swapchain> m_Swapchain;
     std::vector<Framebuffer> m_Framebuffers;
+    std::reference_wrapper<const RenderPass> m_Renderpass;
+};
+
+enum class SwapchainState
+{
+	Suboptimal,
+	OutOfDate,
+	Optimal
 };
 
 class Swapchain
@@ -46,14 +59,27 @@ class Swapchain
     SwapchainFramebuffer CreateFramebuffersFor(const RenderPass &renderPass) const;
     uint32_t CurrentIndex() const;
     
-    VkImageView AcquireNext(const Semaphore& toSignal);
-    void Present(std::span<Semaphore> waitSempahores) const;
+    // Callers should check that the SwapchainState != SwapchainState::OutOfDate
+    [[nodiscard]] 
+        SwapchainState AcquireNext(const Semaphore& toSignal);
+    // Callers should check that the SwapchainState != SwapchainState::OutOfDate
+    [[nodiscard]] 
+        SwapchainState Present(std::span<Semaphore> waitSemaphores);
+    void Recreate(std::vector<std::unique_ptr<SwapchainFramebuffer>>& oldFramebuffers, VkExtent2D newExtents);
+    SwapchainState GetCurrentState() const;
   private:
+    void Create(const SwapchainCreateInfo& createInfo, const VkSurfaceKHR& surface, VkDevice device, const VulkanDevice& vulkanDevice, VkSwapchainKHR oldSwapchain);
+    void Destroy();
+    SwapchainState MapResultToState(VkResult result) const;
+
     VkSwapchainKHR m_Swapchain = VK_NULL_HANDLE;
+    VkSurfaceKHR m_Surface;
     VkDevice m_Device;
+    const VulkanDevice& m_VulkanDevice;
     SwapchainCreateInfo m_OriginalCreateInfo;
     std::vector<VkImage> m_Images;
     std::vector<VkImageView> m_ImageViews;
-    uint32_t m_CurrentImageIndex;
+    uint32_t m_CurrentImageIndex = 0xFFFFFFFF;
     Queue m_TargetPresentQueue;
+    SwapchainState m_State;
 };

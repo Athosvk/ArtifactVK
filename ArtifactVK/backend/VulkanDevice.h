@@ -20,6 +20,7 @@
 class VulkanDevice;
 struct GLFWwindow;
 class ShaderModule;
+struct WindowResizeEvent;
 
 struct QueueFamilyIndices
 {
@@ -48,14 +49,20 @@ class LogicalVulkanDevice
     CommandBufferPool &CreateGraphicsCommandBufferPool();
     Semaphore &CreateDeviceSemaphore();
     Queue GetGraphicsQueue() const;
+    void AcquireNext(const Semaphore& toSignal);
+    void Present(std::span<Semaphore> waitSemaphores);
+    void HandleResizeEvent(const WindowResizeEvent &resizeEvent);
   private:
+    void RecreateSwapchain();
     ShaderModule LoadShaderModule(const std::filesystem::path &filename);
     static std::vector<VkDeviceQueueCreateInfo> GetQueueCreateInfos(const VulkanDevice &physicalDevice);
     VkSurfaceFormatKHR SelectSurfaceFormat() const;
     VkPresentModeKHR SelectPresentMode() const;
     VkExtent2D SelectSwapchainExtent(GLFWwindow& window) const;
 
+    bool m_ResizeQueued = false;
     VkDevice m_Device;
+    GLFWwindow &m_Window;
     const VulkanDevice &m_PhysicalDevice;
     std::optional<Queue> m_GraphicsQueue;
     std::optional<Queue> m_PresentQueue;
@@ -66,7 +73,7 @@ class LogicalVulkanDevice
     std::vector<std::unique_ptr<Semaphore>> m_Semaphores;
     // TODO: Manage this better using a delete queue/stack so that 
     // this doesn't have to manually manage these handles
-    std::unordered_map<VkRenderPass, SwapchainFramebuffer> m_SwapchainFramebuffers;
+    std::vector<std::unique_ptr<SwapchainFramebuffer>> m_SwapchainFramebuffers;
 };
 
 class VulkanDevice
@@ -86,7 +93,7 @@ class VulkanDevice
     LogicalVulkanDevice CreateLogicalDevice(const std::vector<const char *>& validationLayers,
                                             std::vector<EDeviceExtension> extensions, GLFWwindow& window);
 
-    const SurfaceProperties& GetSurfaceProperties() const;
+    SurfaceProperties GetSurfaceProperties() const;
   private:
     bool Validate(std::span<const EDeviceExtension> requiredExtensions) const;
     bool AllExtensionsAvailable(std::span<const EDeviceExtension> extensions) const;
@@ -103,5 +110,6 @@ class VulkanDevice
     VkPhysicalDeviceFeatures m_Features;
     SurfaceProperties m_SurfaceProperties;
     std::set<EDeviceExtension> m_AvailableExtensions;
+    std::optional<std::reference_wrapper<const VulkanSurface>> m_TargetSurface;
     bool m_Valid;
 };
