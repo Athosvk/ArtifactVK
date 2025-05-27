@@ -7,6 +7,17 @@ RasterPipelineBuilder::RasterPipelineBuilder(std::filesystem::path&& vertexShade
 {
 }
 
+RasterPipelineBuilder & RasterPipelineBuilder::SetVertexBindingDescription(const VertexBindingDescription & vertexBinding)
+{
+    m_VertexBindingDescription.emplace(vertexBinding);
+    return *this;
+}
+
+const std::optional<VertexBindingDescription>& RasterPipelineBuilder::GetVertexBindingDescription() const
+{
+    return m_VertexBindingDescription;
+}
+
 const std::filesystem::path &RasterPipelineBuilder::GetVertexShaderPath() const
 {
     return m_VertexShaderPath;
@@ -66,4 +77,26 @@ void RasterPipeline::Bind(const VkCommandBuffer &commandBuffer, const Viewport& 
     vkCmdBindPipeline(commandBuffer, VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_GRAPHICS, m_Pipeline);
     vkCmdSetViewport(commandBuffer, 0, 1, &viewport.Viewport);
     vkCmdSetScissor(commandBuffer, 0, 1, &viewport.Scissor);
+}
+
+VkPipelineVertexInputStateCreateInfo VertexBindingDescription::GetVkPipelineInputStateCreateInfo() const
+{
+    VkPipelineVertexInputStateCreateInfo vertexInputCreateInfo{};
+    vertexInputCreateInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+    vertexInputCreateInfo.vertexBindingDescriptionCount = 1;
+    vertexInputCreateInfo.pVertexBindingDescriptions = &Description;
+    vertexInputCreateInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(AttributeDescriptions.size());
+    vertexInputCreateInfo.pVertexAttributeDescriptions = AttributeDescriptions.data();
+    return vertexInputCreateInfo;
+}
+
+VkPipelineVertexInputStateCreateInfo VertexBindingDescription::DefaultPipelineInputStateCreateInfo()
+{
+    VkPipelineVertexInputStateCreateInfo vertexInputCreateInfo{};
+    vertexInputCreateInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+    vertexInputCreateInfo.vertexBindingDescriptionCount = 0;
+    vertexInputCreateInfo.pVertexBindingDescriptions = nullptr;
+    vertexInputCreateInfo.vertexAttributeDescriptionCount = 0;
+    vertexInputCreateInfo.pVertexAttributeDescriptions = nullptr;
+    return vertexInputCreateInfo;
 }

@@ -42,7 +42,7 @@ void App::RunRenderLoop()
     {
         if (!m_Window.IsMinimized())
         {
-            std::cout << "\nRendering frame " << m_CurrentFrameIndex << "\n";
+            //std::cout << "\nRendering frame " << m_CurrentFrameIndex << "\n";
             auto resizeEvent = m_Window.PollEvents();
             if (resizeEvent.has_value() && !m_Window.IsMinimized())
             {
@@ -65,8 +65,10 @@ void App::RunRenderLoop()
 
 RasterPipeline App::LoadShaderPipeline(LogicalVulkanDevice &vulkanDevice, const RenderPass& renderPass) const
 {
-    return vulkanDevice.CreateRasterPipeline(
-        RasterPipelineBuilder("spirv/triangle.vert.spv", "spirv/triangle.frag.spv"), renderPass);
+    auto builder = RasterPipelineBuilder("spirv/triangle.vert.spv", "spirv/triangle.frag.spv");
+    // TODO: This doesn't emit a validation warning when no vertex buffer is bound. Bug?
+    builder.SetVertexBindingDescription(Vertex::GetVertexBindingDescription());
+    return vulkanDevice.CreateRasterPipeline(std::move(builder), renderPass);
 }
 
 void App::RecordFrame(PerFrameState& state)
@@ -138,8 +140,15 @@ constexpr std::array<VkVertexInputAttributeDescription,2> Vertex::GetAttributeDe
     colorAttribute.format = VkFormat::VK_FORMAT_R32G32B32_SFLOAT;
     colorAttribute.offset = offsetof(Vertex, Color);
 
-
     return {
         positionAttribute, colorAttribute
+    };
+}
+
+constexpr VertexBindingDescription Vertex::GetVertexBindingDescription()
+{
+    return VertexBindingDescription{
+        GetBindingDescription(),
+        GetAttributeDescriptions()
     };
 }

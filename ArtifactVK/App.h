@@ -30,6 +30,7 @@ struct Vertex
 
     constexpr static VkVertexInputBindingDescription GetBindingDescription();
     constexpr static std::array<VkVertexInputAttributeDescription, 2> GetAttributeDescriptions(); 
+    constexpr static VertexBindingDescription GetVertexBindingDescription();
 };
 
 class App

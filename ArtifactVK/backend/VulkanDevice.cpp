@@ -235,12 +235,9 @@ RasterPipeline LogicalVulkanDevice::CreateRasterPipeline(RasterPipelineBuilder &
     dynamicState.dynamicStateCount = 0;
     dynamicState.pDynamicStates = nullptr;
 
-    VkPipelineVertexInputStateCreateInfo vertexInputCreateInfo{};
-    vertexInputCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-    vertexInputCreateInfo.vertexBindingDescriptionCount = 0;
-    vertexInputCreateInfo.pVertexBindingDescriptions = nullptr;
-    vertexInputCreateInfo.vertexAttributeDescriptionCount = 0;
-    vertexInputCreateInfo.pVertexAttributeDescriptions = nullptr;
+    auto bindingDescription = pipelineBuilder.GetVertexBindingDescription();
+    VkPipelineVertexInputStateCreateInfo vertexInputCreateInfo = bindingDescription.has_value() ? bindingDescription->GetVkPipelineInputStateCreateInfo() 
+        : VertexBindingDescription::DefaultPipelineInputStateCreateInfo();
 
     VkPipelineInputAssemblyStateCreateInfo inputAssemblyCreateInfo{};
     inputAssemblyCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
