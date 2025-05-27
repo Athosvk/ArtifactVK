@@ -96,7 +96,9 @@ class VulkanDevice
     // TODO: These are the cached values, but not neccessarily the latest. Need to requery this possibly
     SurfaceProperties GetCachedSurfaceProperties() const;
     SurfaceProperties QuerySurfaceProperties();
+    VkPhysicalDeviceMemoryProperties MemoryProperties() const;
   private:
+    VkPhysicalDeviceMemoryProperties QueryMemoryProperties() const;
     bool Validate(std::span<const EDeviceExtension> requiredExtensions) const;
     bool AllExtensionsAvailable(std::span<const EDeviceExtension> extensions) const;
     std::set<EDeviceExtension> QueryExtensions(const DeviceExtensionMapping &extensionMapping) const;
@@ -110,6 +112,7 @@ class VulkanDevice
     QueueFamilyIndices m_QueueFamilies;
     VkPhysicalDeviceProperties m_Properties;
     VkPhysicalDeviceFeatures m_Features;
+    VkPhysicalDeviceMemoryProperties m_MemoryProperties;
     SurfaceProperties m_SurfaceProperties;
     std::set<EDeviceExtension> m_AvailableExtensions;
     std::optional<std::reference_wrapper<const VulkanSurface>> m_TargetSurface;

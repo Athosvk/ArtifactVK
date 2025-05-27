@@ -108,6 +108,7 @@
     <ClCompile Include="backend\ShaderModule.cpp" />
     <ClCompile Include="backend\RenderPass.cpp" />
     <ClCompile Include="backend\Semaphore.cpp" />
+    <ClCompile Include="backend\VertexBuffer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="App.h" />
@@ -129,6 +130,7 @@
     <ClInclude Include="backend\RenderPass.h" />
     <ClInclude Include="backend\Viewport.h" />
     <ClInclude Include="backend\Semaphore.h" />
+    <ClInclude Include="backend\VertexBuffer.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\.clang-format" />

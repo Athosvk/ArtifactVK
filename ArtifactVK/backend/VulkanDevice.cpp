@@ -27,7 +27,9 @@ VulkanDevice::VulkanDevice(VkPhysicalDevice physicalDevice,
                            std::span<const EDeviceExtension> requestedExtensions)
     : m_ExtensionMapping(extensionMapping), m_PhysicalDevice(physicalDevice),
       m_QueueFamilies(FindQueueFamilies(targetSurface)), m_Properties(QueryDeviceProperties()),
-      m_Features(QueryDeviceFeatures()), m_SurfaceProperties(QuerySurfaceProperties(targetSurface)),
+      m_Features(QueryDeviceFeatures()), 
+      m_MemoryProperties(QueryMemoryProperties()),
+      m_SurfaceProperties(QuerySurfaceProperties(targetSurface)),
       m_AvailableExtensions(QueryExtensions(extensionMapping)), m_Valid(Validate(requestedExtensions)),
       m_TargetSurface(targetSurface)
 {
@@ -80,6 +82,11 @@ SurfaceProperties VulkanDevice::QuerySurfaceProperties()
 {
     m_SurfaceProperties = QuerySurfaceProperties(m_TargetSurface);
     return m_SurfaceProperties;
+}
+
+VkPhysicalDeviceMemoryProperties VulkanDevice::MemoryProperties() const
+{
+    return VkPhysicalDeviceMemoryProperties();
 }
 
 VkPhysicalDeviceProperties VulkanDevice::QueryDeviceProperties() const
@@ -317,6 +324,13 @@ RasterPipeline LogicalVulkanDevice::CreateRasterPipeline(RasterPipelineBuilder &
     pipelineInfo.pDynamicState = &dynamicState;
     
     return RasterPipeline(m_Device, pipelineInfo, renderPass);
+}
+
+VkPhysicalDeviceMemoryProperties VulkanDevice::QueryMemoryProperties() const
+{
+    VkPhysicalDeviceMemoryProperties memoryProperties;
+    vkGetPhysicalDeviceMemoryProperties(m_PhysicalDevice, &memoryProperties);
+    return memoryProperties;
 }
 
 bool VulkanDevice::Validate(std::span<const EDeviceExtension> requiredExtensions) const
