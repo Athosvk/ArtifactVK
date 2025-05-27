@@ -9,7 +9,6 @@ class LogicalVulkanDevice;
 class RasterPipeline
 {
   public:
-    RasterPipeline();
     RasterPipeline(VkDevice vulkanDevice, VkGraphicsPipelineCreateInfo createInfo, const RenderPass& renderPass);
 
     RasterPipeline(const RasterPipeline &) = delete;
