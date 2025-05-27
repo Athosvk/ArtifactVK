@@ -99,7 +99,7 @@ uint32_t VulkanDevice::FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags
             return i;
         }
     }
-    throw std::runtime_error("Could not find suitable memory type for type filter: " + std::to_string(typeFilter))
+    throw std::runtime_error("Could not find suitable memory type for type filter: " + std::to_string(typeFilter));
 }
 
 VkPhysicalDeviceProperties VulkanDevice::QueryDeviceProperties() const
