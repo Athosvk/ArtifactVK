@@ -192,7 +192,6 @@ void LogicalVulkanDevice::RecreateSwapchain(VkExtent2D newSize)
     // TODO: Remove this through proper syncing with old swapchain
     WaitForIdle();
 
-    // Re-query surface properties, as they may have changed on resize etc.
     m_Swapchain->Recreate(m_SwapchainFramebuffers, newSize);
 }
 
@@ -529,7 +528,6 @@ void LogicalVulkanDevice::AcquireNext(const Semaphore& toSignal)
     // as well when AcquireNext does
     while (m_Swapchain->AcquireNext(toSignal) == SwapchainState::OutOfDate)
     {
-        // TODO?: Check if we need to select a new size or not
         RecreateSwapchain(SelectSwapchainExtent(m_Window, m_PhysicalDevice.QuerySurfaceProperties()));
     }
 }

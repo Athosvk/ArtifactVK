@@ -19,9 +19,17 @@ Window::Window(const WindowCreateInfo &windowParams)
     });
 }
 
+Window::Window(Window &&other) : m_InternalWindow(std::exchange(other.m_InternalWindow, nullptr)), m_LastWindowResizeEvent(other.m_LastWindowResizeEvent)
+{
+}
+
+
 Window::~Window()
 {
-    glfwDestroyWindow(m_InternalWindow);
+    if (m_InternalWindow != nullptr) 
+    {
+        glfwDestroyWindow(m_InternalWindow);
+    }
 }
 
 bool Window::ShouldClose() const
@@ -50,7 +58,30 @@ VulkanInstance Window::CreateVulkanInstance(const InstanceCreateInfo &createInfo
     return VulkanInstance(createInfo, *m_InternalWindow);
 }
 
+bool Window::IsMinimized() const
+{
+    return m_Minimized;
+}
+
+void Window::WaitForRender()
+{
+    while (m_Minimized)
+    {
+        int width, height;
+        glfwGetFramebufferSize(m_InternalWindow, &width, &height);
+        glfwWaitEvents();
+    }
+}
+
 void Window::OnWindowResize(WindowResizeEvent resizeEvent)
 {
+    if (resizeEvent.NewWidth == 0 || resizeEvent.NewHeight == 0)
+    {
+        m_Minimized = true;
+    } 
+    else 
+    {
+        m_Minimized = false;
+    }
     m_LastWindowResizeEvent = resizeEvent;
 }
