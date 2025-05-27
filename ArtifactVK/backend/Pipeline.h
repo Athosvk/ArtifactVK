@@ -32,7 +32,6 @@ class RasterPipelineBuilder
 
     const std::filesystem::path& GetVertexShaderPath() const;
     const std::filesystem::path& GetFragmentShaderPath() const;
-    bool RenderToSwapchain() const;
   private:
     std::filesystem::path m_VertexShaderPath;
     std::filesystem::path m_FragmentShaderPath;

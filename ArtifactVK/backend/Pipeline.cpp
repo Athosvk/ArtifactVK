@@ -17,12 +17,6 @@ const std::filesystem::path &RasterPipelineBuilder::GetFragmentShaderPath() cons
     return m_FragmentShaderPath;
 }
 
-bool RasterPipelineBuilder::RenderToSwapchain() const
-{
-    // TODO: Change once we can specify different framebuffers to render the pipeline to
-    return true;
-}
-
 RasterPipeline::RasterPipeline(VkDevice vulkanDevice, VkGraphicsPipelineCreateInfo createInfo, const RenderPass& renderPass)
     : m_VulkanDevice(vulkanDevice) 
 {
