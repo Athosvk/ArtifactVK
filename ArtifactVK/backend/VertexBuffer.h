@@ -10,7 +10,7 @@ template<typename T>
 class VertexBuffer
 {
   public:
-    VertexBuffer(std::vector<T> data, VkDevice device, const VulkanDevice& physicalDevice)
+    VertexBuffer(std::vector<T> data, VkDevice device, const PhysicalDevice& physicalDevice)
     {
         VkBufferCreateInfo bufferCreateInfo{};
 		bufferCreateInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;

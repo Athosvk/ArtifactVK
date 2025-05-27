@@ -48,11 +48,11 @@ VulkanInstance::VulkanInstance(const InstanceCreateInfo &createInfo, GLFWwindow 
     m_VulkanDebugMessenger.ScopeBegin(m_VkInstance, m_ExtensionMapper);
 
     m_Surface.ScopeBegin(m_VkInstance, window);
-    m_ActiveDevice.ScopeBegin(CreatePhysicalDevice(*m_Surface, std::span{createInfo.RequiredExtensions}));
+    m_ActivePhysicalDevice.ScopeBegin(CreatePhysicalDevice(*m_Surface, std::span{createInfo.RequiredExtensions}));
 
-    m_ActiveLogicalDevice.ScopeBegin(
-        m_ActiveDevice->CreateLogicalDevice(m_ValidationLayers, createInfo.RequiredExtensions, window));
-    m_ActiveLogicalDevice->CreateSwapchain(window, *m_Surface);
+    m_ActiveDevice.ScopeBegin(
+        m_ActivePhysicalDevice->CreateLogicalDevice(m_ValidationLayers, createInfo.RequiredExtensions, window));
+    m_ActiveDevice->CreateSwapchain(window, *m_Surface);
 }
 
 VulkanInstance::~VulkanInstance()
@@ -60,8 +60,8 @@ VulkanInstance::~VulkanInstance()
     if (m_VkInstance != VK_NULL_HANDLE)
     {
         m_VulkanDebugMessenger.ScopeEnd();
-        m_ActiveLogicalDevice.ScopeEnd();
         m_ActiveDevice.ScopeEnd();
+        m_ActivePhysicalDevice.ScopeEnd();
         m_Surface.ScopeEnd();
         vkDestroyInstance(m_VkInstance, nullptr);
     }
@@ -72,14 +72,14 @@ VulkanInstance::VulkanInstance(VulkanInstance &&other)
       m_ExtensionMapper(std::move(other.m_ExtensionMapper)),
       m_DeviceExtensionMapper(std::move(other.m_DeviceExtensionMapper)),
       m_VulkanDebugMessenger(std::move(other.m_VulkanDebugMessenger)), m_Surface(std::move(other.m_Surface)),
-      m_ActiveDevice(std::move(other.m_ActiveDevice)), m_ActiveLogicalDevice(std::move(other.m_ActiveLogicalDevice)),
+      m_ActivePhysicalDevice(std::move(other.m_ActivePhysicalDevice)), m_ActiveDevice(std::move(other.m_ActiveDevice)),
       m_ValidationLayers(std::move(other.m_ValidationLayers))
 {
 }
 
-LogicalVulkanDevice &VulkanInstance::GetActiveDevice()
+VulkanDevice &VulkanInstance::GetActiveDevice()
 {
-    return *m_ActiveLogicalDevice;
+    return *m_ActiveDevice;
 }
 
 std::vector<const char *> VulkanInstance::CheckValidationLayers(const std::vector<ValidationLayer> &validationLayers)
@@ -224,7 +224,7 @@ VkInstance VulkanInstance::CreateInstance(const InstanceCreateInfo &createInfo)
     return vkInstance;
 }
 
-VulkanDevice VulkanInstance::CreatePhysicalDevice(const VulkanSurface &targetSurface,
+PhysicalDevice VulkanInstance::CreatePhysicalDevice(const VulkanSurface &targetSurface,
                                                   std::span<const EDeviceExtension> requestedExtensions) const
 {
     VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
@@ -240,7 +240,7 @@ VulkanDevice VulkanInstance::CreatePhysicalDevice(const VulkanSurface &targetSur
 
     vkEnumeratePhysicalDevices(m_VkInstance, &count, physicalDevices.data());
 
-    std::vector<VulkanDevice> devices;
+    std::vector<PhysicalDevice> devices;
     devices.reserve(physicalDevices.size());
     for (auto &physicalDevice : physicalDevices)
     {

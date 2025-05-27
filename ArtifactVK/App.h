@@ -42,10 +42,10 @@ class App
     void RunRenderLoop();
 
   private:
-    RasterPipeline LoadShaderPipeline(LogicalVulkanDevice &vulkanDevice, const RenderPass& renderPass) const;
+    RasterPipeline LoadShaderPipeline(VulkanDevice &vulkanDevice, const RenderPass& renderPass) const;
     void RecordFrame(PerFrameState& state);
     std::vector<std::reference_wrapper<Semaphore>> CreateSemaphorePerInFlightFrame();
-    std::vector<PerFrameState> CreatePerFrameState(LogicalVulkanDevice &vulkanDevice);
+    std::vector<PerFrameState> CreatePerFrameState(VulkanDevice &vulkanDevice);
     constexpr static std::vector<Vertex> GetVertices();
 
     Window m_Window;

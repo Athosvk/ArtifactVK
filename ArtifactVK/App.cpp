@@ -63,7 +63,7 @@ void App::RunRenderLoop()
     }
 }
 
-RasterPipeline App::LoadShaderPipeline(LogicalVulkanDevice &vulkanDevice, const RenderPass& renderPass) const
+RasterPipeline App::LoadShaderPipeline(VulkanDevice &vulkanDevice, const RenderPass& renderPass) const
 {
     auto builder = RasterPipelineBuilder("spirv/triangle.vert.spv", "spirv/triangle.frag.spv");
     // TODO: This doesn't emit a validation warning when no vertex buffer is bound. Bug?
@@ -94,7 +94,7 @@ std::vector<std::reference_wrapper<Semaphore>> App::CreateSemaphorePerInFlightFr
     return semaphores;
 }
 
-std::vector<PerFrameState> App::CreatePerFrameState(LogicalVulkanDevice &vulkanDevice)
+std::vector<PerFrameState> App::CreatePerFrameState(VulkanDevice &vulkanDevice)
 {
     std::vector<PerFrameState> perFrameState;
     auto commandBuffers = vulkanDevice.CreateGraphicsCommandBufferPool().CreateCommandBuffers(MAX_FRAMES_IN_FLIGHT);

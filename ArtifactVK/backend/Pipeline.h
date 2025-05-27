@@ -8,7 +8,7 @@
 #include "RenderPass.h"
 
 struct Viewport;
-class LogicalVulkanDevice;
+class VulkanDevice;
 
 class RasterPipeline
 {
