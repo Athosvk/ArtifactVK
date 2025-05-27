@@ -12,6 +12,9 @@ vec3 colors[3] = vec3[](
 	 vec3(0.0, 0.0, 1.0)
 );
 
+layout(location = 0) in vec2 vertexPosition;
+layout(location = 1) in vec3 vertexColor;
+
 layout(location = 0) out vec4 outColor;
 
 void main() {
