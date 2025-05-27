@@ -65,20 +65,7 @@ SurfaceProperties PhysicalDevice::QuerySurfaceProperties()
 
 VkPhysicalDeviceMemoryProperties PhysicalDevice::MemoryProperties() const
 {
-    return VkPhysicalDeviceMemoryProperties();
-}
-
-uint32_t PhysicalDevice::FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags propertyFlags) const
-{
-    for (uint32_t i = 0; i < m_MemoryProperties.memoryTypeCount; i++)
-    {
-        if ((typeFilter & (1 << i)) != 0
-            && (m_MemoryProperties.memoryTypes[i].propertyFlags & propertyFlags) == propertyFlags)
-        {
-            return i;
-        }
-    }
-    throw std::runtime_error("Could not find suitable memory type for type filter: " + std::to_string(typeFilter));
+    return m_MemoryProperties;
 }
 
 VkPhysicalDeviceProperties PhysicalDevice::QueryDeviceProperties() const

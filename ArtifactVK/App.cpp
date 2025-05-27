@@ -25,6 +25,7 @@ App::App()
       m_PerFrameState(CreatePerFrameState(m_VulkanInstance.GetActiveDevice())),
       m_Swapchain(m_VulkanInstance.GetActiveDevice().GetSwapchain())
 {
+    m_VulkanInstance.GetActiveDevice().CreateVertexBuffer(GetVertices());
 }
 
 App::~App()

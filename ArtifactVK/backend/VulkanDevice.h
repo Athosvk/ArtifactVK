@@ -7,6 +7,7 @@
 #include <optional>
 #include <filesystem>
 #include <span>
+#include <typeinfo>
 
 #include "DeviceExtensionMapping.h"
 #include "VulkanSurface.h"
@@ -16,6 +17,7 @@
 #include "Fence.h"
 #include "Semaphore.h"
 #include "Queue.h"
+#include "VertexBuffer.h"
 
 class PhysicalDevice;
 struct GLFWwindow;
@@ -45,6 +47,11 @@ class VulkanDevice
     void AcquireNext(const Semaphore& toSignal);
     void Present(std::span<Semaphore> waitSemaphores);
     void HandleResizeEvent(const WindowResizeEvent &resizeEvent);
+    template<typename T> 
+    VertexBuffer &CreateVertexBuffer(std::vector<T> data)
+    {
+        return m_VertexBuffers.emplace_back(data, m_Device, m_PhysicalDevice);
+    }
   private:
     void RecreateSwapchain(VkExtent2D newSize);
     ShaderModule LoadShaderModule(const std::filesystem::path &filename);
@@ -66,6 +73,7 @@ class VulkanDevice
     // TODO: Manage this better using a delete queue/stack so that 
     // this doesn't have to manually manage these handles
     std::vector<std::unique_ptr<SwapchainFramebuffer>> m_SwapchainFramebuffers;
+    std::vector<VertexBuffer> m_VertexBuffers;
     std::optional<VkExtent2D> m_LastUnhandledResize;
 };
 
