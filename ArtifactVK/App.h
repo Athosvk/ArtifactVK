@@ -1,5 +1,6 @@
 #pragma once
 #include <vulkan/vulkan.h>
+#include <glm/glm.hpp>
 
 #include <cstdlib>
 #include <iostream>
@@ -21,6 +22,12 @@ struct PerFrameState
     CommandBuffer &CommandBuffer;
 };
 
+struct Vertex
+{
+    glm::vec2 Position;
+    glm::vec3 Color;
+};
+
 class App
 {
   public:
@@ -34,6 +41,7 @@ class App
     void RecordFrame(PerFrameState& state);
     std::vector<std::reference_wrapper<Semaphore>> CreateSemaphorePerInFlightFrame();
     std::vector<PerFrameState> CreatePerFrameState(LogicalVulkanDevice &vulkanDevice);
+    constexpr static std::vector<Vertex> GetVertices();
 
     Window m_Window;
     VulkanInstance m_VulkanInstance;

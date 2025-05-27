@@ -104,3 +104,13 @@ std::vector<PerFrameState> App::CreatePerFrameState(LogicalVulkanDevice &vulkanD
     }
     return perFrameState;
 }
+
+constexpr std::vector<Vertex> App::GetVertices()
+{
+    return
+    {
+	    {{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+		{{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
+		{{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
+    };
+}
