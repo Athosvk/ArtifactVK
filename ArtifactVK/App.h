@@ -6,6 +6,7 @@
 #include <iostream>
 #include <stdexcept>
 #include <functional>
+#include <array>
 
 #include "backend/VulkanInstance.h"
 #include "backend/Window.h"
@@ -26,6 +27,9 @@ struct Vertex
 {
     glm::vec2 Position;
     glm::vec3 Color;
+
+    constexpr static VkVertexInputBindingDescription GetBindingDescription();
+    constexpr static std::array<VkVertexInputAttributeDescription, 2> GetAttributeDescriptions(); 
 };
 
 class App

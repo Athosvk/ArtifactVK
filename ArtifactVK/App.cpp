@@ -114,3 +114,32 @@ constexpr std::vector<Vertex> App::GetVertices()
 		{{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
     };
 }
+
+constexpr VkVertexInputBindingDescription Vertex::GetBindingDescription()
+{
+    VkVertexInputBindingDescription bindingDescription;
+    bindingDescription.binding = 0;
+    bindingDescription.stride = sizeof(Vertex);
+    bindingDescription.inputRate = VkVertexInputRate::VK_VERTEX_INPUT_RATE_VERTEX;
+    return bindingDescription;
+}
+
+constexpr std::array<VkVertexInputAttributeDescription,2> Vertex::GetAttributeDescriptions()
+{
+    VkVertexInputAttributeDescription positionAttribute;
+    positionAttribute.binding = 0;
+    positionAttribute.location = 0;
+    positionAttribute.format = VkFormat::VK_FORMAT_R32G32_SFLOAT;
+    positionAttribute.offset = offsetof(Vertex, Position);
+
+    VkVertexInputAttributeDescription colorAttribute;
+    colorAttribute.binding = 0;
+    colorAttribute.location = 1;
+    colorAttribute.format = VkFormat::VK_FORMAT_R32G32B32_SFLOAT;
+    colorAttribute.offset = offsetof(Vertex, Color);
+
+
+    return {
+        positionAttribute, colorAttribute
+    };
+}
