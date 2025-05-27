@@ -40,15 +40,26 @@ void App::RunRenderLoop()
 {
     while (!m_Window.ShouldClose())
     {
-        std::cout << "\nRendering frame " << m_CurrentFrameIndex << "\n"; 
-        auto resizeEvent = m_Window.PollEvents();
-        if (resizeEvent.has_value())
+        if (!m_Window.IsMinimized())
         {
-            m_VulkanInstance.GetActiveDevice().HandleResizeEvent(*resizeEvent);
-        }
+            std::cout << "\nRendering frame " << m_CurrentFrameIndex << "\n";
+            auto resizeEvent = m_Window.PollEvents();
+            if (resizeEvent.has_value() && !m_Window.IsMinimized())
+            {
+                m_VulkanInstance.GetActiveDevice().HandleResizeEvent(*resizeEvent);
+            }
+            
+            if (m_Window.IsMinimized())
+            {
+                m_Window.WaitForRender();
+            }
+            else
+            {
+				RecordFrame(m_PerFrameState[m_CurrentFrameIndex % 2]);
+				m_CurrentFrameIndex += 1;
+            }
 
-        RecordFrame(m_PerFrameState[m_CurrentFrameIndex % 2]);
-        m_CurrentFrameIndex += 1;
+        }
     }
 }
 
