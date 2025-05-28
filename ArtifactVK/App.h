@@ -56,4 +56,5 @@ class App
     std::vector<PerFrameState> m_PerFrameState;
     uint32_t m_CurrentFrameIndex = 0;
     Swapchain &m_Swapchain;
+    VertexBuffer &m_VertexBuffer;
 };

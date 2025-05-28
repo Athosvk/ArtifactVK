@@ -19,7 +19,6 @@ uint32_t VertexBuffer::FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags
 VertexBuffer::VertexBuffer(VertexBuffer &&other)
     : m_Buffer(std::exchange(other.m_Buffer, VK_NULL_HANDLE)), m_Device(other.m_Device), m_PhysicalDevice(other.m_PhysicalDevice)
 {
-    Bind();
 } 
 
 VertexBuffer::~VertexBuffer()
@@ -28,7 +27,13 @@ VertexBuffer::~VertexBuffer()
 	vkFreeMemory(m_Device, m_Memory, nullptr);
 }
 
-void VertexBuffer::Bind()
+size_t VertexBuffer::VertexCount() const
 {
-	vkBindBufferMemory(m_Device, m_Buffer, m_Memory, 0);
+    return m_VertexCount;
 }
+
+VkBuffer VertexBuffer::Get() const
+{
+    return m_Buffer;
+}
+

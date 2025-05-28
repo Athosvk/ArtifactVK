@@ -11,6 +11,7 @@
 class Framebuffer;
 class RenderPass;
 class RasterPipeline;
+class VertexBuffer;
 
 struct CommandBufferPoolCreateInfo
 {
@@ -34,12 +35,9 @@ struct CommandBuffer
 
     void WaitFence(bool log = false);
     void Begin();
-    void Draw(const Framebuffer& frameBuffer, const RenderPass& renderPass, const RasterPipeline& pipeline);
+    void Draw(const Framebuffer& frameBuffer, const RenderPass& renderPass, const RasterPipeline& pipeline, const VertexBuffer& vertexBuffer);
     Fence& End(std::span<Semaphore> waitSemaphores, std::span<Semaphore> signalSemaphores, Queue queue);
-    VkFence Get() const
-    {
-        return m_InFlight.Get();
-    }
+    void BindBuffer(const VertexBuffer &vertexBuffer);
   private:
     void Reset();
 

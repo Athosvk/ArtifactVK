@@ -23,9 +23,9 @@ App::App()
       m_RenderFullscreen(LoadShaderPipeline(m_VulkanInstance.GetActiveDevice(), m_MainPass)),
       m_SwapchainFramebuffers(m_VulkanInstance.GetActiveDevice().CreateSwapchainFramebuffers(m_MainPass)),
       m_PerFrameState(CreatePerFrameState(m_VulkanInstance.GetActiveDevice())),
-      m_Swapchain(m_VulkanInstance.GetActiveDevice().GetSwapchain())
+      m_Swapchain(m_VulkanInstance.GetActiveDevice().GetSwapchain()),
+      m_VertexBuffer(m_VulkanInstance.GetActiveDevice().CreateVertexBuffer(GetVertices()))
 {
-    m_VulkanInstance.GetActiveDevice().CreateVertexBuffer(GetVertices());
 }
 
 App::~App()
@@ -78,7 +78,7 @@ void App::RecordFrame(PerFrameState& state)
     // TODO: Can probably be moved to CommandBuffer->Begin()
     state.CommandBuffer.WaitFence();
     state.CommandBuffer.Begin();
-    state.CommandBuffer.Draw(m_SwapchainFramebuffers.GetCurrent(), m_MainPass, m_RenderFullscreen);
+    state.CommandBuffer.Draw(m_SwapchainFramebuffers.GetCurrent(), m_MainPass, m_RenderFullscreen, m_VertexBuffer);
     state.CommandBuffer.End(std::span{ &state.ImageAvailable, 1 }, std::span{ &state.RenderFinished, 1 }, 
         m_VulkanInstance.GetActiveDevice().GetGraphicsQueue());
     
