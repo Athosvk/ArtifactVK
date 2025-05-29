@@ -8,7 +8,7 @@
 #include "Framebuffer.h"
 #include "Queue.h"
 
-class VulkanDevice;
+class PhysicalDevice;
 class RenderPass;
 class Semaphore;
 class Swapchain;
@@ -49,7 +49,7 @@ enum class SwapchainState
 class Swapchain
 {
   public:
-    Swapchain(const SwapchainCreateInfo& createInfo, const VkSurfaceKHR& surface, VkDevice device, const VulkanDevice& vulkanDevice, Queue targetPresentQueue);
+    Swapchain(const SwapchainCreateInfo& createInfo, const VkSurfaceKHR& surface, VkDevice device, const PhysicalDevice& vulkanDevice, Queue targetPresentQueue);
     Swapchain(const Swapchain &other) = delete;
     Swapchain(Swapchain &&other);
     ~Swapchain();
@@ -68,14 +68,14 @@ class Swapchain
     void Recreate(std::vector<std::unique_ptr<SwapchainFramebuffer>>& oldFramebuffers, VkExtent2D newExtents);
     SwapchainState GetCurrentState() const;
   private:
-    void Create(const SwapchainCreateInfo& createInfo, const VkSurfaceKHR& surface, VkDevice device, const VulkanDevice& vulkanDevice, VkSwapchainKHR oldSwapchain);
+    void Create(const SwapchainCreateInfo& createInfo, const VkSurfaceKHR& surface, VkDevice device, const PhysicalDevice& vulkanDevice, VkSwapchainKHR oldSwapchain);
     void Destroy();
     SwapchainState MapResultToState(VkResult result) const;
 
     VkSwapchainKHR m_Swapchain = VK_NULL_HANDLE;
     VkSurfaceKHR m_Surface;
     VkDevice m_Device;
-    const VulkanDevice& m_VulkanDevice;
+    const PhysicalDevice& m_VulkanDevice;
     SwapchainCreateInfo m_OriginalCreateInfo;
     std::vector<VkImage> m_Images;
     std::vector<VkImageView> m_ImageViews;

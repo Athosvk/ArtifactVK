@@ -3,16 +3,17 @@
 #include <stdexcept>
 #include <algorithm>
 #include <iostream>
+#include <cassert>
 
 #include "VulkanSurface.h"
 #include "VulkanDevice.h"
 #include "Semaphore.h"
-#include <cassert>
+#include "PhysicalDevice.h"
 
 const static uint32_t InvalidImageIndex = 0xFFFFFFFF;
 
 Swapchain::Swapchain(const SwapchainCreateInfo &createInfo, const VkSurfaceKHR &surface, VkDevice device,
-                     const VulkanDevice &vulkanDevice,
+                     const PhysicalDevice &vulkanDevice,
                      Queue targetPresentQueue)
     : m_Device(device), 
     m_VulkanDevice(vulkanDevice),
@@ -161,7 +162,7 @@ SwapchainState Swapchain::GetCurrentState() const
 }
 
 void Swapchain::Create(const SwapchainCreateInfo &createInfo, const VkSurfaceKHR &surface, VkDevice device,
-                                 const VulkanDevice &vulkanDevice, VkSwapchainKHR oldSwapchain)
+                                 const PhysicalDevice &vulkanDevice, VkSwapchainKHR oldSwapchain)
 {
     VkSwapchainCreateInfoKHR vkCreateInfo{};
     vkCreateInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;

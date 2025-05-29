@@ -2,6 +2,7 @@
 #include "VulkanDevice.h"
 #include "Framebuffer.h"
 #include "RenderPass.h"
+#include "VertexBuffer.h"
 
 #include <cassert>
 #include <vulkan/vulkan.h>
@@ -61,7 +62,7 @@ void CommandBuffer::Begin()
 }
 
 void CommandBuffer::Draw(const Framebuffer& frameBuffer, const RenderPass& renderPass, 
-    const RasterPipeline& pipeline)
+    const RasterPipeline& pipeline, const VertexBuffer& vertexBuffer)
 {
     assert(m_Status == CommandBufferStatus::Recording && "Calling draw before starting recording of command buffer");
     VkRenderPassBeginInfo renderPassBeginInfo{};
@@ -79,8 +80,9 @@ void CommandBuffer::Draw(const Framebuffer& frameBuffer, const RenderPass& rende
     
     vkCmdBeginRenderPass(m_CommandBuffer, &renderPassBeginInfo, VkSubpassContents::VK_SUBPASS_CONTENTS_INLINE);
     pipeline.Bind(m_CommandBuffer, viewport);
+    BindBuffer(vertexBuffer);
     // TODO: Give user control over what to draw
-    vkCmdDraw(m_CommandBuffer, 3, 1, 0, 0);
+    vkCmdDraw(m_CommandBuffer, static_cast<uint32_t>(vertexBuffer.VertexCount()), 1, 0, 0);
     vkCmdEndRenderPass(m_CommandBuffer);
 }
 
@@ -132,6 +134,13 @@ Fence& CommandBuffer::End(std::span<Semaphore> waitSemaphores, std::span<Semapho
     }
     m_Status = CommandBufferStatus::Submitted;
     return m_InFlight;
+}
+
+void CommandBuffer::BindBuffer(const VertexBuffer &vertexBuffer)
+{
+    VkBuffer vertexBuffers = {vertexBuffer.Get()};
+    VkDeviceSize offsets[] = {0};
+    vkCmdBindVertexBuffers(m_CommandBuffer, 0, 1, &vertexBuffers, offsets);
 }
 
 void CommandBuffer::Reset()

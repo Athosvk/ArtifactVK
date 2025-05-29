@@ -20,97 +20,9 @@
 #include "VulkanSurface.h"
 #include "Window.h"
 #include "ShaderModule.h"
+#include "PhysicalDevice.h"
 
-VulkanDevice::VulkanDevice(VkPhysicalDevice physicalDevice,
-                           std::optional<std::reference_wrapper<const VulkanSurface>> targetSurface,
-                           const DeviceExtensionMapping &extensionMapping,
-                           std::span<const EDeviceExtension> requestedExtensions)
-    : m_ExtensionMapping(extensionMapping), m_PhysicalDevice(physicalDevice),
-      m_QueueFamilies(FindQueueFamilies(targetSurface)), m_Properties(QueryDeviceProperties()),
-      m_Features(QueryDeviceFeatures()), m_SurfaceProperties(QuerySurfaceProperties(targetSurface)),
-      m_AvailableExtensions(QueryExtensions(extensionMapping)), m_Valid(Validate(requestedExtensions)),
-      m_TargetSurface(targetSurface)
-{
-}
-
-bool VulkanDevice::IsValid() const
-{
-    return m_Valid;
-}
-
-const QueueFamilyIndices &VulkanDevice::GetQueueFamilies() const
-{
-    return m_QueueFamilies;
-}
-
-const VkPhysicalDeviceProperties &VulkanDevice::GetProperties() const
-{
-    return m_Properties;
-}
-
-const VkPhysicalDeviceFeatures &VulkanDevice::GetFeatures() const
-{
-    return m_Features;
-}
-
-std::vector<EDeviceExtension> VulkanDevice::FilterAvailableExtensions(
-    std::span<const EDeviceExtension> desiredExtensions) const
-{
-    std::vector<EDeviceExtension> desiredAvailableExtensions;
-    desiredAvailableExtensions.reserve(desiredExtensions.size());
-    for (EDeviceExtension extension : desiredExtensions)
-    {
-        desiredAvailableExtensions.emplace_back(extension);
-    }
-    return desiredAvailableExtensions;
-}
-
-LogicalVulkanDevice VulkanDevice::CreateLogicalDevice(const std::vector<const char *> &validationLayers,
-                                                      std::vector<EDeviceExtension> extensions, GLFWwindow& window)
-{
-    return LogicalVulkanDevice(*this, m_PhysicalDevice, validationLayers, extensions, m_ExtensionMapping, window);
-}
-
-SurfaceProperties VulkanDevice::GetCachedSurfaceProperties() const
-{
-    return m_SurfaceProperties;
-}
-
-SurfaceProperties VulkanDevice::QuerySurfaceProperties()
-{
-    m_SurfaceProperties = QuerySurfaceProperties(m_TargetSurface);
-    return m_SurfaceProperties;
-}
-
-VkPhysicalDeviceProperties VulkanDevice::QueryDeviceProperties() const
-{
-    VkPhysicalDeviceProperties properties;
-    vkGetPhysicalDeviceProperties(m_PhysicalDevice, &properties);
-    return properties;
-}
-
-VkPhysicalDeviceFeatures VulkanDevice::QueryDeviceFeatures() const
-{
-    VkPhysicalDeviceFeatures features;
-    vkGetPhysicalDeviceFeatures(m_PhysicalDevice, &features);
-    return features;
-}
-
-SurfaceProperties VulkanDevice::QuerySurfaceProperties(
-    std::optional<std::reference_wrapper<const VulkanSurface>> surface) const
-{
-
-    if (surface)
-    {
-        return surface->get().QueryProperties(m_PhysicalDevice);
-    }
-    else
-    {
-        return SurfaceProperties{};
-    }
-}
-
-VkSurfaceFormatKHR LogicalVulkanDevice::SelectSurfaceFormat() const
+VkSurfaceFormatKHR VulkanDevice::SelectSurfaceFormat() const
 {
     auto surfaceProperties = m_PhysicalDevice.GetCachedSurfaceProperties();
     auto iter = std::find_if(surfaceProperties.Formats.begin(), surfaceProperties.Formats.end(), [](const VkSurfaceFormatKHR& format)
@@ -130,14 +42,14 @@ VkSurfaceFormatKHR LogicalVulkanDevice::SelectSurfaceFormat() const
     }
 }
 
-VkPresentModeKHR LogicalVulkanDevice::SelectPresentMode() const
+VkPresentModeKHR VulkanDevice::SelectPresentMode() const
 {
     auto surfaceProperties = m_PhysicalDevice.GetCachedSurfaceProperties();
     return std::find(surfaceProperties.PresentModes.begin(), surfaceProperties.PresentModes.end(), VkPresentModeKHR::VK_PRESENT_MODE_MAILBOX_KHR) != surfaceProperties.PresentModes.end() ?
         VkPresentModeKHR::VK_PRESENT_MODE_MAILBOX_KHR : VkPresentModeKHR::VK_PRESENT_MODE_FIFO_KHR;
 }
 
-VkExtent2D LogicalVulkanDevice::SelectSwapchainExtent(GLFWwindow& window, const SurfaceProperties& surfaceProperties) const
+VkExtent2D VulkanDevice::SelectSwapchainExtent(GLFWwindow& window, const SurfaceProperties& surfaceProperties) const
 {
     if (surfaceProperties.Capabilities.currentExtent.width !=
         std::numeric_limits<uint32_t>::max())
@@ -159,12 +71,12 @@ VkExtent2D LogicalVulkanDevice::SelectSwapchainExtent(GLFWwindow& window, const 
     }
 }
 
-void LogicalVulkanDevice::WaitForIdle() const
+void VulkanDevice::WaitForIdle() const
 {
     vkDeviceWaitIdle(m_Device);
 }
 
-Swapchain &LogicalVulkanDevice::CreateSwapchain(GLFWwindow &window, const VulkanSurface &surface)
+Swapchain &VulkanDevice::CreateSwapchain(GLFWwindow &window, const VulkanSurface &surface)
 {
     auto maxImageCount = m_PhysicalDevice.GetCachedSurfaceProperties().Capabilities.maxImageCount == 0 ? std::numeric_limits<uint32_t>::max()
                              : m_PhysicalDevice.GetCachedSurfaceProperties().Capabilities.maxImageCount;
@@ -181,13 +93,13 @@ Swapchain &LogicalVulkanDevice::CreateSwapchain(GLFWwindow &window, const Vulkan
     return m_Swapchain.emplace(Swapchain(createInfo, surface.Get(), m_Device, m_PhysicalDevice, m_PresentQueue.value()));
 }
 
-Swapchain &LogicalVulkanDevice::GetSwapchain()
+Swapchain &VulkanDevice::GetSwapchain()
 {
     assert(m_Swapchain.has_value() && "Need an active swapchain. Create one through CreateSwapchain");
     return *m_Swapchain;
 }
 
-void LogicalVulkanDevice::RecreateSwapchain(VkExtent2D newSize)
+void VulkanDevice::RecreateSwapchain(VkExtent2D newSize)
 {
     // TODO: Remove this through proper syncing with old swapchain
     WaitForIdle();
@@ -195,12 +107,12 @@ void LogicalVulkanDevice::RecreateSwapchain(VkExtent2D newSize)
     m_Swapchain->Recreate(m_SwapchainFramebuffers, newSize);
 }
 
-ShaderModule LogicalVulkanDevice::LoadShaderModule(const std::filesystem::path &filename)
+ShaderModule VulkanDevice::LoadShaderModule(const std::filesystem::path &filename)
 {
     return ShaderModule::LoadFromDisk(m_Device, filename);
 }
 
-RasterPipeline LogicalVulkanDevice::CreateRasterPipeline(RasterPipelineBuilder &&pipelineBuilder, const RenderPass& renderPass)
+RasterPipeline VulkanDevice::CreateRasterPipeline(RasterPipelineBuilder &&pipelineBuilder, const RenderPass& renderPass)
 {
     auto fragmentShader = LoadShaderModule(pipelineBuilder.GetFragmentShaderPath());
     auto vertexShader = LoadShaderModule(pipelineBuilder.GetVertexShaderPath());
@@ -235,12 +147,9 @@ RasterPipeline LogicalVulkanDevice::CreateRasterPipeline(RasterPipelineBuilder &
     dynamicState.dynamicStateCount = 0;
     dynamicState.pDynamicStates = nullptr;
 
-    VkPipelineVertexInputStateCreateInfo vertexInputCreateInfo{};
-    vertexInputCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-    vertexInputCreateInfo.vertexBindingDescriptionCount = 0;
-    vertexInputCreateInfo.pVertexBindingDescriptions = nullptr;
-    vertexInputCreateInfo.vertexAttributeDescriptionCount = 0;
-    vertexInputCreateInfo.pVertexAttributeDescriptions = nullptr;
+    auto bindingDescription = pipelineBuilder.GetVertexBindingDescription();
+    VkPipelineVertexInputStateCreateInfo vertexInputCreateInfo = bindingDescription.has_value() ? bindingDescription->GetVkPipelineInputStateCreateInfo() 
+        : VertexBindingDescription::DefaultPipelineInputStateCreateInfo();
 
     VkPipelineInputAssemblyStateCreateInfo inputAssemblyCreateInfo{};
     inputAssemblyCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -322,7 +231,14 @@ RasterPipeline LogicalVulkanDevice::CreateRasterPipeline(RasterPipelineBuilder &
     return RasterPipeline(m_Device, pipelineInfo, renderPass);
 }
 
-bool VulkanDevice::Validate(std::span<const EDeviceExtension> requiredExtensions) const
+VkPhysicalDeviceMemoryProperties PhysicalDevice::QueryMemoryProperties() const
+{
+    VkPhysicalDeviceMemoryProperties memoryProperties;
+    vkGetPhysicalDeviceMemoryProperties(m_PhysicalDevice, &memoryProperties);
+    return memoryProperties;
+}
+
+bool PhysicalDevice::Validate(std::span<const EDeviceExtension> requiredExtensions) const
 {
     return (m_Properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU ||
             m_Properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU) &&
@@ -331,7 +247,7 @@ bool VulkanDevice::Validate(std::span<const EDeviceExtension> requiredExtensions
            !m_SurfaceProperties.PresentModes.empty() && AllExtensionsAvailable(requiredExtensions);
 }
 
-bool VulkanDevice::AllExtensionsAvailable(std::span<const EDeviceExtension> extensions) const
+bool PhysicalDevice::AllExtensionsAvailable(std::span<const EDeviceExtension> extensions) const
 {
     bool allPresent = true;
     for (auto extension : extensions)
@@ -341,7 +257,7 @@ bool VulkanDevice::AllExtensionsAvailable(std::span<const EDeviceExtension> exte
     return allPresent;
 }
 
-std::set<EDeviceExtension> VulkanDevice::QueryExtensions(const DeviceExtensionMapping &extensionMapping) const
+std::set<EDeviceExtension> PhysicalDevice::QueryExtensions(const DeviceExtensionMapping &extensionMapping) const
 {
     uint32_t extensionCount;
     // TODO: Embed support for layer-based extensions
@@ -357,7 +273,7 @@ std::set<EDeviceExtension> VulkanDevice::QueryExtensions(const DeviceExtensionMa
     return mappedExtensions;
 }
 
-QueueFamilyIndices VulkanDevice::FindQueueFamilies(
+QueueFamilyIndices PhysicalDevice::FindQueueFamilies(
     std::optional<std::reference_wrapper<const VulkanSurface>> surface) const
 {
     QueueFamilyIndices indices;
@@ -381,7 +297,7 @@ QueueFamilyIndices VulkanDevice::FindQueueFamilies(
     return indices;
 }
 
-LogicalVulkanDevice::LogicalVulkanDevice(VulkanDevice &physicalDevice, const VkPhysicalDevice &physicalDeviceHandle,
+VulkanDevice::VulkanDevice(PhysicalDevice &physicalDevice, const VkPhysicalDevice &physicalDeviceHandle,
                         const std::vector<const char *> &validationLayers, std::vector<EDeviceExtension> extensions,
                         const DeviceExtensionMapping &deviceExtensionMapping, GLFWwindow& window)
     : m_PhysicalDevice(physicalDevice), m_Window(window)
@@ -421,7 +337,7 @@ LogicalVulkanDevice::LogicalVulkanDevice(VulkanDevice &physicalDevice, const VkP
     m_PresentQueue = Queue(m_Device, physicalDevice.GetQueueFamilies().PresentFamilyIndex.value());
 }
 
-LogicalVulkanDevice::LogicalVulkanDevice(LogicalVulkanDevice &&other)
+VulkanDevice::VulkanDevice(VulkanDevice &&other)
     : m_Device(std::exchange(other.m_Device, VK_NULL_HANDLE)), m_PhysicalDevice(other.m_PhysicalDevice),
       m_GraphicsQueue(other.m_GraphicsQueue), m_PresentQueue(other.m_PresentQueue),
       m_Swapchain(std::move(other.m_Swapchain)), 
@@ -431,7 +347,7 @@ LogicalVulkanDevice::LogicalVulkanDevice(LogicalVulkanDevice &&other)
 {
 }
 
-LogicalVulkanDevice::~LogicalVulkanDevice()
+VulkanDevice::~VulkanDevice()
 {
     if (m_Device == VK_NULL_HANDLE)
     {
@@ -455,6 +371,7 @@ LogicalVulkanDevice::~LogicalVulkanDevice()
     m_Swapchain.reset();
     m_CommandBufferPools.clear();
     m_Semaphores.clear();
+    m_VertexBuffers.clear();
 
     std::condition_variable destroyed;
     std::mutex destroyMutex;
@@ -478,7 +395,7 @@ LogicalVulkanDevice::~LogicalVulkanDevice()
     vkDestroyDevice(m_Device, nullptr);
 }
 
-RenderPass LogicalVulkanDevice::CreateRenderPass()
+RenderPass VulkanDevice::CreateRenderPass()
 {
     assert(m_Swapchain.has_value());
     auto attachmentDescription = m_Swapchain->AttachmentDescription();
@@ -486,13 +403,13 @@ RenderPass LogicalVulkanDevice::CreateRenderPass()
     return RenderPass(m_Device, RenderPassCreateInfo{ attachmentDescription });
 }
 
-const SwapchainFramebuffer& LogicalVulkanDevice::CreateSwapchainFramebuffers(const RenderPass &renderpass)
+const SwapchainFramebuffer& VulkanDevice::CreateSwapchainFramebuffers(const RenderPass &renderpass)
 {
     assert(m_Swapchain.has_value() && "No swapchain to create framebuffers for");
     return *m_SwapchainFramebuffers.emplace_back(std::make_unique<SwapchainFramebuffer>(m_Swapchain->CreateFramebuffersFor(renderpass)));
 }
 
-CommandBufferPool &LogicalVulkanDevice::CreateGraphicsCommandBufferPool()
+CommandBufferPool &VulkanDevice::CreateGraphicsCommandBufferPool()
 {
     auto familyIndices = m_PhysicalDevice.GetQueueFamilies();
     assert(familyIndices.GraphicsFamilyIndex.has_value() &&
@@ -503,18 +420,18 @@ CommandBufferPool &LogicalVulkanDevice::CreateGraphicsCommandBufferPool()
     return *m_CommandBufferPools.emplace_back(std::make_unique<CommandBufferPool>(m_Device, createInfo));
 }
 
-Semaphore &LogicalVulkanDevice::CreateDeviceSemaphore()
+Semaphore &VulkanDevice::CreateDeviceSemaphore()
 {
     return *m_Semaphores.emplace_back(std::make_unique<Semaphore>(m_Device));
 }
 
-Queue LogicalVulkanDevice::GetGraphicsQueue() const
+Queue VulkanDevice::GetGraphicsQueue() const
 {
     assert(m_GraphicsQueue.has_value() && "Device has no graphics queue");
     return m_GraphicsQueue.value();
 }
 
-void LogicalVulkanDevice::AcquireNext(const Semaphore& toSignal)
+void VulkanDevice::AcquireNext(const Semaphore& toSignal)
 {
     // TODO: Ensure semaphores in correct state, or more properly,
     // that we cannot have a recording cmd buffer at this time
@@ -532,7 +449,7 @@ void LogicalVulkanDevice::AcquireNext(const Semaphore& toSignal)
     }
 }
 
-void LogicalVulkanDevice::Present(std::span<Semaphore> waitSemaphores)
+void VulkanDevice::Present(std::span<Semaphore> waitSemaphores)
 {
     assert(m_Swapchain.has_value());
     if (m_Swapchain->Present(waitSemaphores) != SwapchainState::Optimal)
@@ -542,12 +459,12 @@ void LogicalVulkanDevice::Present(std::span<Semaphore> waitSemaphores)
     }
 }
 
-void LogicalVulkanDevice::HandleResizeEvent(const WindowResizeEvent & resizeEvent)
+void VulkanDevice::HandleResizeEvent(const WindowResizeEvent & resizeEvent)
 {
     m_LastUnhandledResize = VkExtent2D{resizeEvent.NewWidth, resizeEvent.NewHeight};
 }
 
-std::vector<VkDeviceQueueCreateInfo> LogicalVulkanDevice::GetQueueCreateInfos(const VulkanDevice &physicalDevice)
+std::vector<VkDeviceQueueCreateInfo> VulkanDevice::GetQueueCreateInfos(const PhysicalDevice &physicalDevice)
 {
     std::set<uint32_t> uniqueQueueIndices = physicalDevice.GetQueueFamilies().GetUniqueQueues();
 

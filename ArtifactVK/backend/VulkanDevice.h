@@ -7,6 +7,7 @@
 #include <optional>
 #include <filesystem>
 #include <span>
+#include <typeinfo>
 
 #include "DeviceExtensionMapping.h"
 #include "VulkanSurface.h"
@@ -16,29 +17,23 @@
 #include "Fence.h"
 #include "Semaphore.h"
 #include "Queue.h"
+#include "VertexBuffer.h"
 
-class VulkanDevice;
+class PhysicalDevice;
 struct GLFWwindow;
 class ShaderModule;
 struct WindowResizeEvent;
 
-struct QueueFamilyIndices
-{
-    std::optional<uint32_t> GraphicsFamilyIndex;
-    std::optional<uint32_t> PresentFamilyIndex;
 
-    std::set<uint32_t> GetUniqueQueues() const;
-};
-
-class LogicalVulkanDevice
+class VulkanDevice
 {
   public:
-    LogicalVulkanDevice(VulkanDevice &physicalDevice, const VkPhysicalDevice &physicalDeviceHandle,
+    VulkanDevice(PhysicalDevice &physicalDevice, const VkPhysicalDevice &physicalDeviceHandle,
                         const std::vector<const char *> &validationLayers, std::vector<EDeviceExtension> extensions,
                         const DeviceExtensionMapping &deviceExtensionMapping, GLFWwindow& window);
-    LogicalVulkanDevice(const LogicalVulkanDevice &other) = delete;
-    LogicalVulkanDevice(LogicalVulkanDevice &&other);
-    ~LogicalVulkanDevice();
+    VulkanDevice(const VulkanDevice &other) = delete;
+    VulkanDevice(VulkanDevice &&other);
+    ~VulkanDevice();
 
     void WaitForIdle() const;
     Swapchain& CreateSwapchain(GLFWwindow& window, const VulkanSurface& surface);
@@ -52,17 +47,22 @@ class LogicalVulkanDevice
     void AcquireNext(const Semaphore& toSignal);
     void Present(std::span<Semaphore> waitSemaphores);
     void HandleResizeEvent(const WindowResizeEvent &resizeEvent);
+    template<typename T> 
+    VertexBuffer &CreateVertexBuffer(std::vector<T> data)
+    {
+        return m_VertexBuffers.emplace_back(data, m_Device, m_PhysicalDevice);
+    }
   private:
     void RecreateSwapchain(VkExtent2D newSize);
     ShaderModule LoadShaderModule(const std::filesystem::path &filename);
-    static std::vector<VkDeviceQueueCreateInfo> GetQueueCreateInfos(const VulkanDevice &physicalDevice);
+    static std::vector<VkDeviceQueueCreateInfo> GetQueueCreateInfos(const PhysicalDevice &physicalDevice);
     VkSurfaceFormatKHR SelectSurfaceFormat() const;
     VkPresentModeKHR SelectPresentMode() const;
     VkExtent2D SelectSwapchainExtent(GLFWwindow& window, const SurfaceProperties& surfaceProperties) const;
 
     VkDevice m_Device;
     GLFWwindow &m_Window;
-    VulkanDevice &m_PhysicalDevice;
+    PhysicalDevice &m_PhysicalDevice;
     std::optional<Queue> m_GraphicsQueue;
     std::optional<Queue> m_PresentQueue;
     std::optional<Swapchain> m_Swapchain = std::nullopt;
@@ -73,45 +73,7 @@ class LogicalVulkanDevice
     // TODO: Manage this better using a delete queue/stack so that 
     // this doesn't have to manually manage these handles
     std::vector<std::unique_ptr<SwapchainFramebuffer>> m_SwapchainFramebuffers;
+    std::vector<VertexBuffer> m_VertexBuffers;
     std::optional<VkExtent2D> m_LastUnhandledResize;
 };
 
-class VulkanDevice
-{
-  public:
-    VulkanDevice(VkPhysicalDevice physicalDevice,
-                 std::optional<std::reference_wrapper<const VulkanSurface>> targetSurface,
-                 const DeviceExtensionMapping &extensionMapping, std::span<const EDeviceExtension> requestedExtensions);
-    VulkanDevice(const VulkanDevice &other) = delete;
-    VulkanDevice(VulkanDevice&& other) = default;
-
-    const QueueFamilyIndices& GetQueueFamilies() const;
-    bool IsValid() const;
-    const VkPhysicalDeviceProperties& GetProperties() const;
-    const VkPhysicalDeviceFeatures& GetFeatures() const;
-    std::vector<EDeviceExtension> FilterAvailableExtensions(std::span<const EDeviceExtension> desiredExtensions) const;
-    LogicalVulkanDevice CreateLogicalDevice(const std::vector<const char *>& validationLayers,
-                                            std::vector<EDeviceExtension> extensions, GLFWwindow& window);
-
-    // TODO: These are the cached values, but not neccessarily the latest. Need to requery this possibly
-    SurfaceProperties GetCachedSurfaceProperties() const;
-    SurfaceProperties QuerySurfaceProperties();
-  private:
-    bool Validate(std::span<const EDeviceExtension> requiredExtensions) const;
-    bool AllExtensionsAvailable(std::span<const EDeviceExtension> extensions) const;
-    std::set<EDeviceExtension> QueryExtensions(const DeviceExtensionMapping &extensionMapping) const;
-    QueueFamilyIndices FindQueueFamilies(std::optional<std::reference_wrapper<const VulkanSurface>> surface) const;
-    VkPhysicalDeviceProperties QueryDeviceProperties() const;
-    VkPhysicalDeviceFeatures QueryDeviceFeatures() const;
-    SurfaceProperties QuerySurfaceProperties(std::optional<std::reference_wrapper<const VulkanSurface>> surface) const;
-
-    VkPhysicalDevice m_PhysicalDevice;
-    const DeviceExtensionMapping &m_ExtensionMapping;
-    QueueFamilyIndices m_QueueFamilies;
-    VkPhysicalDeviceProperties m_Properties;
-    VkPhysicalDeviceFeatures m_Features;
-    SurfaceProperties m_SurfaceProperties;
-    std::set<EDeviceExtension> m_AvailableExtensions;
-    std::optional<std::reference_wrapper<const VulkanSurface>> m_TargetSurface;
-    bool m_Valid;
-};

@@ -1,10 +1,12 @@
 #pragma once
 #include <vulkan/vulkan.h>
+#include <glm/glm.hpp>
 
 #include <cstdlib>
 #include <iostream>
 #include <stdexcept>
 #include <functional>
+#include <array>
 
 #include "backend/VulkanInstance.h"
 #include "backend/Window.h"
@@ -21,6 +23,16 @@ struct PerFrameState
     CommandBuffer &CommandBuffer;
 };
 
+struct Vertex
+{
+    glm::vec2 Position;
+    glm::vec3 Color;
+
+    constexpr static VkVertexInputBindingDescription GetBindingDescription();
+    constexpr static std::array<VkVertexInputAttributeDescription, 2> GetAttributeDescriptions(); 
+    constexpr static VertexBindingDescription GetVertexBindingDescription();
+};
+
 class App
 {
   public:
@@ -30,10 +42,11 @@ class App
     void RunRenderLoop();
 
   private:
-    RasterPipeline LoadShaderPipeline(LogicalVulkanDevice &vulkanDevice, const RenderPass& renderPass) const;
+    RasterPipeline LoadShaderPipeline(VulkanDevice &vulkanDevice, const RenderPass& renderPass) const;
     void RecordFrame(PerFrameState& state);
     std::vector<std::reference_wrapper<Semaphore>> CreateSemaphorePerInFlightFrame();
-    std::vector<PerFrameState> CreatePerFrameState(LogicalVulkanDevice &vulkanDevice);
+    std::vector<PerFrameState> CreatePerFrameState(VulkanDevice &vulkanDevice);
+    constexpr static std::vector<Vertex> GetVertices();
 
     Window m_Window;
     VulkanInstance m_VulkanInstance;
@@ -43,4 +56,5 @@ class App
     std::vector<PerFrameState> m_PerFrameState;
     uint32_t m_CurrentFrameIndex = 0;
     Swapchain &m_Swapchain;
+    VertexBuffer &m_VertexBuffer;
 };

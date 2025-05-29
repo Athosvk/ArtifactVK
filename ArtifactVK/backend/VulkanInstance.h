@@ -13,6 +13,7 @@
 #include "ExtensionFunctionMapping.h"
 #include "VulkanDebugMessenger.h"
 #include "VulkanDevice.h"
+#include "PhysicalDevice.h"
 #include "VulkanSurface.h"
 #include "../ManualScope.h"
 
@@ -61,13 +62,13 @@ class VulkanInstance
     VulkanInstance(const VulkanInstance &other) = delete;
     VulkanInstance(VulkanInstance &&other);
 
-    LogicalVulkanDevice &GetActiveDevice();
+    VulkanDevice &GetActiveDevice();
 
   private:
     static std::vector<const char *> CheckValidationLayers(const std::vector<ValidationLayer> &validationLayers);
     VkDebugUtilsMessengerEXT CreateDebugMessenger() const;
     VkInstance CreateInstance(const InstanceCreateInfo &createInfo);
-    VulkanDevice CreatePhysicalDevice(const VulkanSurface &targetSurface,
+    PhysicalDevice CreatePhysicalDevice(const VulkanSurface &targetSurface,
                                       std::span<const EDeviceExtension> deviceExtensions) const;
 
     VkInstance m_VkInstance;
@@ -77,7 +78,7 @@ class VulkanInstance
     ManualScope<VulkanSurface> m_Surface;
     // TODO: Technically does't need to be wrapped in a ManualScope, but
     // has a dependency on m_Surface
+    ManualScope<PhysicalDevice> m_ActivePhysicalDevice;
     ManualScope<VulkanDevice> m_ActiveDevice;
-    ManualScope<LogicalVulkanDevice> m_ActiveLogicalDevice;
     std::vector<const char *> m_ValidationLayers;
 };
