@@ -14,6 +14,11 @@ IndexBuffer::IndexBuffer(CreateIndexBufferInfo bufferInfo, VkDevice device, cons
 
 }
 
+VkBuffer IndexBuffer::Get() const
+{
+    return m_IndexBuffer.Get();
+}
+
 DeviceBuffer IndexBuffer::CreateStagingBuffer(VkDeviceSize size, VkDevice device,
                                               const PhysicalDevice &physicalDevice) const
 {
@@ -27,7 +32,7 @@ DeviceBuffer IndexBuffer::CreateStagingBuffer(VkDeviceSize size, VkDevice device
 DeviceBuffer IndexBuffer::CreateIndexBuffer(VkDeviceSize size, VkDevice device,
                                             const PhysicalDevice &physicalDevice) const
 {
-	auto createIndexBufferInfo = CreateBufferInfo{size, VkBufferUsageFlagBits::VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+	auto createIndexBufferInfo = CreateBufferInfo{size, VkBufferUsageFlagBits::VK_BUFFER_USAGE_TRANSFER_DST_BIT | VkBufferUsageFlagBits::VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
 												   VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT};
     return DeviceBuffer(device, physicalDevice, createIndexBufferInfo);
 }

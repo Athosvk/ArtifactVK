@@ -23,6 +23,7 @@ class IndexBuffer
         // TODO: Optional so that you don't have to opt in to the copying to device local
         CommandBuffer& transferCommandBuffer);
 
+    VkBuffer Get() const;
   private:
     DeviceBuffer CreateStagingBuffer(VkDeviceSize size, VkDevice device, const PhysicalDevice& physicalDevice) const;
     DeviceBuffer CreateIndexBuffer(VkDeviceSize size, VkDevice device, const PhysicalDevice& physicalDevice) const;

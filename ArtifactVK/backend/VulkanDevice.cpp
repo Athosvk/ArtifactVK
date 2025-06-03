@@ -314,6 +314,7 @@ VulkanDevice::~VulkanDevice()
     m_CommandBufferPools.clear();
     m_Semaphores.clear();
     m_VertexBuffers.clear();
+    m_IndexBuffers.clear();
 
     std::condition_variable destroyed;
     std::mutex destroyMutex;

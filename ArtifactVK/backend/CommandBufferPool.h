@@ -13,6 +13,7 @@ class RenderPass;
 class RasterPipeline;
 class VertexBuffer;
 class DeviceBuffer;
+class IndexBuffer;
 
 struct CommandBufferPoolCreateInfo
 {
@@ -39,7 +40,8 @@ class CommandBuffer
     void Draw(const Framebuffer& frameBuffer, const RenderPass& renderPass, const RasterPipeline& pipeline, const VertexBuffer& vertexBuffer);
     Fence& End(std::span<Semaphore> waitSemaphores, std::span<Semaphore> signalSemaphores);
     Fence& End();
-    void BindBuffer(const VertexBuffer &vertexBuffer);
+    void BindVertexBuffer(const VertexBuffer &vertexBuffer);
+    void BindIndexBuffer(const IndexBuffer &indexBuffer);
     void Copy(const DeviceBuffer &source, const DeviceBuffer &destination);
   private:
     void Reset();
@@ -68,5 +70,5 @@ class CommandBufferPool
     VkDevice m_Device;
     VkCommandPool m_CommandBufferPool;
     // TODO: Cleanup command buffers
-    std::vector<CommandBuffer> m_CommandBuffers;
+    std::vector<std::unique_ptr<CommandBuffer>> m_CommandBuffers;
 };

@@ -31,7 +31,7 @@ DeviceBuffer VertexBuffer::CreateStagingBuffer(VkDeviceSize size, VkDevice devic
 
 DeviceBuffer VertexBuffer::CreateVertexBuffer(VkDeviceSize size, VkDevice device, const PhysicalDevice& physicalDevice) const
 {
-	auto createVertexBufferInfo = CreateBufferInfo{size, VkBufferUsageFlagBits::VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+	auto createVertexBufferInfo = CreateBufferInfo{size, VkBufferUsageFlagBits::VK_BUFFER_USAGE_TRANSFER_DST_BIT | VkBufferUsageFlagBits::VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
 												   VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT};
 	return DeviceBuffer(device, physicalDevice, createVertexBufferInfo);
 }
