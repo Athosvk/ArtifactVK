@@ -54,7 +54,7 @@ class VulkanDevice
     VertexBuffer &CreateVertexBuffer(std::vector<T> data)
     {
         auto bufferCreateInfo = CreateVertexBufferInfo{data};
-        return m_VertexBuffers.emplace_back(bufferCreateInfo, m_Device, m_PhysicalDevice, GetTransferCommandBuffer());
+        return *m_VertexBuffers.emplace_back(std::make_unique<VertexBuffer>(bufferCreateInfo, m_Device, m_PhysicalDevice, GetTransferCommandBuffer()));
     }
 
     IndexBuffer &CreateIndexBuffer(std::vector<size_t> data);
@@ -82,8 +82,8 @@ class VulkanDevice
     // TODO: Manage this better using a delete queue/stack so that 
     // this doesn't have to manually manage these handles
     std::vector<std::unique_ptr<SwapchainFramebuffer>> m_SwapchainFramebuffers;
-    std::vector<VertexBuffer> m_VertexBuffers;
-    std::vector<IndexBuffer> m_IndexBuffers;
+    std::vector<std::unique_ptr<VertexBuffer>> m_VertexBuffers;
+    std::vector<std::unique_ptr<IndexBuffer>> m_IndexBuffers;
     std::optional<VkExtent2D> m_LastUnhandledResize;
 };
 

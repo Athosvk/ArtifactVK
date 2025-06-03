@@ -431,7 +431,7 @@ void VulkanDevice::HandleResizeEvent(const WindowResizeEvent & resizeEvent)
 
 IndexBuffer &VulkanDevice::CreateIndexBuffer(std::vector<size_t> data)
 {
-    return m_IndexBuffers.emplace_back(IndexBuffer(CreateIndexBufferInfo(data), m_Device, m_PhysicalDevice, GetTransferCommandBuffer()));
+    return *m_IndexBuffers.emplace_back(std::make_unique<IndexBuffer>(IndexBuffer(CreateIndexBufferInfo(data), m_Device, m_PhysicalDevice, GetTransferCommandBuffer())));
 }
 
 std::vector<VkDeviceQueueCreateInfo> VulkanDevice::GetQueueCreateInfos(const PhysicalDevice &physicalDevice)
