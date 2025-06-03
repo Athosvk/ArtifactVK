@@ -12,6 +12,8 @@ struct QueueFamilyIndices
 {
     std::optional<uint32_t> GraphicsFamilyIndex;
     std::optional<uint32_t> PresentFamilyIndex;
+    std::optional<uint32_t> TransferFamilyIndex;
+    std::optional<uint32_t> ComputeFamilyIndex;
 
     std::set<uint32_t> GetUniqueQueues() const;
 };

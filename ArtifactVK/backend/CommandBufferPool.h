@@ -48,6 +48,8 @@ struct CommandBuffer
     CommandBufferStatus m_Status = CommandBufferStatus::Reset;
 };
 
+// TODO: Template with per-type command buffer, so that they only have the matching
+// operations available
 class CommandBufferPool
 {
   public:
@@ -57,6 +59,7 @@ class CommandBufferPool
     ~CommandBufferPool();
     
     std::vector<std::reference_wrapper<CommandBuffer>> CreateCommandBuffers(uint32_t count);
+    CommandBuffer& CreateCommandBuffer();
   private:
     VkDevice m_Device;
     VkCommandPool m_CommandBufferPool;

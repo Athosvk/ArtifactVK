@@ -61,7 +61,7 @@ void DeviceBuffer::CopyFrom(const DeviceBuffer &source)
     cmdBufferAllocateInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     cmdBufferAllocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 	// TODO: Pass command pool/command buffer to use here
-    cmdBufferAllocateInfo.commandPool = ;
+    //cmdBufferAllocateInfo.commandPool = ;
 
 }
 

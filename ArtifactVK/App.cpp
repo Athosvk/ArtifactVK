@@ -32,7 +32,7 @@ App::~App()
 {
     for (auto &perFrameState : m_PerFrameState)
     {
-        perFrameState.CommandBuffer.WaitFence(true);
+        perFrameState.CommandBuffer.WaitFence();
     }
     glfwTerminate();
 }

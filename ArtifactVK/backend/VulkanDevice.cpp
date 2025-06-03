@@ -231,72 +231,6 @@ RasterPipeline VulkanDevice::CreateRasterPipeline(RasterPipelineBuilder &&pipeli
     return RasterPipeline(m_Device, pipelineInfo, renderPass);
 }
 
-VkPhysicalDeviceMemoryProperties PhysicalDevice::QueryMemoryProperties() const
-{
-    VkPhysicalDeviceMemoryProperties memoryProperties;
-    vkGetPhysicalDeviceMemoryProperties(m_PhysicalDevice, &memoryProperties);
-    return memoryProperties;
-}
-
-bool PhysicalDevice::Validate(std::span<const EDeviceExtension> requiredExtensions) const
-{
-    return (m_Properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU ||
-            m_Properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU) &&
-           m_Features.geometryShader && m_QueueFamilies.GraphicsFamilyIndex.has_value() &&
-           m_QueueFamilies.PresentFamilyIndex.has_value() && !m_SurfaceProperties.Formats.empty() &&
-           !m_SurfaceProperties.PresentModes.empty() && AllExtensionsAvailable(requiredExtensions);
-}
-
-bool PhysicalDevice::AllExtensionsAvailable(std::span<const EDeviceExtension> extensions) const
-{
-    bool allPresent = true;
-    for (auto extension : extensions)
-    {
-        allPresent = allPresent && m_AvailableExtensions.find(extension) != m_AvailableExtensions.end();
-    }
-    return allPresent;
-}
-
-std::set<EDeviceExtension> PhysicalDevice::QueryExtensions(const DeviceExtensionMapping &extensionMapping) const
-{
-    uint32_t extensionCount;
-    // TODO: Embed support for layer-based extensions
-    vkEnumerateDeviceExtensionProperties(m_PhysicalDevice, nullptr, &extensionCount, nullptr);
-    std::vector<VkExtensionProperties> extensions(extensionCount);
-    vkEnumerateDeviceExtensionProperties(m_PhysicalDevice, nullptr, &extensionCount, extensions.data());
-
-    std::set<EDeviceExtension> mappedExtensions;
-    for (const auto &extension : extensions)
-    {
-        mappedExtensions.insert(extensionMapping.At(extension.extensionName));
-    }
-    return mappedExtensions;
-}
-
-QueueFamilyIndices PhysicalDevice::FindQueueFamilies(
-    std::optional<std::reference_wrapper<const VulkanSurface>> surface) const
-{
-    QueueFamilyIndices indices;
-    uint32_t queueFamilyCount = 0;
-    vkGetPhysicalDeviceQueueFamilyProperties(m_PhysicalDevice, &queueFamilyCount, nullptr);
-    std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
-    vkGetPhysicalDeviceQueueFamilyProperties(m_PhysicalDevice, &queueFamilyCount, queueFamilies.data());
-
-    for (uint32_t i = 0; i < queueFamilyCount; i++)
-    {
-        if ((queueFamilies[static_cast<size_t>(i)].queueFlags & VK_QUEUE_GRAPHICS_BIT) == 1)
-        {
-            indices.GraphicsFamilyIndex = i;
-        }
-        if (!indices.PresentFamilyIndex.has_value() && surface && (*surface).get().IsSupportedOnQueue(m_PhysicalDevice, i))
-        {
-            indices.PresentFamilyIndex = i;
-        }
-    }
-
-    return indices;
-}
-
 VulkanDevice::VulkanDevice(PhysicalDevice &physicalDevice, const VkPhysicalDevice &physicalDeviceHandle,
                         const std::vector<const char *> &validationLayers, std::vector<EDeviceExtension> extensions,
                         const DeviceExtensionMapping &deviceExtensionMapping, GLFWwindow& window)
@@ -335,6 +269,8 @@ VulkanDevice::VulkanDevice(PhysicalDevice &physicalDevice, const VkPhysicalDevic
     // Assertion: physical device has a graphics and present family queue
     m_GraphicsQueue = Queue(m_Device, physicalDevice.GetQueueFamilies().GraphicsFamilyIndex.value());
     m_PresentQueue = Queue(m_Device, physicalDevice.GetQueueFamilies().PresentFamilyIndex.value());
+    
+    m_TransferCommandBufferPool = m_CommandBufferPools.emplace_back(std::make_unique<CommandBufferPool>(CreateTransferCommandBufferPool())).get();
 }
 
 VulkanDevice::VulkanDevice(VulkanDevice &&other)
@@ -420,6 +356,23 @@ CommandBufferPool &VulkanDevice::CreateGraphicsCommandBufferPool()
     return *m_CommandBufferPools.emplace_back(std::make_unique<CommandBufferPool>(m_Device, createInfo));
 }
 
+CommandBufferPool VulkanDevice::CreateTransferCommandBufferPool() const
+{
+    auto familyIndices = m_PhysicalDevice.GetQueueFamilies();
+    assert(familyIndices.TransferFamilyIndex.has_value() &&
+           "No graphics family queue to create command buffer pool for");
+
+    CommandBufferPoolCreateInfo createInfo{VkCommandPoolCreateFlagBits::VK_COMMAND_POOL_CREATE_TRANSIENT_BIT,
+                                           familyIndices.TransferFamilyIndex.value()};
+    return CommandBufferPool(m_Device, createInfo);
+}
+
+CommandBuffer &VulkanDevice::GetTransferCommandBuffer()
+{
+    // TODO: Cache most recent?
+    return m_TransferCommandBufferPool->CreateCommandBuffer();
+}
+
 Semaphore &VulkanDevice::CreateDeviceSemaphore()
 {
     return *m_Semaphores.emplace_back(std::make_unique<Semaphore>(m_Device));
@@ -473,7 +426,7 @@ std::vector<VkDeviceQueueCreateInfo> VulkanDevice::GetQueueCreateInfos(const Phy
     for (uint32_t queueIndex : uniqueQueueIndices)
     {
         VkDeviceQueueCreateInfo graphicsQueueCreateInfo{};
-        graphicsQueueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+        graphicsQueueCreateInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
         graphicsQueueCreateInfo.queueFamilyIndex = queueIndex;
         graphicsQueueCreateInfo.queueCount = 1;
         float priority = 1.0f;
@@ -485,5 +438,5 @@ std::vector<VkDeviceQueueCreateInfo> VulkanDevice::GetQueueCreateInfos(const Phy
 
 std::set<uint32_t> QueueFamilyIndices::GetUniqueQueues() const
 {
-    return {GraphicsFamilyIndex.value(), PresentFamilyIndex.value()};
+    return {GraphicsFamilyIndex.value(), PresentFamilyIndex.value(), ComputeFamilyIndex.value(), TransferFamilyIndex.value()};
 }

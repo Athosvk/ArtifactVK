@@ -5,6 +5,7 @@
 #include <stdexcept>
 
 #include "Buffer.h"
+#include "CommandBufferPool.h"
 
 class PhysicalDevice;
 
@@ -20,7 +21,9 @@ class VertexBuffer
 {
   public:
     template<typename T>
-    VertexBuffer(CreateVertexBufferInfo<T> bufferInfo, VkDevice device, const PhysicalDevice& physicalDevice) : 
+    VertexBuffer(CreateVertexBufferInfo<T> bufferInfo, VkDevice device, const PhysicalDevice& physicalDevice, 
+            // TODO: Optional so that you don't have to opt in to the copying to device local
+            CommandBuffer& transferCommandBuffer) : 
         m_PhysicalDevice(physicalDevice), m_VertexCount(bufferInfo.InitialData.size()),
 	    m_StagingBuffer(CreateStagingBuffer(bufferInfo.InitialData.size() * sizeof(T), device, physicalDevice)),
 	    m_VertexBuffer(CreateVertexBuffer(bufferInfo.InitialData.size() * sizeof(T), device, physicalDevice))

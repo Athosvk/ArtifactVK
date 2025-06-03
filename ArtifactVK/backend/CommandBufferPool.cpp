@@ -196,3 +196,8 @@ std::vector<std::reference_wrapper<CommandBuffer>> CommandBufferPool::CreateComm
     
     return std::vector<std::reference_wrapper<CommandBuffer>>(m_CommandBuffers.begin(), m_CommandBuffers.end());
 }
+
+CommandBuffer &CommandBufferPool::CreateCommandBuffer()
+{
+    return CreateCommandBuffers(1)[0];
+}
