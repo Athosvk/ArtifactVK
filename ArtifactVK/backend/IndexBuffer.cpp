@@ -19,6 +19,11 @@ VkBuffer IndexBuffer::Get() const
     return m_IndexBuffer.Get();
 }
 
+size_t IndexBuffer::GetIndexCount() const
+{
+    return m_IndexCount;
+}
+
 DeviceBuffer IndexBuffer::CreateStagingBuffer(VkDeviceSize size, VkDevice device,
                                               const PhysicalDevice &physicalDevice) const
 {

@@ -79,7 +79,7 @@ void App::RecordFrame(PerFrameState& state)
     // TODO: Can probably be moved to CommandBuffer->Begin()
     state.CommandBuffer.WaitFence();
     state.CommandBuffer.Begin();
-    state.CommandBuffer.Draw(m_SwapchainFramebuffers.GetCurrent(), m_MainPass, m_RenderFullscreen, m_VertexBuffer);
+    state.CommandBuffer.DrawIndexed(m_SwapchainFramebuffers.GetCurrent(), m_MainPass, m_RenderFullscreen, m_VertexBuffer, m_IndexBuffer);
     state.CommandBuffer.End(std::span{ &state.ImageAvailable, 1 }, std::span{ &state.RenderFinished, 1 });
     
     m_VulkanInstance.GetActiveDevice().Present(std::span{&state.RenderFinished, 1});

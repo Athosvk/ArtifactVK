@@ -24,6 +24,7 @@ class IndexBuffer
         CommandBuffer& transferCommandBuffer);
 
     VkBuffer Get() const;
+    size_t GetIndexCount() const;
   private:
     DeviceBuffer CreateStagingBuffer(VkDeviceSize size, VkDevice device, const PhysicalDevice& physicalDevice) const;
     DeviceBuffer CreateIndexBuffer(VkDeviceSize size, VkDevice device, const PhysicalDevice& physicalDevice) const;

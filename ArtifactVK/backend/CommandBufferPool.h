@@ -38,12 +38,13 @@ class CommandBuffer
     void WaitFence();
     void Begin();
     void Draw(const Framebuffer& frameBuffer, const RenderPass& renderPass, const RasterPipeline& pipeline, const VertexBuffer& vertexBuffer);
+    void DrawIndexed(const Framebuffer& frameBuffer, const RenderPass& renderPass, const RasterPipeline& pipeline, const VertexBuffer& vertexBuffer, const IndexBuffer& indexBuffer);
     Fence& End(std::span<Semaphore> waitSemaphores, std::span<Semaphore> signalSemaphores);
     Fence& End();
-    void BindVertexBuffer(const VertexBuffer &vertexBuffer);
-    void BindIndexBuffer(const IndexBuffer &indexBuffer);
     void Copy(const DeviceBuffer &source, const DeviceBuffer &destination);
   private:
+    void BindVertexBuffer(const VertexBuffer &vertexBuffer);
+    void BindIndexBuffer(const IndexBuffer &indexBuffer);
     void Reset();
 
     bool m_Moved = false;

@@ -88,6 +88,33 @@ void CommandBuffer::Draw(const Framebuffer& frameBuffer, const RenderPass& rende
     vkCmdEndRenderPass(m_CommandBuffer);
 }
 
+void CommandBuffer::DrawIndexed(const Framebuffer &frameBuffer, const RenderPass &renderPass,
+                                const RasterPipeline &pipeline, const VertexBuffer &vertexBuffer,
+                                const IndexBuffer &indexBuffer)
+{
+    assert(m_Status == CommandBufferStatus::Recording && "Calling draw before starting recording of command buffer");
+    VkRenderPassBeginInfo renderPassBeginInfo{};
+    renderPassBeginInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    renderPassBeginInfo.framebuffer = frameBuffer.Get();
+    renderPassBeginInfo.renderPass = renderPass.Get();
+
+    auto viewport = frameBuffer.GetViewport();
+    // Should only be rendering to the scissor area, not the entire viewport
+    renderPassBeginInfo.renderArea = viewport.Scissor;
+
+    VkClearValue clearColor = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
+    renderPassBeginInfo.clearValueCount = 1;
+    renderPassBeginInfo.pClearValues = &clearColor;
+    
+    vkCmdBeginRenderPass(m_CommandBuffer, &renderPassBeginInfo, VkSubpassContents::VK_SUBPASS_CONTENTS_INLINE);
+    pipeline.Bind(m_CommandBuffer, viewport);
+    BindVertexBuffer(vertexBuffer);
+    BindIndexBuffer(indexBuffer);
+    // TODO: Give user control over what to draw
+    vkCmdDrawIndexed(m_CommandBuffer, static_cast<uint32_t>(indexBuffer.GetIndexCount()), 1, 0, 0, 0);
+    vkCmdEndRenderPass(m_CommandBuffer);
+}
+
 // TODO: Bind command buffer to a queue at creation time
 Fence& CommandBuffer::End(std::span<Semaphore> waitSemaphores, std::span<Semaphore> signalSemaphores)
 {
