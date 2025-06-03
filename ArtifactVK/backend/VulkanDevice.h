@@ -24,7 +24,6 @@ struct GLFWwindow;
 class ShaderModule;
 struct WindowResizeEvent;
 
-
 class VulkanDevice
 {
   public:
@@ -50,7 +49,8 @@ class VulkanDevice
     template<typename T> 
     VertexBuffer &CreateVertexBuffer(std::vector<T> data)
     {
-        return m_VertexBuffers.emplace_back(data, m_Device, m_PhysicalDevice);
+        auto bufferCreateInfo = CreateVertexBufferInfo{data};
+        return m_VertexBuffers.emplace_back(bufferCreateInfo, m_Device, m_PhysicalDevice);
     }
   private:
     void RecreateSwapchain(VkExtent2D newSize);

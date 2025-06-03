@@ -37,7 +37,6 @@ class PhysicalDevice
     SurfaceProperties GetCachedSurfaceProperties() const;
     SurfaceProperties QuerySurfaceProperties();
     VkPhysicalDeviceMemoryProperties MemoryProperties() const;
-    uint32_t FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags propertyFlags) const;
   private:
     VkPhysicalDeviceMemoryProperties QueryMemoryProperties() const;
     bool Validate(std::span<const EDeviceExtension> requiredExtensions) const;
