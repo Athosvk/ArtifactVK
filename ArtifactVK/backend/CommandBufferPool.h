@@ -33,7 +33,7 @@ struct CommandBuffer
     CommandBuffer(CommandBuffer && other);
     ~CommandBuffer();
 
-    void WaitFence(bool log = false);
+    void WaitFence();
     void Begin();
     void Draw(const Framebuffer& frameBuffer, const RenderPass& renderPass, const RasterPipeline& pipeline, const VertexBuffer& vertexBuffer);
     Fence& End(std::span<Semaphore> waitSemaphores, std::span<Semaphore> signalSemaphores, Queue queue);

@@ -31,7 +31,7 @@ CommandBuffer::~CommandBuffer()
     }
 }
 
-void CommandBuffer::WaitFence(bool log)
+void CommandBuffer::WaitFence()
 {
     // No use in waiting for a fence that cannot possibly have been signaled
     if (m_Status != CommandBufferStatus::Reset) 
