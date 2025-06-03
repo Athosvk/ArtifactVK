@@ -25,7 +25,7 @@ App::App()
       m_PerFrameState(CreatePerFrameState(m_VulkanInstance.GetActiveDevice())),
       m_Swapchain(m_VulkanInstance.GetActiveDevice().GetSwapchain()),
       m_VertexBuffer(m_VulkanInstance.GetActiveDevice().CreateVertexBuffer(GetVertices())),
-      m_IndexBuffer(m_VulkanInstance.GetActiveDevice().CreateIndexBuffer({}))
+      m_IndexBuffer(m_VulkanInstance.GetActiveDevice().CreateIndexBuffer(GetIndices()))
 {
 }
 
@@ -112,9 +112,17 @@ constexpr std::vector<Vertex> App::GetVertices()
 {
     return
     {
-	    {{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-		{{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
-		{{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
+	    {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+		{{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
+		{{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
+		{{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}
+    };
+}
+
+constexpr std::vector<uint16_t> App::GetIndices()
+{
+    return {
+        0, 1, 2, 2, 3, 0
     };
 }
 

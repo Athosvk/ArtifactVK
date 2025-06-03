@@ -1,10 +1,17 @@
 #include "IndexBuffer.h"
+#include "CommandBufferPool.h"
 
 IndexBuffer::IndexBuffer(CreateIndexBufferInfo bufferInfo, VkDevice device, const PhysicalDevice& physicalDevice, 
         CommandBuffer& transferCommandBuffer) : 
-    m_StagingBuffer(CreateStagingBuffer(bufferInfo.InitialData.size() * sizeof(size_t), device, physicalDevice)),
-      m_IndexBuffer(CreateIndexBuffer(bufferInfo.InitialData.size() * sizeof(size_t), device, physicalDevice))
+    m_StagingBuffer(CreateStagingBuffer(bufferInfo.InitialData.size() * sizeof(uint16_t), device, physicalDevice)),
+      m_IndexBuffer(CreateIndexBuffer(bufferInfo.InitialData.size() * sizeof(uint16_t), device, physicalDevice))
 {
+	m_IndexCount = bufferInfo.InitialData.size();
+	m_StagingBuffer.UploadData(bufferInfo.InitialData);
+	transferCommandBuffer.Copy(m_StagingBuffer, m_IndexBuffer);
+	// TODO: Use semaphore instead, allow fetching the semaphore
+	m_TransferFence = transferCommandBuffer.End({}, {});
+
 }
 
 DeviceBuffer IndexBuffer::CreateStagingBuffer(VkDeviceSize size, VkDevice device,

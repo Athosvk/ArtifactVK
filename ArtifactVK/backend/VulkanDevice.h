@@ -57,7 +57,7 @@ class VulkanDevice
         return *m_VertexBuffers.emplace_back(std::make_unique<VertexBuffer>(bufferCreateInfo, m_Device, m_PhysicalDevice, GetTransferCommandBuffer()));
     }
 
-    IndexBuffer &CreateIndexBuffer(std::vector<size_t> data);
+    IndexBuffer &CreateIndexBuffer(std::vector<uint16_t> data);
   private:
     CommandBufferPool CreateTransferCommandBufferPool() const;
     void RecreateSwapchain(VkExtent2D newSize);

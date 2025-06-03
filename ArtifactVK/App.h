@@ -50,6 +50,7 @@ class App
     std::vector<std::reference_wrapper<Semaphore>> CreateSemaphorePerInFlightFrame();
     std::vector<PerFrameState> CreatePerFrameState(VulkanDevice &vulkanDevice);
     constexpr static std::vector<Vertex> GetVertices();
+    constexpr static std::vector<uint16_t> GetIndices();
 
     Window m_Window;
     VulkanInstance m_VulkanInstance;

@@ -1,14 +1,17 @@
 #pragma once
 #include <vulkan/vulkan.h>
+#include <optional>
 
 #include "Buffer.h"
+#include "Fence.h"
 
 class CommandBuffer;
 class PhysicalDevice;
 
 struct CreateIndexBufferInfo
 {
-    std::vector<size_t> InitialData;
+    // TODO: User configure for uint32_t
+    std::vector<uint16_t> InitialData;
     VkBufferUsageFlags Flags = 0;
     VkSharingMode SharingMode = VkSharingMode::VK_SHARING_MODE_EXCLUSIVE;
 };
@@ -26,4 +29,7 @@ class IndexBuffer
 
     DeviceBuffer m_StagingBuffer;
     DeviceBuffer m_IndexBuffer;
+    size_t m_IndexCount;
+
+    mutable std::optional<std::reference_wrapper<Fence>> m_TransferFence;
 };

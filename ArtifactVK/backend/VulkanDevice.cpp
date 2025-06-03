@@ -429,7 +429,7 @@ void VulkanDevice::HandleResizeEvent(const WindowResizeEvent & resizeEvent)
     m_LastUnhandledResize = VkExtent2D{resizeEvent.NewWidth, resizeEvent.NewHeight};
 }
 
-IndexBuffer &VulkanDevice::CreateIndexBuffer(std::vector<size_t> data)
+IndexBuffer &VulkanDevice::CreateIndexBuffer(std::vector<uint16_t> data)
 {
     return *m_IndexBuffers.emplace_back(std::make_unique<IndexBuffer>(IndexBuffer(CreateIndexBufferInfo(data), m_Device, m_PhysicalDevice, GetTransferCommandBuffer())));
 }
