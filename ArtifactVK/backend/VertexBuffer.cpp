@@ -11,6 +11,9 @@ VkBuffer VertexBuffer::Get() const
 {
     if (m_TransferFence)
     {
+		// TODO: Allow doing this explciitly instead, as we can't read
+		// the intent behind calling `Get` this can lead to 
+		// unexpected results
         m_TransferFence->get().WaitAndReset();   
 		m_TransferFence = std::nullopt;
 	}
