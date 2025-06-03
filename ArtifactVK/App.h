@@ -14,6 +14,9 @@
 #include "backend/RenderPass.h"
 #include "backend/Swapchain.h"
 
+class VertexBuffer;
+class IndexBuffer;
+
 const uint32_t MAX_FRAMES_IN_FLIGHT = 2;
 
 struct PerFrameState
@@ -57,4 +60,5 @@ class App
     uint32_t m_CurrentFrameIndex = 0;
     Swapchain &m_Swapchain;
     VertexBuffer &m_VertexBuffer;
+    IndexBuffer &m_IndexBuffer;
 };

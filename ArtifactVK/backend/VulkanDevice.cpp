@@ -21,6 +21,7 @@
 #include "Window.h"
 #include "ShaderModule.h"
 #include "PhysicalDevice.h"
+#include "IndexBuffer.h"
 
 VkSurfaceFormatKHR VulkanDevice::SelectSurfaceFormat() const
 {
@@ -426,6 +427,11 @@ void VulkanDevice::Present(std::span<Semaphore> waitSemaphores)
 void VulkanDevice::HandleResizeEvent(const WindowResizeEvent & resizeEvent)
 {
     m_LastUnhandledResize = VkExtent2D{resizeEvent.NewWidth, resizeEvent.NewHeight};
+}
+
+IndexBuffer &VulkanDevice::CreateIndexBuffer(std::vector<size_t> data)
+{
+    return m_IndexBuffers.emplace_back(IndexBuffer(CreateIndexBufferInfo(data), m_Device, m_PhysicalDevice, GetTransferCommandBuffer()));
 }
 
 std::vector<VkDeviceQueueCreateInfo> VulkanDevice::GetQueueCreateInfos(const PhysicalDevice &physicalDevice)

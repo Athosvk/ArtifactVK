@@ -24,7 +24,8 @@ App::App()
       m_SwapchainFramebuffers(m_VulkanInstance.GetActiveDevice().CreateSwapchainFramebuffers(m_MainPass)),
       m_PerFrameState(CreatePerFrameState(m_VulkanInstance.GetActiveDevice())),
       m_Swapchain(m_VulkanInstance.GetActiveDevice().GetSwapchain()),
-      m_VertexBuffer(m_VulkanInstance.GetActiveDevice().CreateVertexBuffer(GetVertices()))
+      m_VertexBuffer(m_VulkanInstance.GetActiveDevice().CreateVertexBuffer(GetVertices())),
+      m_IndexBuffer(m_VulkanInstance.GetActiveDevice().CreateIndexBuffer({}))
 {
 }
 

@@ -20,7 +20,7 @@ struct CommandBufferPoolCreateInfo
     uint32_t QueueIndex;
 };
 
-struct CommandBuffer
+class CommandBuffer
 {
 	enum class CommandBufferStatus
 	{

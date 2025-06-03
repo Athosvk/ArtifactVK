@@ -15,6 +15,7 @@ struct CreateIndexBufferInfo
 
 class IndexBuffer
 {
+  public:
     IndexBuffer(CreateIndexBufferInfo bufferInfo, VkDevice device, const PhysicalDevice& physicalDevice, 
         // TODO: Optional so that you don't have to opt in to the copying to device local
         CommandBuffer& transferCommandBuffer);

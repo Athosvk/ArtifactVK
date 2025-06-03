@@ -23,6 +23,7 @@ class PhysicalDevice;
 struct GLFWwindow;
 class ShaderModule;
 struct WindowResizeEvent;
+class IndexBuffer;
 
 class VulkanDevice
 {
@@ -55,6 +56,8 @@ class VulkanDevice
         auto bufferCreateInfo = CreateVertexBufferInfo{data};
         return m_VertexBuffers.emplace_back(bufferCreateInfo, m_Device, m_PhysicalDevice, GetTransferCommandBuffer());
     }
+
+    IndexBuffer &CreateIndexBuffer(std::vector<size_t> data);
   private:
     CommandBufferPool CreateTransferCommandBufferPool() const;
     void RecreateSwapchain(VkExtent2D newSize);
@@ -80,6 +83,7 @@ class VulkanDevice
     // this doesn't have to manually manage these handles
     std::vector<std::unique_ptr<SwapchainFramebuffer>> m_SwapchainFramebuffers;
     std::vector<VertexBuffer> m_VertexBuffers;
+    std::vector<IndexBuffer> m_IndexBuffers;
     std::optional<VkExtent2D> m_LastUnhandledResize;
 };
 
