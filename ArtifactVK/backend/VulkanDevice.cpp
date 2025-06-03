@@ -279,10 +279,12 @@ VulkanDevice::VulkanDevice(PhysicalDevice &physicalDevice, const VkPhysicalDevic
 VulkanDevice::VulkanDevice(VulkanDevice &&other)
     : m_Device(std::exchange(other.m_Device, VK_NULL_HANDLE)), m_PhysicalDevice(other.m_PhysicalDevice),
       m_GraphicsQueue(other.m_GraphicsQueue), m_PresentQueue(other.m_PresentQueue),
+      m_TransferQueue(other.m_TransferQueue),
       m_Swapchain(std::move(other.m_Swapchain)), 
       m_CommandBufferPools(std::move(other.m_CommandBufferPools)),
       m_Semaphores(std::move(other.m_Semaphores)),
-      m_SwapchainFramebuffers(std::move(other.m_SwapchainFramebuffers)), m_Window(other.m_Window)
+      m_SwapchainFramebuffers(std::move(other.m_SwapchainFramebuffers)), m_Window(other.m_Window),
+      m_TransferCommandBufferPool(other.m_TransferCommandBufferPool)
 {
 }
 
