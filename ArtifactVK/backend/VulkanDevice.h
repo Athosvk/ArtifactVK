@@ -45,6 +45,7 @@ class VulkanDevice
     CommandBuffer &GetTransferCommandBuffer();
     Semaphore &CreateDeviceSemaphore();
     Queue GetGraphicsQueue() const;
+    Queue GetTransferQueue() const;
     void AcquireNext(const Semaphore& toSignal);
     void Present(std::span<Semaphore> waitSemaphores);
     void HandleResizeEvent(const WindowResizeEvent &resizeEvent);
@@ -68,6 +69,7 @@ class VulkanDevice
     PhysicalDevice &m_PhysicalDevice;
     std::optional<Queue> m_GraphicsQueue;
     std::optional<Queue> m_PresentQueue;
+    std::optional<Queue> m_TransferQueue;
     std::optional<Swapchain> m_Swapchain = std::nullopt;
     std::vector<std::unique_ptr<CommandBufferPool>> m_CommandBufferPools;
     CommandBufferPool* m_TransferCommandBufferPool = nullptr;

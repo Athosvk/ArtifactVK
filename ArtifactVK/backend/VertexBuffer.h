@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <stdexcept>
+#include <optional>
 
 #include "Buffer.h"
 #include "CommandBufferPool.h"
@@ -30,10 +31,12 @@ class VertexBuffer
     {
         m_VertexCount = bufferInfo.InitialData.size();
         m_StagingBuffer.UploadData(bufferInfo.InitialData);
+        transferCommandBuffer.Copy(m_StagingBuffer, m_VertexBuffer);
+        // TODO: Use semaphore instead, allow fetching the semaphore
+        m_TransferFence = transferCommandBuffer.End({}, {});
     }
 
     size_t VertexCount() const;
-
     VkBuffer Get() const;
   private:
     DeviceBuffer CreateStagingBuffer(VkDeviceSize size, VkDevice device, const PhysicalDevice& physicalDevice) const;
@@ -43,4 +46,6 @@ class VertexBuffer
     DeviceBuffer m_StagingBuffer;
     DeviceBuffer m_VertexBuffer;
     size_t m_VertexCount;
+    // TODO: Make non-mutable 
+    mutable std::optional<std::reference_wrapper<Fence>> m_TransferFence;
 };

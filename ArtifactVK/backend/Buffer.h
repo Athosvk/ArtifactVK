@@ -21,8 +21,8 @@ public:
 	~DeviceBuffer();
 
     VkBuffer Get() const;
+    VkDeviceSize GetSize() const;
 
-    void CopyFrom(const DeviceBuffer &source);
     template<typename T>
     void UploadData(const std::vector<T> vertexData)
     {

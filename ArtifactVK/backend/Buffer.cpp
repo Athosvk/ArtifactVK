@@ -55,14 +55,9 @@ VkBuffer DeviceBuffer::Get() const
     return m_Buffer;
 }
 
-void DeviceBuffer::CopyFrom(const DeviceBuffer &source)
+VkDeviceSize DeviceBuffer::GetSize() const
 {
-    VkCommandBufferAllocateInfo cmdBufferAllocateInfo{};
-    cmdBufferAllocateInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    cmdBufferAllocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-	// TODO: Pass command pool/command buffer to use here
-    //cmdBufferAllocateInfo.commandPool = ;
-
+    return m_CreateInfo.Size;
 }
 
 uint32_t DeviceBuffer::FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags propertyFlags, const PhysicalDevice& physicalDevice) const

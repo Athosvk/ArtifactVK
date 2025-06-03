@@ -269,6 +269,9 @@ VulkanDevice::VulkanDevice(PhysicalDevice &physicalDevice, const VkPhysicalDevic
     // Assertion: physical device has a graphics and present family queue
     m_GraphicsQueue = Queue(m_Device, physicalDevice.GetQueueFamilies().GraphicsFamilyIndex.value());
     m_PresentQueue = Queue(m_Device, physicalDevice.GetQueueFamilies().PresentFamilyIndex.value());
+
+    // Possibly redundant creation if it's shared with the graphics queue
+    m_TransferQueue = Queue(m_Device, physicalDevice.GetQueueFamilies().TransferFamilyIndex.value());
     
     m_TransferCommandBufferPool = m_CommandBufferPools.emplace_back(std::make_unique<CommandBufferPool>(CreateTransferCommandBufferPool())).get();
 }
@@ -370,7 +373,7 @@ CommandBufferPool VulkanDevice::CreateTransferCommandBufferPool() const
 CommandBuffer &VulkanDevice::GetTransferCommandBuffer()
 {
     // TODO: Cache most recent?
-    return m_TransferCommandBufferPool->CreateCommandBuffer();
+    return m_TransferCommandBufferPool->CreateCommandBuffer(*m_TransferQueue);
 }
 
 Semaphore &VulkanDevice::CreateDeviceSemaphore()
@@ -382,6 +385,12 @@ Queue VulkanDevice::GetGraphicsQueue() const
 {
     assert(m_GraphicsQueue.has_value() && "Device has no graphics queue");
     return m_GraphicsQueue.value();
+}
+
+Queue VulkanDevice::GetTransferQueue() const
+{
+    assert(m_TransferQueue.has_value() && "Device has no transfer queue");
+    return m_TransferQueue.value();
 }
 
 void VulkanDevice::AcquireNext(const Semaphore& toSignal)

@@ -9,6 +9,11 @@ size_t VertexBuffer::VertexCount() const
 
 VkBuffer VertexBuffer::Get() const
 {
+    if (m_TransferFence)
+    {
+        m_TransferFence->get().WaitAndReset();   
+		m_TransferFence = std::nullopt;
+	}
     return m_VertexBuffer.Get();
 }
 
