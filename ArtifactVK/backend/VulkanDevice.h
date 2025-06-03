@@ -24,7 +24,6 @@ struct GLFWwindow;
 class ShaderModule;
 struct WindowResizeEvent;
 
-
 class VulkanDevice
 {
   public:
@@ -41,18 +40,23 @@ class VulkanDevice
     RasterPipeline CreateRasterPipeline(RasterPipelineBuilder &&pipelineBuilder, const RenderPass& renderPass);
     RenderPass CreateRenderPass();
     const SwapchainFramebuffer& CreateSwapchainFramebuffers(const RenderPass &renderpass);
+    // TODO: Make a getter, just construct it in the constructor 
     CommandBufferPool &CreateGraphicsCommandBufferPool();
+    CommandBuffer &GetTransferCommandBuffer();
     Semaphore &CreateDeviceSemaphore();
     Queue GetGraphicsQueue() const;
+    Queue GetTransferQueue() const;
     void AcquireNext(const Semaphore& toSignal);
     void Present(std::span<Semaphore> waitSemaphores);
     void HandleResizeEvent(const WindowResizeEvent &resizeEvent);
     template<typename T> 
     VertexBuffer &CreateVertexBuffer(std::vector<T> data)
     {
-        return m_VertexBuffers.emplace_back(data, m_Device, m_PhysicalDevice);
+        auto bufferCreateInfo = CreateVertexBufferInfo{data};
+        return m_VertexBuffers.emplace_back(bufferCreateInfo, m_Device, m_PhysicalDevice, GetTransferCommandBuffer());
     }
   private:
+    CommandBufferPool CreateTransferCommandBufferPool() const;
     void RecreateSwapchain(VkExtent2D newSize);
     ShaderModule LoadShaderModule(const std::filesystem::path &filename);
     static std::vector<VkDeviceQueueCreateInfo> GetQueueCreateInfos(const PhysicalDevice &physicalDevice);
@@ -65,8 +69,10 @@ class VulkanDevice
     PhysicalDevice &m_PhysicalDevice;
     std::optional<Queue> m_GraphicsQueue;
     std::optional<Queue> m_PresentQueue;
+    std::optional<Queue> m_TransferQueue;
     std::optional<Swapchain> m_Swapchain = std::nullopt;
     std::vector<std::unique_ptr<CommandBufferPool>> m_CommandBufferPools;
+    CommandBufferPool* m_TransferCommandBufferPool = nullptr;
     // TODO: Don't hold the semaphores here (unless for pooling).
     // Let objects logically decide if they need to provide one.
     std::vector<std::unique_ptr<Semaphore>> m_Semaphores;

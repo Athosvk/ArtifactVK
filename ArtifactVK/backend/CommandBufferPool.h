@@ -12,6 +12,7 @@ class Framebuffer;
 class RenderPass;
 class RasterPipeline;
 class VertexBuffer;
+class DeviceBuffer;
 
 struct CommandBufferPoolCreateInfo
 {
@@ -29,15 +30,17 @@ struct CommandBuffer
 	};
 
   public:
-    CommandBuffer(VkCommandBuffer &&commandBuffer, VkDevice device);
+    CommandBuffer(VkCommandBuffer &&commandBuffer, VkDevice device, Queue queue);
     CommandBuffer(CommandBuffer && other);
     ~CommandBuffer();
 
-    void WaitFence(bool log = false);
+    void WaitFence();
     void Begin();
     void Draw(const Framebuffer& frameBuffer, const RenderPass& renderPass, const RasterPipeline& pipeline, const VertexBuffer& vertexBuffer);
-    Fence& End(std::span<Semaphore> waitSemaphores, std::span<Semaphore> signalSemaphores, Queue queue);
+    Fence& End(std::span<Semaphore> waitSemaphores, std::span<Semaphore> signalSemaphores);
+    Fence& End();
     void BindBuffer(const VertexBuffer &vertexBuffer);
+    void Copy(const DeviceBuffer &source, const DeviceBuffer &destination);
   private:
     void Reset();
 
@@ -46,8 +49,11 @@ struct CommandBuffer
     // TODO: Pool these fences in the CommandBufferPool
     Fence m_InFlight;
     CommandBufferStatus m_Status = CommandBufferStatus::Reset;
+    Queue m_Queue;
 };
 
+// TODO: Template with per-type command buffer, so that they only have the matching
+// operations available
 class CommandBufferPool
 {
   public:
@@ -56,9 +62,11 @@ class CommandBufferPool
     CommandBufferPool(CommandBufferPool &&other);
     ~CommandBufferPool();
     
-    std::vector<std::reference_wrapper<CommandBuffer>> CreateCommandBuffers(uint32_t count);
+    std::vector<std::reference_wrapper<CommandBuffer>> CreateCommandBuffers(uint32_t count, Queue queue);
+    CommandBuffer& CreateCommandBuffer(Queue queue);
   private:
     VkDevice m_Device;
     VkCommandPool m_CommandBufferPool;
+    // TODO: Cleanup command buffers
     std::vector<CommandBuffer> m_CommandBuffers;
 };

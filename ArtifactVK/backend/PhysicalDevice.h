@@ -12,6 +12,8 @@ struct QueueFamilyIndices
 {
     std::optional<uint32_t> GraphicsFamilyIndex;
     std::optional<uint32_t> PresentFamilyIndex;
+    std::optional<uint32_t> TransferFamilyIndex;
+    std::optional<uint32_t> ComputeFamilyIndex;
 
     std::set<uint32_t> GetUniqueQueues() const;
 };
@@ -37,7 +39,6 @@ class PhysicalDevice
     SurfaceProperties GetCachedSurfaceProperties() const;
     SurfaceProperties QuerySurfaceProperties();
     VkPhysicalDeviceMemoryProperties MemoryProperties() const;
-    uint32_t FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags propertyFlags) const;
   private:
     VkPhysicalDeviceMemoryProperties QueryMemoryProperties() const;
     bool Validate(std::span<const EDeviceExtension> requiredExtensions) const;

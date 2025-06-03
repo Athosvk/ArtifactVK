@@ -2,31 +2,6 @@
 
 #include "PhysicalDevice.h"
 
-uint32_t VertexBuffer::FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags propertyFlags) const
-{
-    auto memoryProperties = m_PhysicalDevice.MemoryProperties();
-    for (uint32_t i = 0; i < memoryProperties.memoryTypeCount; i++)
-	{
-		if ((typeFilter & (1 << i)) != 0
-			&& (memoryProperties.memoryTypes[i].propertyFlags & propertyFlags) == propertyFlags)
-		{
-			return i;
-		}
-	}
-	throw std::runtime_error("Could not find suitable memory type for type filter: " + std::to_string(typeFilter));
-}
-
-VertexBuffer::VertexBuffer(VertexBuffer &&other)
-    : m_Buffer(std::exchange(other.m_Buffer, VK_NULL_HANDLE)), m_Device(other.m_Device), m_PhysicalDevice(other.m_PhysicalDevice)
-{
-} 
-
-VertexBuffer::~VertexBuffer()
-{
-	vkDestroyBuffer(m_Device, m_Buffer, nullptr);
-	vkFreeMemory(m_Device, m_Memory, nullptr);
-}
-
 size_t VertexBuffer::VertexCount() const
 {
     return m_VertexCount;
@@ -34,6 +9,30 @@ size_t VertexBuffer::VertexCount() const
 
 VkBuffer VertexBuffer::Get() const
 {
-    return m_Buffer;
+    if (m_TransferFence)
+    {
+		// TODO: Allow doing this explciitly instead, as we can't read
+		// the intent behind calling `Get` this can lead to 
+		// unexpected results
+        m_TransferFence->get().WaitAndReset();   
+		m_TransferFence = std::nullopt;
+	}
+    return m_VertexBuffer.Get();
+}
+
+DeviceBuffer VertexBuffer::CreateStagingBuffer(VkDeviceSize size, VkDevice device, const PhysicalDevice& physicalDevice) const
+{
+	auto createStagingBufferInfo =
+		CreateBufferInfo{size, VkBufferUsageFlagBits::VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+						 VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+							 VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_COHERENT_BIT};
+    return DeviceBuffer(device, physicalDevice, createStagingBufferInfo);
+}
+
+DeviceBuffer VertexBuffer::CreateVertexBuffer(VkDeviceSize size, VkDevice device, const PhysicalDevice& physicalDevice) const
+{
+	auto createVertexBufferInfo = CreateBufferInfo{size, VkBufferUsageFlagBits::VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+												   VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT};
+	return DeviceBuffer(device, physicalDevice, createVertexBufferInfo);
 }
 

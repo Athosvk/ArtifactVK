@@ -8,15 +8,16 @@
 #include <vulkan/vulkan.h>
 #include <stdexcept>
 #include <iostream>
+#include <span>
 
-CommandBuffer::CommandBuffer(VkCommandBuffer &&commandBuffer, VkDevice device) : m_CommandBuffer(commandBuffer), 
+CommandBuffer::CommandBuffer(VkCommandBuffer &&commandBuffer, VkDevice device, Queue queue) : m_CommandBuffer(commandBuffer), 
     // Start the Fence signaled so that we can query for correct usage prior to beginning the command buffer (again)
-    m_InFlight(Fence(device))
+      m_InFlight(Fence(device)), m_Queue(queue)
 {
 }
 
 CommandBuffer::CommandBuffer(CommandBuffer &&other)
-    : m_CommandBuffer(other.m_CommandBuffer), m_InFlight(std::move(other.m_InFlight)), m_Status(other.m_Status)
+    : m_CommandBuffer(other.m_CommandBuffer), m_InFlight(std::move(other.m_InFlight)), m_Status(other.m_Status), m_Queue(other.m_Queue)
 {
     other.m_Moved = true;
 }
@@ -31,7 +32,7 @@ CommandBuffer::~CommandBuffer()
     }
 }
 
-void CommandBuffer::WaitFence(bool log)
+void CommandBuffer::WaitFence()
 {
     // No use in waiting for a fence that cannot possibly have been signaled
     if (m_Status != CommandBufferStatus::Reset) 
@@ -87,7 +88,7 @@ void CommandBuffer::Draw(const Framebuffer& frameBuffer, const RenderPass& rende
 }
 
 // TODO: Bind command buffer to a queue at creation time
-Fence& CommandBuffer::End(std::span<Semaphore> waitSemaphores, std::span<Semaphore> signalSemaphores, Queue queue)
+Fence& CommandBuffer::End(std::span<Semaphore> waitSemaphores, std::span<Semaphore> signalSemaphores)
 {
     if (vkEndCommandBuffer(m_CommandBuffer) != VK_SUCCESS)
     {
@@ -128,7 +129,7 @@ Fence& CommandBuffer::End(std::span<Semaphore> waitSemaphores, std::span<Semapho
 
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &m_CommandBuffer;
-    if (vkQueueSubmit(queue.Get(), 1, &submitInfo, m_InFlight.Get()) != VkResult::VK_SUCCESS)
+    if (vkQueueSubmit(m_Queue.Get(), 1, &submitInfo, m_InFlight.Get()) != VkResult::VK_SUCCESS)
     {
         throw std::runtime_error("Faied to submit cmd buffer to queue");
     }
@@ -136,11 +137,30 @@ Fence& CommandBuffer::End(std::span<Semaphore> waitSemaphores, std::span<Semapho
     return m_InFlight;
 }
 
+Fence &CommandBuffer::End()
+{
+    return End(std::span<Semaphore>(), std::span<Semaphore>());
+}
+
 void CommandBuffer::BindBuffer(const VertexBuffer &vertexBuffer)
 {
     VkBuffer vertexBuffers = {vertexBuffer.Get()};
     VkDeviceSize offsets[] = {0};
     vkCmdBindVertexBuffers(m_CommandBuffer, 0, 1, &vertexBuffers, offsets);
+}
+
+void CommandBuffer::Copy(const DeviceBuffer &source, const DeviceBuffer &destination)
+{
+    // TODO: Use `Begin` instead and allow for a one-time fire
+    VkCommandBufferBeginInfo beginInfo{};
+    beginInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    beginInfo.flags = VkCommandBufferUsageFlagBits::VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+    vkBeginCommandBuffer(m_CommandBuffer, &beginInfo);
+    VkBufferCopy bufferCopy{};
+    bufferCopy.srcOffset = 0;
+    bufferCopy.dstOffset = 0;
+    bufferCopy.size = source.GetSize();
+    vkCmdCopyBuffer(m_CommandBuffer, source.Get(), destination.Get(), 1, &bufferCopy);
 }
 
 void CommandBuffer::Reset()
@@ -174,7 +194,7 @@ CommandBufferPool::~CommandBufferPool()
     vkDestroyCommandPool(m_Device, m_CommandBufferPool, nullptr);
 }
 
-std::vector<std::reference_wrapper<CommandBuffer>> CommandBufferPool::CreateCommandBuffers(uint32_t count)
+std::vector<std::reference_wrapper<CommandBuffer>> CommandBufferPool::CreateCommandBuffers(uint32_t count, Queue queue)
 {
     VkCommandBufferAllocateInfo allocationInfo{};
     allocationInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -191,8 +211,13 @@ std::vector<std::reference_wrapper<CommandBuffer>> CommandBufferPool::CreateComm
     
     for (auto&& vkCommandBuffer : commandBuffers)
     {
-        m_CommandBuffers.emplace_back(CommandBuffer(std::move(vkCommandBuffer), m_Device));
+        m_CommandBuffers.emplace_back(CommandBuffer(std::move(vkCommandBuffer), m_Device, queue));
     }
     
     return std::vector<std::reference_wrapper<CommandBuffer>>(m_CommandBuffers.begin(), m_CommandBuffers.end());
+}
+
+CommandBuffer &CommandBufferPool::CreateCommandBuffer(Queue queue)
+{
+    return CreateCommandBuffers(1, queue)[0];
 }

@@ -32,7 +32,7 @@ App::~App()
 {
     for (auto &perFrameState : m_PerFrameState)
     {
-        perFrameState.CommandBuffer.WaitFence(true);
+        perFrameState.CommandBuffer.WaitFence();
     }
     glfwTerminate();
 }
@@ -79,8 +79,7 @@ void App::RecordFrame(PerFrameState& state)
     state.CommandBuffer.WaitFence();
     state.CommandBuffer.Begin();
     state.CommandBuffer.Draw(m_SwapchainFramebuffers.GetCurrent(), m_MainPass, m_RenderFullscreen, m_VertexBuffer);
-    state.CommandBuffer.End(std::span{ &state.ImageAvailable, 1 }, std::span{ &state.RenderFinished, 1 }, 
-        m_VulkanInstance.GetActiveDevice().GetGraphicsQueue());
+    state.CommandBuffer.End(std::span{ &state.ImageAvailable, 1 }, std::span{ &state.RenderFinished, 1 });
     
     m_VulkanInstance.GetActiveDevice().Present(std::span{&state.RenderFinished, 1});
 }
@@ -98,7 +97,7 @@ std::vector<std::reference_wrapper<Semaphore>> App::CreateSemaphorePerInFlightFr
 std::vector<PerFrameState> App::CreatePerFrameState(VulkanDevice &vulkanDevice)
 {
     std::vector<PerFrameState> perFrameState;
-    auto commandBuffers = vulkanDevice.CreateGraphicsCommandBufferPool().CreateCommandBuffers(MAX_FRAMES_IN_FLIGHT);
+    auto commandBuffers = vulkanDevice.CreateGraphicsCommandBufferPool().CreateCommandBuffers(MAX_FRAMES_IN_FLIGHT, m_VulkanInstance.GetActiveDevice().GetGraphicsQueue());
     perFrameState.reserve(MAX_FRAMES_IN_FLIGHT);
     for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
     {
