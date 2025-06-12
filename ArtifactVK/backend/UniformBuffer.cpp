@@ -2,25 +2,16 @@
 
 #include "VulkanDevice.h"
 
-UniformBuffer::UniformBuffer(VulkanDevice& vulkanDevice, VkDevice device, size_t bufferSize) 
+UniformBuffer::UniformBuffer(VulkanDevice& vulkanDevice, VkDevice device, size_t bufferSize, VkDescriptorSetLayout descriptorSetLayout) 
 	: m_Device(device),
-	m_Buffer(CreateBuffer(vulkanDevice, bufferSize))
+	m_Buffer(CreateBuffer(vulkanDevice, bufferSize)), 
+	m_DescriptorSetLayout(descriptorSetLayout)
 {
-	VkDescriptorSetLayoutBinding uboLayoutBinding{};
-	uboLayoutBinding.binding = 0;
-	uboLayoutBinding.descriptorType = VkDescriptorType::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	uboLayoutBinding.descriptorCount = 1;
-	uboLayoutBinding.stageFlags = VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT;
-	uboLayoutBinding.pImmutableSamplers = nullptr;  
+}
 
-	VkDescriptorSetLayoutCreateInfo createInfo;
-	createInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-	createInfo.bindingCount = 1;
-	createInfo.pBindings = &uboLayoutBinding;
-		
-	if (vkCreateDescriptorSetLayout(m_Device, &createInfo, nullptr, &m_DescriptorSet) != VkResult::VK_SUCCESS) {
-		throw std::runtime_error("Could not create descriptor set for uniform buffer");
-	}
+VkDescriptorSetLayout UniformBuffer::GetDescriptorSetLayout() const
+{
+    return m_DescriptorSetLayout;
 }
 
 DeviceBuffer& UniformBuffer::CreateBuffer(VulkanDevice &vulkanDevice, size_t size)

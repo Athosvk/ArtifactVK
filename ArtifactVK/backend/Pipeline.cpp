@@ -13,9 +13,9 @@ RasterPipelineBuilder & RasterPipelineBuilder::SetVertexBindingDescription(const
     return *this;
 }
 
-RasterPipelineBuilder &RasterPipelineBuilder::AddDescriptorSet(VkDescriptorSetLayout descriptor)
+RasterPipelineBuilder &RasterPipelineBuilder::AddDescriptorSet(VkDescriptorSetLayout descriptorSet)
 {
-    m_DescriptorSets.push_back(descriptor);
+    m_DescriptorSets.emplace_back(descriptorSet);
     return *this;
 }
 

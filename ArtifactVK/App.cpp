@@ -20,9 +20,9 @@ App::App()
     : m_Window(WindowCreateInfo{800, 600, "ArtifactVK"}),
       m_VulkanInstance(m_Window.CreateVulkanInstance(DefaultCreateInfo())),
       m_MainPass(m_VulkanInstance.GetActiveDevice().CreateRenderPass()),
-      m_RenderFullscreen(LoadShaderPipeline(m_VulkanInstance.GetActiveDevice(), m_MainPass)),
       m_SwapchainFramebuffers(m_VulkanInstance.GetActiveDevice().CreateSwapchainFramebuffers(m_MainPass)),
       m_PerFrameState(CreatePerFrameState(m_VulkanInstance.GetActiveDevice())),
+      m_RenderFullscreen(LoadShaderPipeline(m_VulkanInstance.GetActiveDevice(), m_MainPass)),
       m_Swapchain(m_VulkanInstance.GetActiveDevice().GetSwapchain()),
       m_VertexBuffer(m_VulkanInstance.GetActiveDevice().CreateVertexBuffer(GetVertices())),
       m_IndexBuffer(m_VulkanInstance.GetActiveDevice().CreateIndexBuffer(GetIndices()))
@@ -69,6 +69,9 @@ RasterPipeline App::LoadShaderPipeline(VulkanDevice &vulkanDevice, const RenderP
 {
     auto builder = RasterPipelineBuilder("spirv/triangle.vert.spv", "spirv/triangle.frag.spv");
     builder.SetVertexBindingDescription(Vertex::GetVertexBindingDescription());
+    // Just get the first, they're alll the same. 
+    // TODO: Have nicer outer bindings for it (i.e. less directly translated from Vulkan)_
+    builder.AddDescriptorSet(m_PerFrameState.front().UniformBuffer.GetDescriptorSetLayout());
     return vulkanDevice.CreateRasterPipeline(std::move(builder), renderPass);
 }
 
@@ -99,11 +102,25 @@ std::vector<PerFrameState> App::CreatePerFrameState(VulkanDevice &vulkanDevice)
     std::vector<PerFrameState> perFrameState;
     auto commandBuffers = vulkanDevice.CreateGraphicsCommandBufferPool().CreateCommandBuffers(MAX_FRAMES_IN_FLIGHT, m_VulkanInstance.GetActiveDevice().GetGraphicsQueue());
     perFrameState.reserve(MAX_FRAMES_IN_FLIGHT);
+    
+    auto uniformBuffer = vulkanDevice.CreateUniformBuffer<UniformConstants>();
     for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
     {
-        perFrameState.emplace_back(PerFrameState{vulkanDevice.CreateDeviceSemaphore(),
-                                                 vulkanDevice.CreateDeviceSemaphore(), commandBuffers[i],
-                                                 vulkanDevice.CreateUniformBuffer<UniformConstants>()});
+        if (i == 0)
+        {
+			perFrameState.emplace_back(PerFrameState{vulkanDevice.CreateDeviceSemaphore(), 
+													 vulkanDevice.CreateDeviceSemaphore(), commandBuffers[i],
+													 uniformBuffer});
+        }
+        else
+        {
+            auto matchingUniformBuffer =
+                vulkanDevice.CreateUniformBufferFromLayout<UniformConstants>(uniformBuffer.GetDescriptorSetLayout());
+			perFrameState.emplace_back(PerFrameState{vulkanDevice.CreateDeviceSemaphore(), 
+													 vulkanDevice.CreateDeviceSemaphore(), commandBuffers[i],
+													 matchingUniformBuffer});
+        
+        }
     }
     return perFrameState;
 }

@@ -8,14 +8,14 @@ class VulkanDevice;
 class UniformBuffer
 {
 public:
-    UniformBuffer(VulkanDevice& vulkanDevice, VkDevice device, size_t bufferSize);
+    UniformBuffer(VulkanDevice& vulkanDevice, VkDevice device, size_t bufferSize, VkDescriptorSetLayout descriptorSetLayout);
 
-private:
+    VkDescriptorSetLayout GetDescriptorSetLayout() const;
+  private:
     DeviceBuffer& CreateBuffer(VulkanDevice& vulkanDevice, size_t size);
 
-  private:
+    VkDescriptorSetLayout m_DescriptorSetLayout;
     VkDevice m_Device;
-    VkDescriptorSetLayout m_DescriptorSet;
     DeviceBuffer& m_Buffer;
 	void* m_MappedData;
 };

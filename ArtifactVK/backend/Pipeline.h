@@ -9,6 +9,7 @@
 
 struct Viewport;
 class VulkanDevice;
+class UniformBuffer;
 
 struct PipelineCreateInfo
 {
@@ -51,7 +52,7 @@ class RasterPipelineBuilder
     RasterPipelineBuilder(std::filesystem::path &&vertexShaderPath, std::filesystem::path &&fragmentShaderPath);
 
     RasterPipelineBuilder& SetVertexBindingDescription(const VertexBindingDescription& vertexBinding);
-    RasterPipelineBuilder& AddDescriptorSet(VkDescriptorSetLayout descriptor);
+    RasterPipelineBuilder& AddDescriptorSet(VkDescriptorSetLayout uniformBuffer);
     const std::optional<VertexBindingDescription>& GetVertexBindingDescription() const;
     const std::filesystem::path& GetVertexShaderPath() const;
     const std::filesystem::path& GetFragmentShaderPath() const;

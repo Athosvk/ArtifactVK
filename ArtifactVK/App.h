@@ -63,9 +63,9 @@ class App
     Window m_Window;
     VulkanInstance m_VulkanInstance;
     RenderPass m_MainPass;
-    RasterPipeline m_RenderFullscreen;
     const SwapchainFramebuffer& m_SwapchainFramebuffers;
     std::vector<PerFrameState> m_PerFrameState;
+    RasterPipeline m_RenderFullscreen;
     uint32_t m_CurrentFrameIndex = 0;
     Swapchain &m_Swapchain;
     VertexBuffer &m_VertexBuffer;
