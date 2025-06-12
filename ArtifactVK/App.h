@@ -16,6 +16,7 @@
 
 class VertexBuffer;
 class IndexBuffer;
+class UniformBuffer;
 
 const uint32_t MAX_FRAMES_IN_FLIGHT = 2;
 
@@ -24,6 +25,7 @@ struct PerFrameState
     Semaphore &ImageAvailable;
     Semaphore &RenderFinished;
     CommandBuffer &CommandBuffer;
+    UniformBuffer &UniformBuffer;
 };
 
 struct Vertex
@@ -36,7 +38,7 @@ struct Vertex
     constexpr static VertexBindingDescription GetVertexBindingDescription();
 };
 
-struct UniformBuffer {
+struct UniformConstants {
     glm::mat4 model;
     glm::mat4 view;
     glm::mat4 projection;

@@ -72,29 +72,9 @@ VkExtent2D VulkanDevice::SelectSwapchainExtent(GLFWwindow& window, const Surface
     }
 }
 
-VkDescriptorSetLayoutBinding VulkanDevice::CreateDescriptorSetLayout()
+DeviceBuffer &VulkanDevice::CreateBuffer(const CreateBufferInfo& createInfo)
 {
-    VkDescriptorSetLayoutBinding uboLayoutBinding{};
-    uboLayoutBinding.binding = 0;
-    uboLayoutBinding.descriptorType = VkDescriptorType::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    uboLayoutBinding.descriptorCount = 1;
-    // TODO: Just always make this all graphics stages? Depends on performance consequences
-    // (Maybe check in breda)
-    uboLayoutBinding.stageFlags = VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT;
-    uboLayoutBinding.pImmutableSamplers = nullptr;  
-
-    VkDescriptorSetLayoutCreateInfo createInfo;
-    createInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    createInfo.bindingCount = 1;
-    createInfo.pBindings = &uboLayoutBinding;
-
-    VkDescriptorSetLayout layout;
-        
-    if (vkCreateDescriptorSetLayout(m_Device, &createInfo, nullptr, &layout) != VkResult::VK_SUCCESS) {
-        throw std::runtime_error("Could not crate descriptor set for uniform buffer");
-    }
-
-    return uboLayoutBinding;
+    return m_Buffers.emplace_back(DeviceBuffer(m_Device, m_PhysicalDevice, createInfo));
 }
 
 void VulkanDevice::WaitForIdle() const
@@ -144,15 +124,15 @@ RasterPipeline VulkanDevice::CreateRasterPipeline(RasterPipelineBuilder &&pipeli
     auto vertexShader = LoadShaderModule(pipelineBuilder.GetVertexShaderPath());
 
     VkPipelineShaderStageCreateInfo fragCreateInfo{};
-    fragCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    fragCreateInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+    fragCreateInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    fragCreateInfo.stage = VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT;
     fragCreateInfo.module = fragmentShader.Get();
     fragCreateInfo.pName = "main";
     fragCreateInfo.pSpecializationInfo = nullptr;
 
     VkPipelineShaderStageCreateInfo vertexCreateInfo{};
-    vertexCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    vertexCreateInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
+    vertexCreateInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    vertexCreateInfo.stage = VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT;
     vertexCreateInfo.module = vertexShader.Get();
     vertexCreateInfo.pName = "main";
     vertexCreateInfo.pSpecializationInfo = nullptr;
@@ -160,13 +140,12 @@ RasterPipeline VulkanDevice::CreateRasterPipeline(RasterPipelineBuilder &&pipeli
     VkPipelineShaderStageCreateInfo stages[] = {fragCreateInfo, vertexCreateInfo};
 
     std::array<VkDynamicState, 2> dynamicStates = {
-        // Only when d
         VK_DYNAMIC_STATE_SCISSOR,
         VK_DYNAMIC_STATE_VIEWPORT,
     };
 
     VkPipelineDynamicStateCreateInfo dynamicState{};
-    dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+    dynamicState.sType = VkStructureType::VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
     //dynamicState.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
     //dynamicState.pDynamicStates = dynamicStates.data();
 
@@ -254,7 +233,7 @@ RasterPipeline VulkanDevice::CreateRasterPipeline(RasterPipelineBuilder &&pipeli
     pipelineInfo.pColorBlendState = &colorBlendState;
     pipelineInfo.pDynamicState = &dynamicState;
     
-    auto createInfo = PipelineCreateInfo{pipelineInfo, {}, renderPass};
+    auto createInfo = PipelineCreateInfo{pipelineInfo, pipelineBuilder.GetDescriptorSets(), renderPass};
     return RasterPipeline(m_Device, createInfo);
 }
 
@@ -331,6 +310,11 @@ VulkanDevice::~VulkanDevice()
         // ordering through semaphores and fences for specific operations instead.
         m_PresentQueue->Wait();
     }
+
+    for (VkDescriptorSetLayout descriptorSet : m_DescriptorSets)
+    {
+        vkDestroyDescriptorSetLayout(m_Device, descriptorSet, nullptr);
+    }
     // Explicitly order destruction of vulkan objects
     // Prior to swapchain destruction, since framebuffers may be 
     // to swapchain images
@@ -341,6 +325,7 @@ VulkanDevice::~VulkanDevice()
     m_Semaphores.clear();
     m_VertexBuffers.clear();
     m_IndexBuffers.clear();
+    m_Buffers.clear();
 
     std::condition_variable destroyed;
     std::mutex destroyMutex;

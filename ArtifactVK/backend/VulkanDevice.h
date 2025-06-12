@@ -18,6 +18,8 @@
 #include "Semaphore.h"
 #include "Queue.h"
 #include "VertexBuffer.h"
+#include "UniformBuffer.h"
+#include "Buffer.h"
 
 class PhysicalDevice;
 struct GLFWwindow;
@@ -51,14 +53,21 @@ class VulkanDevice
     void Present(std::span<Semaphore> waitSemaphores);
     void HandleResizeEvent(const WindowResizeEvent &resizeEvent);
     template<typename T> 
-    VertexBuffer &CreateVertexBuffer(std::vector<T> data)
+    VertexBuffer &CreateVertexBuffer(std::vector<T> initialData)
     {
-        auto bufferCreateInfo = CreateVertexBufferInfo{data};
+        auto bufferCreateInfo = CreateVertexBufferInfo{initialData};
         return *m_VertexBuffers.emplace_back(std::make_unique<VertexBuffer>(bufferCreateInfo, m_Device, m_PhysicalDevice, GetTransferCommandBuffer()));
     }
 
     IndexBuffer &CreateIndexBuffer(std::vector<uint16_t> data);
-    VkDescriptorSetLayoutBinding CreateDescriptorSetLayout();
+
+    template<typename T> 
+    UniformBuffer &CreateUniformBuffer()
+    {
+        return *m_UniformBuffers.emplace_back(std::make_unique<UniformBuffer>(*this, m_Device, sizeof(T)));
+    }
+
+    DeviceBuffer &CreateBuffer(const CreateBufferInfo& createBufferInfo);
   private:
     CommandBufferPool CreateTransferCommandBufferPool() const;
     void RecreateSwapchain(VkExtent2D newSize);
@@ -85,6 +94,9 @@ class VulkanDevice
     std::vector<std::unique_ptr<SwapchainFramebuffer>> m_SwapchainFramebuffers;
     std::vector<std::unique_ptr<VertexBuffer>> m_VertexBuffers;
     std::vector<std::unique_ptr<IndexBuffer>> m_IndexBuffers;
+    std::vector<std::unique_ptr<UniformBuffer>> m_UniformBuffers;
+    std::vector<VkDescriptorSetLayout> m_DescriptorSets;
+    std::vector<DeviceBuffer> m_Buffers; 
     std::optional<VkExtent2D> m_LastUnhandledResize;
 };
 

@@ -9,7 +9,7 @@ struct CreateBufferInfo
     VkDeviceSize Size;
     VkBufferUsageFlags BufferUsage;
     VkMemoryPropertyFlags MemoryProperties;
-    VkSharingMode SharingMode;
+    VkSharingMode SharingMode = VkSharingMode::VK_SHARING_MODE_EXCLUSIVE;
 };
 
 class DeviceBuffer

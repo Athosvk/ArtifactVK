@@ -13,6 +13,12 @@ RasterPipelineBuilder & RasterPipelineBuilder::SetVertexBindingDescription(const
     return *this;
 }
 
+RasterPipelineBuilder &RasterPipelineBuilder::AddDescriptorSet(VkDescriptorSetLayout descriptor)
+{
+    m_DescriptorSets.push_back(descriptor);
+    return *this;
+}
+
 const std::optional<VertexBindingDescription>& RasterPipelineBuilder::GetVertexBindingDescription() const
 {
     return m_VertexBindingDescription;
@@ -28,13 +34,18 @@ const std::filesystem::path &RasterPipelineBuilder::GetFragmentShaderPath() cons
     return m_FragmentShaderPath;
 }
 
+const std::vector<VkDescriptorSetLayout>& RasterPipelineBuilder::GetDescriptorSets() const
+{
+    return m_DescriptorSets;
+}
+
 RasterPipeline::RasterPipeline(VkDevice vulkanDevice, PipelineCreateInfo createInfo)
     : m_VulkanDevice(vulkanDevice) 
 {
     VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo{};
     pipelineLayoutCreateInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pipelineLayoutCreateInfo.setLayoutCount = 0;
-    pipelineLayoutCreateInfo.pSetLayouts = nullptr;
+    pipelineLayoutCreateInfo.pSetLayouts = createInfo.Descriptors.data();
     pipelineLayoutCreateInfo.pushConstantRangeCount = 0;
     pipelineLayoutCreateInfo.pPushConstantRanges = nullptr;
 

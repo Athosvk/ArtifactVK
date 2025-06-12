@@ -68,7 +68,6 @@ void App::RunRenderLoop()
 RasterPipeline App::LoadShaderPipeline(VulkanDevice &vulkanDevice, const RenderPass& renderPass) const
 {
     auto builder = RasterPipelineBuilder("spirv/triangle.vert.spv", "spirv/triangle.frag.spv");
-    // TODO: This doesn't emit a validation warning when no vertex buffer is bound. Bug?
     builder.SetVertexBindingDescription(Vertex::GetVertexBindingDescription());
     return vulkanDevice.CreateRasterPipeline(std::move(builder), renderPass);
 }
@@ -103,7 +102,8 @@ std::vector<PerFrameState> App::CreatePerFrameState(VulkanDevice &vulkanDevice)
     for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
     {
         perFrameState.emplace_back(PerFrameState{vulkanDevice.CreateDeviceSemaphore(),
-                                                 vulkanDevice.CreateDeviceSemaphore(), commandBuffers[i]});
+                                                 vulkanDevice.CreateDeviceSemaphore(), commandBuffers[i],
+                                                 vulkanDevice.CreateUniformBuffer<UniformConstants>()});
     }
     return perFrameState;
 }
