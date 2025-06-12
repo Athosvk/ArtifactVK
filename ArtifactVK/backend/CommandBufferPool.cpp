@@ -3,6 +3,7 @@
 #include "Framebuffer.h"
 #include "RenderPass.h"
 #include "VertexBuffer.h"
+#include "IndexBuffer.h"
 
 #include <cassert>
 #include <vulkan/vulkan.h>
@@ -81,9 +82,36 @@ void CommandBuffer::Draw(const Framebuffer& frameBuffer, const RenderPass& rende
     
     vkCmdBeginRenderPass(m_CommandBuffer, &renderPassBeginInfo, VkSubpassContents::VK_SUBPASS_CONTENTS_INLINE);
     pipeline.Bind(m_CommandBuffer, viewport);
-    BindBuffer(vertexBuffer);
+    BindVertexBuffer(vertexBuffer);
     // TODO: Give user control over what to draw
     vkCmdDraw(m_CommandBuffer, static_cast<uint32_t>(vertexBuffer.VertexCount()), 1, 0, 0);
+    vkCmdEndRenderPass(m_CommandBuffer);
+}
+
+void CommandBuffer::DrawIndexed(const Framebuffer &frameBuffer, const RenderPass &renderPass,
+                                const RasterPipeline &pipeline, const VertexBuffer &vertexBuffer,
+                                const IndexBuffer &indexBuffer)
+{
+    assert(m_Status == CommandBufferStatus::Recording && "Calling draw before starting recording of command buffer");
+    VkRenderPassBeginInfo renderPassBeginInfo{};
+    renderPassBeginInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    renderPassBeginInfo.framebuffer = frameBuffer.Get();
+    renderPassBeginInfo.renderPass = renderPass.Get();
+
+    auto viewport = frameBuffer.GetViewport();
+    // Should only be rendering to the scissor area, not the entire viewport
+    renderPassBeginInfo.renderArea = viewport.Scissor;
+
+    VkClearValue clearColor = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
+    renderPassBeginInfo.clearValueCount = 1;
+    renderPassBeginInfo.pClearValues = &clearColor;
+    
+    vkCmdBeginRenderPass(m_CommandBuffer, &renderPassBeginInfo, VkSubpassContents::VK_SUBPASS_CONTENTS_INLINE);
+    pipeline.Bind(m_CommandBuffer, viewport);
+    BindVertexBuffer(vertexBuffer);
+    BindIndexBuffer(indexBuffer);
+    // TODO: Give user control over what to draw
+    vkCmdDrawIndexed(m_CommandBuffer, static_cast<uint32_t>(indexBuffer.GetIndexCount()), 1, 0, 0, 0);
     vkCmdEndRenderPass(m_CommandBuffer);
 }
 
@@ -142,11 +170,18 @@ Fence &CommandBuffer::End()
     return End(std::span<Semaphore>(), std::span<Semaphore>());
 }
 
-void CommandBuffer::BindBuffer(const VertexBuffer &vertexBuffer)
+void CommandBuffer::BindVertexBuffer(const VertexBuffer &vertexBuffer)
 {
     VkBuffer vertexBuffers = {vertexBuffer.Get()};
     VkDeviceSize offsets[] = {0};
     vkCmdBindVertexBuffers(m_CommandBuffer, 0, 1, &vertexBuffers, offsets);
+}
+
+void CommandBuffer::BindIndexBuffer(const IndexBuffer &indexBuffer)
+{
+    VkBuffer indexBuffers = {indexBuffer.Get()};
+    VkDeviceSize offsets[] = {0};
+    vkCmdBindIndexBuffer(m_CommandBuffer, indexBuffers, 0, VkIndexType::VK_INDEX_TYPE_UINT16);
 }
 
 void CommandBuffer::Copy(const DeviceBuffer &source, const DeviceBuffer &destination)
@@ -209,12 +244,13 @@ std::vector<std::reference_wrapper<CommandBuffer>> CommandBufferPool::CreateComm
         throw std::runtime_error("Failed to allocate command buffer");
     }
     
+    std::vector<std::reference_wrapper<CommandBuffer>> commandBufferHandles;
     for (auto&& vkCommandBuffer : commandBuffers)
     {
-        m_CommandBuffers.emplace_back(CommandBuffer(std::move(vkCommandBuffer), m_Device, queue));
+        commandBufferHandles.emplace_back(*m_CommandBuffers.emplace_back(std::make_unique<CommandBuffer>(std::move(vkCommandBuffer), m_Device, queue)));
     }
-    
-    return std::vector<std::reference_wrapper<CommandBuffer>>(m_CommandBuffers.begin(), m_CommandBuffers.end());
+
+    return commandBufferHandles;
 }
 
 CommandBuffer &CommandBufferPool::CreateCommandBuffer(Queue queue)

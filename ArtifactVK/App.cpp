@@ -24,7 +24,8 @@ App::App()
       m_SwapchainFramebuffers(m_VulkanInstance.GetActiveDevice().CreateSwapchainFramebuffers(m_MainPass)),
       m_PerFrameState(CreatePerFrameState(m_VulkanInstance.GetActiveDevice())),
       m_Swapchain(m_VulkanInstance.GetActiveDevice().GetSwapchain()),
-      m_VertexBuffer(m_VulkanInstance.GetActiveDevice().CreateVertexBuffer(GetVertices()))
+      m_VertexBuffer(m_VulkanInstance.GetActiveDevice().CreateVertexBuffer(GetVertices())),
+      m_IndexBuffer(m_VulkanInstance.GetActiveDevice().CreateIndexBuffer(GetIndices()))
 {
 }
 
@@ -78,7 +79,7 @@ void App::RecordFrame(PerFrameState& state)
     // TODO: Can probably be moved to CommandBuffer->Begin()
     state.CommandBuffer.WaitFence();
     state.CommandBuffer.Begin();
-    state.CommandBuffer.Draw(m_SwapchainFramebuffers.GetCurrent(), m_MainPass, m_RenderFullscreen, m_VertexBuffer);
+    state.CommandBuffer.DrawIndexed(m_SwapchainFramebuffers.GetCurrent(), m_MainPass, m_RenderFullscreen, m_VertexBuffer, m_IndexBuffer);
     state.CommandBuffer.End(std::span{ &state.ImageAvailable, 1 }, std::span{ &state.RenderFinished, 1 });
     
     m_VulkanInstance.GetActiveDevice().Present(std::span{&state.RenderFinished, 1});
@@ -111,9 +112,17 @@ constexpr std::vector<Vertex> App::GetVertices()
 {
     return
     {
-	    {{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-		{{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
-		{{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
+	    {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+		{{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
+		{{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
+		{{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}
+    };
+}
+
+constexpr std::vector<uint16_t> App::GetIndices()
+{
+    return {
+        0, 1, 2, 2, 3, 0
     };
 }
 

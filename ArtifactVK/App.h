@@ -14,6 +14,9 @@
 #include "backend/RenderPass.h"
 #include "backend/Swapchain.h"
 
+class VertexBuffer;
+class IndexBuffer;
+
 const uint32_t MAX_FRAMES_IN_FLIGHT = 2;
 
 struct PerFrameState
@@ -47,6 +50,7 @@ class App
     std::vector<std::reference_wrapper<Semaphore>> CreateSemaphorePerInFlightFrame();
     std::vector<PerFrameState> CreatePerFrameState(VulkanDevice &vulkanDevice);
     constexpr static std::vector<Vertex> GetVertices();
+    constexpr static std::vector<uint16_t> GetIndices();
 
     Window m_Window;
     VulkanInstance m_VulkanInstance;
@@ -57,4 +61,5 @@ class App
     uint32_t m_CurrentFrameIndex = 0;
     Swapchain &m_Swapchain;
     VertexBuffer &m_VertexBuffer;
+    IndexBuffer &m_IndexBuffer;
 };

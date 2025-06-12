@@ -27,7 +27,8 @@ class VertexBuffer
             CommandBuffer& transferCommandBuffer) : 
         m_PhysicalDevice(physicalDevice), m_VertexCount(bufferInfo.InitialData.size()),
 	    m_StagingBuffer(CreateStagingBuffer(bufferInfo.InitialData.size() * sizeof(T), device, physicalDevice)),
-	    m_VertexBuffer(CreateVertexBuffer(bufferInfo.InitialData.size() * sizeof(T), device, physicalDevice))
+	    m_VertexBuffer(CreateVertexBuffer(bufferInfo.InitialData.size() * sizeof(T), device, physicalDevice)),
+              m_CommandBuffer(transferCommandBuffer)
     {
         m_VertexCount = bufferInfo.InitialData.size();
         m_StagingBuffer.UploadData(bufferInfo.InitialData);
@@ -48,4 +49,5 @@ class VertexBuffer
     size_t m_VertexCount;
     // TODO: Make non-mutable 
     mutable std::optional<std::reference_wrapper<Fence>> m_TransferFence;
+    CommandBuffer& m_CommandBuffer;
 };
