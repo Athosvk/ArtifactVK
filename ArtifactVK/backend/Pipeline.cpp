@@ -28,7 +28,7 @@ const std::filesystem::path &RasterPipelineBuilder::GetFragmentShaderPath() cons
     return m_FragmentShaderPath;
 }
 
-RasterPipeline::RasterPipeline(VkDevice vulkanDevice, VkGraphicsPipelineCreateInfo createInfo, const RenderPass& renderPass)
+RasterPipeline::RasterPipeline(VkDevice vulkanDevice, PipelineCreateInfo createInfo)
     : m_VulkanDevice(vulkanDevice) 
 {
     VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo{};
@@ -42,14 +42,15 @@ RasterPipeline::RasterPipeline(VkDevice vulkanDevice, VkGraphicsPipelineCreateIn
     {
         throw std::runtime_error("Could not create pipeline layout");
     }
-    createInfo.layout = m_PipelineLayout;
-    createInfo.renderPass = renderPass.Get();
-    createInfo.subpass = 0;
+    VkGraphicsPipelineCreateInfo vkCreateInfo = std::move(createInfo.CreateInfo);
+    vkCreateInfo.layout = m_PipelineLayout;
+    vkCreateInfo.renderPass = createInfo.RenderPass.Get();
+    vkCreateInfo.subpass = 0;
 
     // Unused
-    createInfo.basePipelineHandle = VK_NULL_HANDLE;
-    createInfo.basePipelineIndex = -1;
-    if (vkCreateGraphicsPipelines(vulkanDevice, VK_NULL_HANDLE, 1, &createInfo, nullptr, &m_Pipeline))
+    vkCreateInfo.basePipelineHandle = VK_NULL_HANDLE;
+    vkCreateInfo.basePipelineIndex = -1;
+    if (vkCreateGraphicsPipelines(vulkanDevice, VK_NULL_HANDLE, 1, &vkCreateInfo, nullptr, &m_Pipeline))
     {
         throw std::runtime_error("Could not create pipeline");
     }

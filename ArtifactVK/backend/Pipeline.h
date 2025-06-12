@@ -10,10 +10,17 @@
 struct Viewport;
 class VulkanDevice;
 
+struct PipelineCreateInfo
+{
+    VkGraphicsPipelineCreateInfo CreateInfo;
+    std::vector<VkDescriptorSetLayout> Descriptors;
+    const RenderPass &RenderPass;
+};
+
 class RasterPipeline
 {
   public:
-    RasterPipeline(VkDevice vulkanDevice, VkGraphicsPipelineCreateInfo createInfo, const RenderPass& renderPass);
+    RasterPipeline(VkDevice vulkanDevice, PipelineCreateInfo createInfo);
 
     RasterPipeline(const RasterPipeline &) = delete;
     RasterPipeline(RasterPipeline &&other);
