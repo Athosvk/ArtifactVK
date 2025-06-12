@@ -58,6 +58,7 @@ class VulkanDevice
     }
 
     IndexBuffer &CreateIndexBuffer(std::vector<uint16_t> data);
+    VkDescriptorSetLayoutBinding CreateDescriptorSetLayout();
   private:
     CommandBufferPool CreateTransferCommandBufferPool() const;
     void RecreateSwapchain(VkExtent2D newSize);

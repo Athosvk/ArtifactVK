@@ -72,6 +72,31 @@ VkExtent2D VulkanDevice::SelectSwapchainExtent(GLFWwindow& window, const Surface
     }
 }
 
+VkDescriptorSetLayoutBinding VulkanDevice::CreateDescriptorSetLayout()
+{
+    VkDescriptorSetLayoutBinding uboLayoutBinding{};
+    uboLayoutBinding.binding = 0;
+    uboLayoutBinding.descriptorType = VkDescriptorType::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    uboLayoutBinding.descriptorCount = 1;
+    // TODO: Just always make this all graphics stages? Depends on performance consequences
+    // (Maybe check in breda)
+    uboLayoutBinding.stageFlags = VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT;
+    uboLayoutBinding.pImmutableSamplers = nullptr;  
+
+    VkDescriptorSetLayoutCreateInfo createInfo;
+    createInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    createInfo.bindingCount = 1;
+    createInfo.pBindings = &uboLayoutBinding;
+
+    VkDescriptorSetLayout layout;
+        
+    if (vkCreateDescriptorSetLayout(m_Device, &createInfo, nullptr, &layout) != VkResult::VK_SUCCESS) {
+        throw std::runtime_error("Could not crate descriptor set for uniform buffer");
+    }
+
+    return uboLayoutBinding;
+}
+
 void VulkanDevice::WaitForIdle() const
 {
     vkDeviceWaitIdle(m_Device);
@@ -229,7 +254,8 @@ RasterPipeline VulkanDevice::CreateRasterPipeline(RasterPipelineBuilder &&pipeli
     pipelineInfo.pColorBlendState = &colorBlendState;
     pipelineInfo.pDynamicState = &dynamicState;
     
-    return RasterPipeline(m_Device, pipelineInfo, renderPass);
+    auto createInfo = PipelineCreateInfo{pipelineInfo, {}, renderPass};
+    return RasterPipeline(m_Device, createInfo);
 }
 
 VulkanDevice::VulkanDevice(PhysicalDevice &physicalDevice, const VkPhysicalDevice &physicalDeviceHandle,
