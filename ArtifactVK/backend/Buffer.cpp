@@ -36,6 +36,12 @@ DeviceBuffer::DeviceBuffer(VkDevice device, const PhysicalDevice &physicalDevice
 	}
 
 	vkBindBufferMemory(m_Device, m_Buffer, m_Memory, 0);
+    if (bufferInfo.PersistentlyMapped)
+    {
+        void *mappedBuffer;
+        vkMapMemory(m_Device, m_Memory, 0, bufferInfo.Size, 0, &mappedBuffer);
+        m_MappedBuffer.emplace(mappedBuffer);
+	}
 }
 
 DeviceBuffer::DeviceBuffer(DeviceBuffer && other)
@@ -60,7 +66,17 @@ VkDeviceSize DeviceBuffer::GetSize() const
     return m_CreateInfo.Size;
 }
 
-uint32_t DeviceBuffer::FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags propertyFlags, const PhysicalDevice& physicalDevice) const
+VkDescriptorBufferInfo DeviceBuffer::GetDescriptorInfo() const
+{
+    VkDescriptorBufferInfo descriptorInfo{};
+    descriptorInfo.buffer = m_Buffer;
+    descriptorInfo.offset = 0;
+    descriptorInfo.range = sizeof(m_CreateInfo.Size);
+    return descriptorInfo;
+}
+
+uint32_t DeviceBuffer::FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags propertyFlags,
+                                      const PhysicalDevice &physicalDevice) const
 {
     auto memoryProperties = physicalDevice.MemoryProperties();
     for (uint32_t i = 0; i < memoryProperties.memoryTypeCount; i++)

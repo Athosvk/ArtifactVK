@@ -14,7 +14,12 @@ VkDescriptorSetLayout UniformBuffer::GetDescriptorSetLayout() const
     return m_DescriptorSetLayout;
 }
 
-DeviceBuffer& UniformBuffer::CreateBuffer(VulkanDevice &vulkanDevice, size_t size)
+VkDescriptorBufferInfo UniformBuffer::GetDescriptorInfo() const
+{
+    return m_Buffer.GetDescriptorInfo();
+}
+
+DeviceBuffer &UniformBuffer::CreateBuffer(VulkanDevice &vulkanDevice, size_t size)
 {
 	CreateBufferInfo bufferInfo;
 	bufferInfo.BufferUsage = VkBufferUsageFlagBits::VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;

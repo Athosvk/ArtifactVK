@@ -11,6 +11,11 @@ public:
     UniformBuffer(VulkanDevice& vulkanDevice, VkDevice device, size_t bufferSize, VkDescriptorSetLayout descriptorSetLayout);
 
     VkDescriptorSetLayout GetDescriptorSetLayout() const;
+    template<typename T> void UploadData(const T &data)
+    {
+        m_Buffer.UploadData<T>({data});
+    }
+    VkDescriptorBufferInfo GetDescriptorInfo() const;
   private:
     DeviceBuffer& CreateBuffer(VulkanDevice& vulkanDevice, size_t size);
 

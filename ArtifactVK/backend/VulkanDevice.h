@@ -64,7 +64,7 @@ class VulkanDevice
     template<typename T> 
     UniformBuffer &CreateUniformBuffer()
     {
-		VkDescriptorSetLayout descriptorSet;
+		VkDescriptorSetLayout descriptorSetLayout;
 		VkDescriptorSetLayoutBinding uboLayoutBinding{};
 		uboLayoutBinding.binding = 0;
 		uboLayoutBinding.descriptorType = VkDescriptorType::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -77,12 +77,12 @@ class VulkanDevice
 		createInfo.bindingCount = 1;
 		createInfo.pBindings = &uboLayoutBinding;
 			
-		if (vkCreateDescriptorSetLayout(m_Device, &createInfo, nullptr, &descriptorSet) != VkResult::VK_SUCCESS) {
+		if (vkCreateDescriptorSetLayout(m_Device, &createInfo, nullptr, &descriptorSetLayout) != VkResult::VK_SUCCESS) {
 			throw std::runtime_error("Could not create descriptor set for uniform buffer");
 		}
-        m_DescriptorSets.emplace_back(descriptorSet);
+        m_DescriptorSetLayouts.emplace_back(descriptorSetLayout);
 
-        return CreateUniformBufferFromLayout<T>(descriptorSet);
+        return CreateUniformBufferFromLayout<T>(descriptorSetLayout);
     }
 
     template<typename T> 
@@ -93,6 +93,8 @@ class VulkanDevice
 
     DeviceBuffer &CreateBuffer(const CreateBufferInfo& createBufferInfo);
   private:
+    void CreateDescriptorPool(uint32_t size);
+    std::vector<VkDescriptorSet>  CreateDescriptorSets(std::vector<VkDescriptorSetLayout> layouts, std::vector<std::reference_wrapper<const UniformBuffer>> uniformBuffers, VkDescriptorPool pool);
     CommandBufferPool CreateTransferCommandBufferPool() const;
     void RecreateSwapchain(VkExtent2D newSize);
     ShaderModule LoadShaderModule(const std::filesystem::path &filename);
@@ -119,8 +121,10 @@ class VulkanDevice
     std::vector<std::unique_ptr<VertexBuffer>> m_VertexBuffers;
     std::vector<std::unique_ptr<IndexBuffer>> m_IndexBuffers;
     std::vector<std::unique_ptr<UniformBuffer>> m_UniformBuffers;
-    std::vector<VkDescriptorSetLayout> m_DescriptorSets;
+    std::vector<VkDescriptorSetLayout> m_DescriptorSetLayouts;
     std::vector<DeviceBuffer> m_Buffers; 
     std::optional<VkExtent2D> m_LastUnhandledResize;
+    std::vector<VkDescriptorPool> m_DescriptorPools;
+    std::vector<VkDescriptorSet> m_DescriptorSets;
 };
 

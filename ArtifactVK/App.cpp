@@ -5,6 +5,8 @@
 #include <vector>
 
 #include "backend/ShaderModule.h"
+#include <chrono>
+#include <glm/gtc/matrix_transform.hpp>
 
 const InstanceCreateInfo DefaultCreateInfo()
 {
@@ -65,7 +67,26 @@ void App::RunRenderLoop()
     }
 }
 
-RasterPipeline App::LoadShaderPipeline(VulkanDevice &vulkanDevice, const RenderPass& renderPass) const
+UniformConstants App::GetUniforms()
+{
+    static auto startTime = std::chrono::high_resolution_clock::now();
+    auto currentTime = std::chrono::high_resolution_clock::now();
+
+    float secondsElapsed = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
+
+    UniformConstants constants;
+    constants.model = glm::rotate(glm::mat4(1.0f), secondsElapsed * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    constants.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    
+    constants.projection = glm::perspective(
+        glm::radians(45.0f),
+        m_VulkanInstance.GetActiveDevice().GetSwapchain().GetViewportDescription().Viewport.width /
+            (float)m_VulkanInstance.GetActiveDevice().GetSwapchain().GetViewportDescription().Viewport.height,
+        0.1f, 10.0f);
+    return constants;
+}
+
+RasterPipeline App::LoadShaderPipeline(VulkanDevice &vulkanDevice, const RenderPass &renderPass) const
 {
     auto builder = RasterPipelineBuilder("spirv/triangle.vert.spv", "spirv/triangle.frag.spv");
     builder.SetVertexBindingDescription(Vertex::GetVertexBindingDescription());
@@ -81,6 +102,7 @@ void App::RecordFrame(PerFrameState& state)
     // TODO: Can probably be moved to CommandBuffer->Begin()
     state.CommandBuffer.WaitFence();
     state.CommandBuffer.Begin();
+    state.UniformBuffer.UploadData(GetUniforms());
     state.CommandBuffer.DrawIndexed(m_SwapchainFramebuffers.GetCurrent(), m_MainPass, m_RenderFullscreen, m_VertexBuffer, m_IndexBuffer);
     state.CommandBuffer.End(std::span{ &state.ImageAvailable, 1 }, std::span{ &state.RenderFinished, 1 });
     

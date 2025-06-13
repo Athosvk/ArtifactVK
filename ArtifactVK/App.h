@@ -53,6 +53,7 @@ class App
     void RunRenderLoop();
 
   private:
+    UniformConstants GetUniforms();
     RasterPipeline LoadShaderPipeline(VulkanDevice &vulkanDevice, const RenderPass& renderPass) const;
     void RecordFrame(PerFrameState& state);
     std::vector<std::reference_wrapper<Semaphore>> CreateSemaphorePerInFlightFrame();
