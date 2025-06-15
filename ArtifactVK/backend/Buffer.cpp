@@ -1,6 +1,7 @@
 #include "Buffer.h"
 
 #include <stdexcept>
+#include <iostream>
 
 #include "PhysicalDevice.h"
 
@@ -41,17 +42,23 @@ DeviceBuffer::DeviceBuffer(VkDevice device, const PhysicalDevice &physicalDevice
         void *mappedBuffer;
         vkMapMemory(m_Device, m_Memory, 0, bufferInfo.Size, 0, &mappedBuffer);
         m_MappedBuffer.emplace(mappedBuffer);
+        std::cout << "Mapped at " << mappedBuffer << "\n";
 	}
 }
 
 DeviceBuffer::DeviceBuffer(DeviceBuffer && other)
-    : m_Device(other.m_Device), m_Buffer(std::exchange(other.m_Buffer, VK_NULL_HANDLE)), m_Memory(std::exchange(other.m_Memory, VK_NULL_HANDLE)), m_CreateInfo(other.m_CreateInfo)
+    : m_Device(other.m_Device), m_Buffer(std::exchange(other.m_Buffer, VK_NULL_HANDLE)), m_Memory(std::exchange(other.m_Memory, VK_NULL_HANDLE)), 
+	m_CreateInfo(std::move(other.m_CreateInfo)), m_MappedBuffer(std::move(other.m_MappedBuffer))
 {
 
 }
 
 DeviceBuffer::~DeviceBuffer()
 {
+    if (m_MappedBuffer.has_value())
+    {
+        vkUnmapMemory(m_Device, m_Memory);
+	}
 	vkDestroyBuffer(m_Device, m_Buffer, nullptr);
 	vkFreeMemory(m_Device, m_Memory, nullptr);
 }

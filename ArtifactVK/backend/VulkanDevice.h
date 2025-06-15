@@ -64,7 +64,7 @@ class VulkanDevice
     template<typename T> 
     UniformBuffer &CreateUniformBuffer()
     {
-		VkDescriptorSetLayout descriptorSetLayout;
+        VkDescriptorSetLayout descriptorSetLayout{};
 		VkDescriptorSetLayoutBinding uboLayoutBinding{};
 		uboLayoutBinding.binding = 0;
 		uboLayoutBinding.descriptorType = VkDescriptorType::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -72,7 +72,7 @@ class VulkanDevice
 		uboLayoutBinding.stageFlags = VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT;
 		uboLayoutBinding.pImmutableSamplers = nullptr;  
 
-		VkDescriptorSetLayoutCreateInfo createInfo;
+		VkDescriptorSetLayoutCreateInfo createInfo{};
 		createInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
 		createInfo.bindingCount = 1;
 		createInfo.pBindings = &uboLayoutBinding;
@@ -94,7 +94,7 @@ class VulkanDevice
     DeviceBuffer &CreateBuffer(const CreateBufferInfo& createBufferInfo);
   private:
     void CreateDescriptorPool(uint32_t size);
-    std::vector<VkDescriptorSet>  CreateDescriptorSets(std::vector<VkDescriptorSetLayout> layouts, std::vector<std::reference_wrapper<const UniformBuffer>> uniformBuffers, VkDescriptorPool pool);
+    std::vector<VkDescriptorSet> CreateDescriptorSets(std::vector<VkDescriptorSetLayout> layouts, std::vector<std::reference_wrapper<const UniformBuffer>> uniformBuffers, VkDescriptorPool pool);
     CommandBufferPool CreateTransferCommandBufferPool() const;
     void RecreateSwapchain(VkExtent2D newSize);
     ShaderModule LoadShaderModule(const std::filesystem::path &filename);
@@ -122,7 +122,7 @@ class VulkanDevice
     std::vector<std::unique_ptr<IndexBuffer>> m_IndexBuffers;
     std::vector<std::unique_ptr<UniformBuffer>> m_UniformBuffers;
     std::vector<VkDescriptorSetLayout> m_DescriptorSetLayouts;
-    std::vector<DeviceBuffer> m_Buffers; 
+    std::vector<std::unique_ptr<DeviceBuffer>> m_Buffers; 
     std::optional<VkExtent2D> m_LastUnhandledResize;
     std::vector<VkDescriptorPool> m_DescriptorPools;
     std::vector<VkDescriptorSet> m_DescriptorSets;

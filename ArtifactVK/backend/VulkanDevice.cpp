@@ -112,7 +112,7 @@ std::vector<VkDescriptorSet> VulkanDevice::CreateDescriptorSets(std::vector<VkDe
 
 DeviceBuffer &VulkanDevice::CreateBuffer(const CreateBufferInfo& createInfo)
 {
-    return m_Buffers.emplace_back(DeviceBuffer(m_Device, m_PhysicalDevice, createInfo));
+    return *m_Buffers.emplace_back(std::make_unique<DeviceBuffer>(m_Device, m_PhysicalDevice, createInfo));
 }
 
 void VulkanDevice::WaitForIdle() const

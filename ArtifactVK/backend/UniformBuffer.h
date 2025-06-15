@@ -9,6 +9,8 @@ class UniformBuffer
 {
 public:
     UniformBuffer(VulkanDevice& vulkanDevice, VkDevice device, size_t bufferSize, VkDescriptorSetLayout descriptorSetLayout);
+    UniformBuffer(UniformBuffer &&other) = default;
+    UniformBuffer(const UniformBuffer &other) = delete;
 
     VkDescriptorSetLayout GetDescriptorSetLayout() const;
     template<typename T> void UploadData(const T &data)
@@ -22,5 +24,4 @@ public:
     VkDescriptorSetLayout m_DescriptorSetLayout;
     VkDevice m_Device;
     DeviceBuffer& m_Buffer;
-	void* m_MappedData;
 };

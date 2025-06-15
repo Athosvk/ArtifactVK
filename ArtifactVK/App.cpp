@@ -125,7 +125,7 @@ std::vector<PerFrameState> App::CreatePerFrameState(VulkanDevice &vulkanDevice)
     auto commandBuffers = vulkanDevice.CreateGraphicsCommandBufferPool().CreateCommandBuffers(MAX_FRAMES_IN_FLIGHT, m_VulkanInstance.GetActiveDevice().GetGraphicsQueue());
     perFrameState.reserve(MAX_FRAMES_IN_FLIGHT);
     
-    auto uniformBuffer = vulkanDevice.CreateUniformBuffer<UniformConstants>();
+    auto& uniformBuffer = vulkanDevice.CreateUniformBuffer<UniformConstants>();
     for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
     {
         if (i == 0)
@@ -136,7 +136,7 @@ std::vector<PerFrameState> App::CreatePerFrameState(VulkanDevice &vulkanDevice)
         }
         else
         {
-            auto matchingUniformBuffer =
+            auto& matchingUniformBuffer =
                 vulkanDevice.CreateUniformBufferFromLayout<UniformConstants>(uniformBuffer.GetDescriptorSetLayout());
 			perFrameState.emplace_back(PerFrameState{vulkanDevice.CreateDeviceSemaphore(), 
 													 vulkanDevice.CreateDeviceSemaphore(), commandBuffers[i],
