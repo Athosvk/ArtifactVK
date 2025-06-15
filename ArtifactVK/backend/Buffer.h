@@ -8,7 +8,7 @@ class PhysicalDevice;
 
 struct CreateBufferInfo
 {
-    VkDeviceSize Size;
+    VkDeviceSize Size = 0xFFFFFFFF;
     VkBufferUsageFlags BufferUsage;
     VkMemoryPropertyFlags MemoryProperties;
     VkSharingMode SharingMode = VkSharingMode::VK_SHARING_MODE_EXCLUSIVE;

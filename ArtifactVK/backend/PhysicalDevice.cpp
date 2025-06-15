@@ -149,12 +149,12 @@ QueueFamilyIndices PhysicalDevice::FindQueueFamilies(
 
     for (uint32_t i = 0; i < queueFamilyCount; i++)
     {
-        if ((queueFamilies[static_cast<size_t>(i)].queueFlags & VK_QUEUE_GRAPHICS_BIT) == VK_QUEUE_GRAPHICS_BIT)
+        if (queueFamilies[static_cast<size_t>(i)].queueFlags & VK_QUEUE_GRAPHICS_BIT)
         {
             indices.GraphicsFamilyIndex = i;
         }
 
-        if ((queueFamilies[static_cast<size_t>(i)].queueFlags & VK_QUEUE_COMPUTE_BIT) == VK_QUEUE_COMPUTE_BIT)
+        if (queueFamilies[static_cast<size_t>(i)].queueFlags & VK_QUEUE_COMPUTE_BIT)
         {
             indices.ComputeFamilyIndex = i;
         }
@@ -164,11 +164,11 @@ QueueFamilyIndices PhysicalDevice::FindQueueFamilies(
             indices.PresentFamilyIndex = i;
         }
 
-        if (queueFamilies[static_cast<size_t>(i)].queueFlags & VK_QUEUE_TRANSFER_BIT 
+        if (queueFamilies[static_cast<size_t>(i)].queueFlags & VK_QUEUE_TRANSFER_BIT
             // Explicitly look for a dedicated transfer queue. We'll use the compute or graphics
             // queue if there is none
-            && !((queueFamilies[static_cast<size_t>(i)].queueFlags & VK_QUEUE_GRAPHICS_BIT) == VK_QUEUE_GRAPHICS_BIT)
-            && !((queueFamilies[static_cast<size_t>(i)].queueFlags & VK_QUEUE_COMPUTE_BIT) == VK_QUEUE_COMPUTE_BIT))
+            && !(queueFamilies[static_cast<size_t>(i)].queueFlags & VK_QUEUE_GRAPHICS_BIT)
+            && !(queueFamilies[static_cast<size_t>(i)].queueFlags & VK_QUEUE_COMPUTE_BIT))
         {
             indices.TransferFamilyIndex = i;
         }
