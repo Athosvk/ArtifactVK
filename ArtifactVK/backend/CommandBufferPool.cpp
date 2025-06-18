@@ -4,6 +4,7 @@
 #include "RenderPass.h"
 #include "VertexBuffer.h"
 #include "IndexBuffer.h"
+#include "Pipeline.h"
 
 #include <cassert>
 #include <vulkan/vulkan.h>
