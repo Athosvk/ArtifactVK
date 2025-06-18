@@ -13,9 +13,9 @@ RasterPipelineBuilder & RasterPipelineBuilder::SetVertexBindingDescription(const
     return *this;
 }
 
-RasterPipelineBuilder &RasterPipelineBuilder::AddDescriptorSet(VkDescriptorSetLayout descriptorSet)
+RasterPipelineBuilder &RasterPipelineBuilder::AddUniformBuffer(UniformBuffer& uniformBuffer)
 {
-    m_DescriptorSets.emplace_back(descriptorSet);
+    m_UniformBuffers.emplace_back(uniformBuffer);
     return *this;
 }
 
@@ -34,9 +34,16 @@ const std::filesystem::path &RasterPipelineBuilder::GetFragmentShaderPath() cons
     return m_FragmentShaderPath;
 }
 
-const std::vector<VkDescriptorSetLayout>& RasterPipelineBuilder::GetDescriptorSets() const
+std::vector<VkDescriptorSetLayout> RasterPipelineBuilder::GetDescriptorSets() const
 {
-    return m_DescriptorSets;
+    // TODO: Don't allocate, allow caller to use a scratch buffer instead
+    std::vector<VkDescriptorSetLayout> descriptors;
+    descriptors.reserve(m_UniformBuffers.size());
+    for (const auto &uniformBuffer : m_UniformBuffers)
+    {
+        descriptors.emplace_back(uniformBuffer.get().GetDescriptorSetLayout());
+    }
+    return descriptors;
 }
 
 RasterPipeline::RasterPipeline(VkDevice vulkanDevice, PipelineCreateInfo createInfo)

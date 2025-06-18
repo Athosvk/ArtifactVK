@@ -92,7 +92,7 @@ RasterPipeline App::LoadShaderPipeline(VulkanDevice &vulkanDevice, const RenderP
     builder.SetVertexBindingDescription(Vertex::GetVertexBindingDescription());
     // Just get the first, they're alll the same. 
     // TODO: Have nicer outer bindings for it (i.e. less directly translated from Vulkan)_
-    builder.AddDescriptorSet(m_PerFrameState.front().UniformBuffer.GetDescriptorSetLayout());
+    builder.AddUniformBuffer(m_PerFrameState.front().UniformBuffer);
     return vulkanDevice.CreateRasterPipeline(std::move(builder), renderPass);
 }
 
