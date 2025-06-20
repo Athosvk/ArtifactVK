@@ -72,42 +72,9 @@ VkExtent2D VulkanDevice::SelectSwapchainExtent(GLFWwindow& window, const Surface
     }
 }
 
-std::vector<VkDescriptorSet> VulkanDevice::CreateDescriptorSets(std::vector<VkDescriptorSetLayout> layouts, std::vector<std::reference_wrapper<const UniformBuffer>> uniformBuffers, VkDescriptorPool pool)
+VkDescriptorSet VulkanDevice::CreateDescriptorSet(const UniformBuffer &uniformBuffer)
 {
-    VkDescriptorSetAllocateInfo allocInfo{};
-    allocInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    allocInfo.descriptorPool = pool;
-    allocInfo.descriptorSetCount = static_cast<uint32_t>(layouts.size());
-    allocInfo.pSetLayouts = layouts.data();
-
-    std::vector<VkDescriptorSet> descriptorSets;
-    descriptorSets.resize(layouts.size());
-    if (vkAllocateDescriptorSets(m_Device, &allocInfo, descriptorSets.data()) != VkResult::VK_SUCCESS)
-    {
-        throw std::runtime_error("Failed to allocate descriptor sets");
-    }
-    m_DescriptorSets.insert(m_DescriptorSets.end(), descriptorSets.begin(), descriptorSets.end());
-
-    for (size_t i = 0; i < descriptorSets.size(); i++)
-    {
-		VkWriteDescriptorSet descriptorWriteInfo{};
-		descriptorWriteInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        descriptorWriteInfo.dstSet = descriptorSets[i];
-        descriptorWriteInfo.dstBinding = 0;
-
-        descriptorWriteInfo.descriptorType = VkDescriptorType::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        // TODO: Support array bindings
-        descriptorWriteInfo.dstArrayElement = 0;
-        descriptorWriteInfo.descriptorCount = 0;
-
-        VkDescriptorBufferInfo bufferInfo = uniformBuffers[i].get().GetDescriptorInfo();
-        descriptorWriteInfo.pBufferInfo = &bufferInfo;
-        descriptorWriteInfo.pImageInfo = nullptr;
-        descriptorWriteInfo.pTexelBufferView = nullptr;
-        // TODO: Combine into one update
-        vkUpdateDescriptorSets(m_Device, 1, &descriptorWriteInfo, 0, nullptr);
-    }
-    return descriptorSets;
+    return m_DescriptorPool->CreateDescriptorSet(uniformBuffer);
 }
 
 DeviceBuffer &VulkanDevice::CreateBuffer(const CreateBufferInfo& createInfo)
@@ -320,6 +287,8 @@ VulkanDevice::VulkanDevice(PhysicalDevice &physicalDevice, const VkPhysicalDevic
     m_TransferQueue = Queue(m_Device, physicalDevice.GetQueueFamilies().TransferFamilyIndex.value());
     
     m_TransferCommandBufferPool = m_CommandBufferPools.emplace_back(std::make_unique<CommandBufferPool>(CreateTransferCommandBufferPool())).get();
+    // Arbitrary size
+    m_DescriptorPool = std::make_unique<DescriptorPool>(m_Device, DescriptorPoolCreateInfo{64});
 }
 
 VulkanDevice::VulkanDevice(VulkanDevice &&other)
@@ -330,7 +299,7 @@ VulkanDevice::VulkanDevice(VulkanDevice &&other)
       m_CommandBufferPools(std::move(other.m_CommandBufferPools)),
       m_Semaphores(std::move(other.m_Semaphores)),
       m_SwapchainFramebuffers(std::move(other.m_SwapchainFramebuffers)), m_Window(other.m_Window),
-      m_TransferCommandBufferPool(other.m_TransferCommandBufferPool)
+      m_TransferCommandBufferPool(other.m_TransferCommandBufferPool), m_DescriptorPool(std::move(other.m_DescriptorPool))
 {
 }
 
@@ -341,6 +310,7 @@ VulkanDevice::~VulkanDevice()
         // Moved
         return;
     }
+    std::cout << "Destroying vk device";
     if (m_PresentQueue.has_value())
     {
         // The present queue may still be in the process of performing
@@ -355,10 +325,7 @@ VulkanDevice::~VulkanDevice()
     {
         vkDestroyDescriptorSetLayout(m_Device, descriptorSet, nullptr);
     }
-    for (VkDescriptorPool descriptorPool : m_DescriptorPools)
-    {
-        vkDestroyDescriptorPool(m_Device, descriptorPool, nullptr);
-    }
+    m_DescriptorPool.reset();
     // Explicitly order destruction of vulkan objects
     // Prior to swapchain destruction, since framebuffers may be 
     // to swapchain images
@@ -427,27 +394,6 @@ CommandBufferPool VulkanDevice::CreateTransferCommandBufferPool() const
     CommandBufferPoolCreateInfo createInfo{VkCommandPoolCreateFlagBits::VK_COMMAND_POOL_CREATE_TRANSIENT_BIT,
                                            familyIndices.TransferFamilyIndex.value()};
     return CommandBufferPool(m_Device, createInfo);
-}
-
-void VulkanDevice::CreateDescriptorPool(uint32_t size)
-{
-    VkDescriptorPoolSize poolSize{};
-    poolSize.type = VkDescriptorType::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    poolSize.descriptorCount = static_cast<uint32_t>(size);
-    
-    VkDescriptorPoolCreateInfo poolInfo{};
-    poolInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
-    poolInfo.poolSizeCount = 1;
-    poolInfo.pPoolSizes = &poolSize;
-
-    poolInfo.maxSets = static_cast<uint32_t>(size);
-    VkDescriptorPool descriptorPool;
-
-    if (vkCreateDescriptorPool(m_Device, &poolInfo, nullptr, &descriptorPool) != VkResult::VK_SUCCESS)
-    {
-        throw std::runtime_error("Failed to create descriptor pool");
-    }
-    m_DescriptorPools.emplace_back(descriptorPool);
 }
 
 CommandBuffer &VulkanDevice::GetTransferCommandBuffer()

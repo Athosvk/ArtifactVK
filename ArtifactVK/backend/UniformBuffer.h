@@ -17,6 +17,8 @@ public:
     {
         m_Buffer.UploadData<T>({data});
     }
+
+    void AddToDescriptorSet(VkDescriptorSet descriptorSet);
     VkDescriptorBufferInfo GetDescriptorInfo() const;
   private:
     DeviceBuffer& CreateBuffer(VulkanDevice& vulkanDevice, size_t size);
@@ -24,4 +26,5 @@ public:
     VkDescriptorSetLayout m_DescriptorSetLayout;
     VkDevice m_Device;
     DeviceBuffer& m_Buffer;
+    std::vector<VkDescriptorSet> m_DescripotrSets;
 };

@@ -19,6 +19,7 @@
 #include "Queue.h"
 #include "VertexBuffer.h"
 #include "UniformBuffer.h"
+#include "DescriptorPool.h"
 #include "Buffer.h"
 
 class PhysicalDevice;
@@ -86,15 +87,16 @@ class VulkanDevice
     }
 
     template<typename T> 
-    UniformBuffer &CreateUniformBufferFromLayout(VkDescriptorSetLayout descriptorSet)
+    UniformBuffer &CreateUniformBufferFromLayout(VkDescriptorSetLayout descriptorLayout)
     {
-        return *m_UniformBuffers.emplace_back(std::make_unique<UniformBuffer>(*this, m_Device, sizeof(T), descriptorSet));
+        UniformBuffer& uniformBuffer = *m_UniformBuffers.emplace_back(std::make_unique<UniformBuffer>(*this, m_Device, sizeof(T), descriptorLayout));
+        uniformBuffer.AddToDescriptorSet(CreateDescriptorSet(uniformBuffer));
+        return uniformBuffer;
     }
 
     DeviceBuffer &CreateBuffer(const CreateBufferInfo& createBufferInfo);
   private:
-    void CreateDescriptorPool(uint32_t size);
-    std::vector<VkDescriptorSet> CreateDescriptorSets(std::vector<VkDescriptorSetLayout> layouts, std::vector<std::reference_wrapper<const UniformBuffer>> uniformBuffers, VkDescriptorPool pool);
+    VkDescriptorSet CreateDescriptorSet(const UniformBuffer& uniformBuffer);
     CommandBufferPool CreateTransferCommandBufferPool() const;
     void RecreateSwapchain(VkExtent2D newSize);
     ShaderModule LoadShaderModule(const std::filesystem::path &filename);
@@ -124,7 +126,7 @@ class VulkanDevice
     std::vector<VkDescriptorSetLayout> m_DescriptorSetLayouts;
     std::vector<std::unique_ptr<DeviceBuffer>> m_Buffers; 
     std::optional<VkExtent2D> m_LastUnhandledResize;
-    std::vector<VkDescriptorPool> m_DescriptorPools;
+    std::unique_ptr<DescriptorPool> m_DescriptorPool;
     std::vector<VkDescriptorSet> m_DescriptorSets;
 };
 
