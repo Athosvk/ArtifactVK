@@ -60,7 +60,7 @@ VkDescriptorSet DescriptorPool::CreateDescriptorSet(const UniformBuffer& uniform
     descriptorWriteInfo.descriptorType = VkDescriptorType::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     // TODO: Support array bindings
     descriptorWriteInfo.dstArrayElement = 0;
-    descriptorWriteInfo.descriptorCount = 0;
+    descriptorWriteInfo.descriptorCount = 1;
 
     VkDescriptorBufferInfo bufferInfo = uniformBuffer.GetDescriptorInfo();
     descriptorWriteInfo.pBufferInfo = &bufferInfo;
