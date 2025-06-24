@@ -14,9 +14,14 @@ VkDescriptorSetLayout UniformBuffer::GetDescriptorSetLayout() const
     return m_DescriptorSetLayout;
 }
 
-void UniformBuffer::AddToDescriptorSet(VkDescriptorSet descriptorSet)
+void UniformBuffer::SetDescriptorSet(VkDescriptorSet descriptorSet)
 {
-    m_DescripotrSets.emplace_back(descriptorSet);
+    m_DescriptorSet = descriptorSet;
+}
+
+VkDescriptorSet UniformBuffer::GetDescriptorSet() const
+{
+    return m_DescriptorSet;
 }
 
 VkDescriptorBufferInfo UniformBuffer::GetDescriptorInfo() const

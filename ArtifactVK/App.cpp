@@ -59,7 +59,7 @@ void App::RunRenderLoop()
             }
             else
             {
-				RecordFrame(m_PerFrameState[m_CurrentFrameIndex % 2]);
+				RecordFrame(m_PerFrameState[m_CurrentFrameIndex % MAX_FRAMES_IN_FLIGHT]);
 				m_CurrentFrameIndex += 1;
             }
 
@@ -74,6 +74,7 @@ UniformConstants App::GetUniforms()
 
     float secondsElapsed = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
 
+    /*
     UniformConstants constants;
     constants.model = glm::rotate(glm::mat4(1.0f), secondsElapsed * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
     constants.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
@@ -83,14 +84,18 @@ UniformConstants App::GetUniforms()
         m_VulkanInstance.GetActiveDevice().GetSwapchain().GetViewportDescription().Viewport.width /
             (float)m_VulkanInstance.GetActiveDevice().GetSwapchain().GetViewportDescription().Viewport.height,
         0.1f, 10.0f);
+        */
+    UniformConstants constants;
+    constants.test = secondsElapsed;
     return constants;
 }
 
 RasterPipeline App::LoadShaderPipeline(VulkanDevice &vulkanDevice, const RenderPass &renderPass) const
 {
-    auto builder = RasterPipelineBuilder("spirv/triangle.vert.spv", "spirv/triangle.frag.spv");
+    auto builder = RasterPipelineBuilder("spirv/shaders/triangle.vert.spv", "spirv/shaders/triangle.frag.spv");
     builder.SetVertexBindingDescription(Vertex::GetVertexBindingDescription());
     // Just get the first, they're alll the same. 
+
     // TODO: Have nicer outer bindings for it (i.e. less directly translated from Vulkan)_
     builder.AddUniformBuffer(m_PerFrameState.front().UniformBuffer);
     return vulkanDevice.CreateRasterPipeline(std::move(builder), renderPass);
@@ -98,12 +103,14 @@ RasterPipeline App::LoadShaderPipeline(VulkanDevice &vulkanDevice, const RenderP
 
 void App::RecordFrame(PerFrameState& state)
 {
+    std::cout << "\nRecording frame\n";
     m_VulkanInstance.GetActiveDevice().AcquireNext(state.ImageAvailable);
     // TODO: Can probably be moved to CommandBuffer->Begin()
     state.CommandBuffer.WaitFence();
     state.CommandBuffer.Begin();
+    auto uniforms = GetUniforms();
     state.UniformBuffer.UploadData(GetUniforms());
-    state.CommandBuffer.DrawIndexed(m_SwapchainFramebuffers.GetCurrent(), m_MainPass, m_RenderFullscreen, m_VertexBuffer, m_IndexBuffer);
+    state.CommandBuffer.DrawIndexed(m_SwapchainFramebuffers.GetCurrent(), m_MainPass, m_RenderFullscreen, m_VertexBuffer, m_IndexBuffer, state.UniformBuffer);
     state.CommandBuffer.End(std::span{ &state.ImageAvailable, 1 }, std::span{ &state.RenderFinished, 1 });
     
     m_VulkanInstance.GetActiveDevice().Present(std::span{&state.RenderFinished, 1});

@@ -65,11 +65,11 @@ class VulkanDevice
     template<typename T> 
     UniformBuffer &CreateUniformBuffer()
     {
-        VkDescriptorSetLayout descriptorSetLayout{};
 		VkDescriptorSetLayoutBinding uboLayoutBinding{};
 		uboLayoutBinding.binding = 0;
 		uboLayoutBinding.descriptorType = VkDescriptorType::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		uboLayoutBinding.descriptorCount = 1;
+        // TODO: Make more universal
 		uboLayoutBinding.stageFlags = VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT;
 		uboLayoutBinding.pImmutableSamplers = nullptr;  
 
@@ -78,6 +78,7 @@ class VulkanDevice
 		createInfo.bindingCount = 1;
 		createInfo.pBindings = &uboLayoutBinding;
 			
+        VkDescriptorSetLayout descriptorSetLayout{};
 		if (vkCreateDescriptorSetLayout(m_Device, &createInfo, nullptr, &descriptorSetLayout) != VkResult::VK_SUCCESS) {
 			throw std::runtime_error("Could not create descriptor set for uniform buffer");
 		}
@@ -90,7 +91,7 @@ class VulkanDevice
     UniformBuffer &CreateUniformBufferFromLayout(VkDescriptorSetLayout descriptorLayout)
     {
         UniformBuffer& uniformBuffer = *m_UniformBuffers.emplace_back(std::make_unique<UniformBuffer>(*this, m_Device, sizeof(T), descriptorLayout));
-        uniformBuffer.AddToDescriptorSet(CreateDescriptorSet(uniformBuffer));
+        uniformBuffer.SetDescriptorSet(CreateDescriptorSet(uniformBuffer));
         return uniformBuffer;
     }
 

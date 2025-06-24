@@ -12,13 +12,15 @@ public:
     UniformBuffer(UniformBuffer &&other) = default;
     UniformBuffer(const UniformBuffer &other) = delete;
 
+
     VkDescriptorSetLayout GetDescriptorSetLayout() const;
     template<typename T> void UploadData(const T &data)
     {
         m_Buffer.UploadData<T>({data});
     }
 
-    void AddToDescriptorSet(VkDescriptorSet descriptorSet);
+    void SetDescriptorSet(VkDescriptorSet descriptorSet);
+    VkDescriptorSet GetDescriptorSet() const;
     VkDescriptorBufferInfo GetDescriptorInfo() const;
   private:
     DeviceBuffer& CreateBuffer(VulkanDevice& vulkanDevice, size_t size);
@@ -26,5 +28,6 @@ public:
     VkDescriptorSetLayout m_DescriptorSetLayout;
     VkDevice m_Device;
     DeviceBuffer& m_Buffer;
-    std::vector<VkDescriptorSet> m_DescripotrSets;
+    // TODO: Temporary, shouldn't be controlled by this
+    VkDescriptorSet m_DescriptorSet;
 };

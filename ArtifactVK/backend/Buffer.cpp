@@ -78,7 +78,7 @@ VkDescriptorBufferInfo DeviceBuffer::GetDescriptorInfo() const
     VkDescriptorBufferInfo descriptorInfo{};
     descriptorInfo.buffer = m_Buffer;
     descriptorInfo.offset = 0;
-    descriptorInfo.range = sizeof(m_CreateInfo.Size);
+    descriptorInfo.range = GetSize();
     return descriptorInfo;
 }
 

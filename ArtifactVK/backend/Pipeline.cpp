@@ -51,7 +51,7 @@ RasterPipeline::RasterPipeline(VkDevice vulkanDevice, PipelineCreateInfo createI
 {
     VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo{};
     pipelineLayoutCreateInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipelineLayoutCreateInfo.setLayoutCount = 0;
+    pipelineLayoutCreateInfo.setLayoutCount = static_cast<uint32_t>(createInfo.Descriptors.size());
     pipelineLayoutCreateInfo.pSetLayouts = createInfo.Descriptors.data();
     pipelineLayoutCreateInfo.pushConstantRangeCount = 0;
     pipelineLayoutCreateInfo.pPushConstantRanges = nullptr;
@@ -91,7 +91,12 @@ RasterPipeline::~RasterPipeline()
     }
 }
 
-void RasterPipeline::Bind(const VkCommandBuffer &commandBuffer, const Viewport& viewport) const
+VkPipelineLayout RasterPipeline::GetPipelineLayout() const
+{
+    return m_PipelineLayout;
+}
+
+void RasterPipeline::Bind(const VkCommandBuffer &commandBuffer, const Viewport &viewport) const
 {
     vkCmdBindPipeline(commandBuffer, VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_GRAPHICS, m_Pipeline);
     vkCmdSetViewport(commandBuffer, 0, 1, &viewport.Viewport);

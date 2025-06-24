@@ -6,6 +6,7 @@
 #include <iostream>
 #include <stdexcept>
 #include <functional>
+
 #include <array>
 
 #include "backend/VulkanInstance.h"
@@ -26,6 +27,7 @@ struct PerFrameState
     Semaphore &RenderFinished;
     CommandBuffer &CommandBuffer;
     UniformBuffer &UniformBuffer;
+
 };
 
 struct Vertex
@@ -39,9 +41,11 @@ struct Vertex
 };
 
 struct UniformConstants {
-    glm::mat4 model;
+    /* glm::mat4 model;
     glm::mat4 view;
     glm::mat4 projection;
+    */
+    float test;
 };
 
 class App

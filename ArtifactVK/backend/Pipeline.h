@@ -30,7 +30,8 @@ class RasterPipeline
 
     RasterPipeline &operator=(const ShaderModule &) = delete;
     RasterPipeline &operator=(ShaderModule &&) = delete;
-
+    
+    VkPipelineLayout GetPipelineLayout() const;
     void Bind(const VkCommandBuffer &commandBuffer, const Viewport& viewport) const;
   private:
     VkDevice m_VulkanDevice;
