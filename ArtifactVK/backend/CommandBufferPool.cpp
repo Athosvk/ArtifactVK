@@ -4,6 +4,7 @@
 #include "RenderPass.h"
 #include "VertexBuffer.h"
 #include "IndexBuffer.h"
+#include "Pipeline.h"
 
 #include <cassert>
 #include <vulkan/vulkan.h>
@@ -63,8 +64,8 @@ void CommandBuffer::Begin()
     m_Status = CommandBufferStatus::Recording;
 }
 
-void CommandBuffer::Draw(const Framebuffer& frameBuffer, const RenderPass& renderPass, 
-    const RasterPipeline& pipeline, const VertexBuffer& vertexBuffer)
+void CommandBuffer::Draw(const Framebuffer& frameBuffer, const RenderPass& renderPass, const RasterPipeline& pipeline, 
+    const VertexBuffer& vertexBuffer, const UniformBuffer& uniformBuffer)
 {
     assert(m_Status == CommandBufferStatus::Recording && "Calling draw before starting recording of command buffer");
     VkRenderPassBeginInfo renderPassBeginInfo{};
@@ -83,14 +84,14 @@ void CommandBuffer::Draw(const Framebuffer& frameBuffer, const RenderPass& rende
     vkCmdBeginRenderPass(m_CommandBuffer, &renderPassBeginInfo, VkSubpassContents::VK_SUBPASS_CONTENTS_INLINE);
     pipeline.Bind(m_CommandBuffer, viewport);
     BindVertexBuffer(vertexBuffer);
+    BindUniformBuffer(uniformBuffer, pipeline);
     // TODO: Give user control over what to draw
     vkCmdDraw(m_CommandBuffer, static_cast<uint32_t>(vertexBuffer.VertexCount()), 1, 0, 0);
     vkCmdEndRenderPass(m_CommandBuffer);
 }
 
-void CommandBuffer::DrawIndexed(const Framebuffer &frameBuffer, const RenderPass &renderPass,
-                                const RasterPipeline &pipeline, const VertexBuffer &vertexBuffer,
-                                const IndexBuffer &indexBuffer)
+void CommandBuffer::DrawIndexed(const Framebuffer& frameBuffer, const RenderPass& renderPass, const RasterPipeline& pipeline,
+    const VertexBuffer& vertexBuffer, const IndexBuffer& indexBuffer, const UniformBuffer& uniformBuffer)
 {
     assert(m_Status == CommandBufferStatus::Recording && "Calling draw before starting recording of command buffer");
     VkRenderPassBeginInfo renderPassBeginInfo{};
@@ -110,6 +111,7 @@ void CommandBuffer::DrawIndexed(const Framebuffer &frameBuffer, const RenderPass
     pipeline.Bind(m_CommandBuffer, viewport);
     BindVertexBuffer(vertexBuffer);
     BindIndexBuffer(indexBuffer);
+    BindUniformBuffer(uniformBuffer, pipeline);
     // TODO: Give user control over what to draw
     vkCmdDrawIndexed(m_CommandBuffer, static_cast<uint32_t>(indexBuffer.GetIndexCount()), 1, 0, 0, 0);
     vkCmdEndRenderPass(m_CommandBuffer);
@@ -157,7 +159,8 @@ Fence& CommandBuffer::End(std::span<Semaphore> waitSemaphores, std::span<Semapho
 
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &m_CommandBuffer;
-    if (vkQueueSubmit(m_Queue.Get(), 1, &submitInfo, m_InFlight.Get()) != VkResult::VK_SUCCESS)
+    auto res = vkQueueSubmit(m_Queue.Get(), 1, &submitInfo, m_InFlight.Get());
+    if (res != VkResult::VK_SUCCESS)
     {
         throw std::runtime_error("Faied to submit cmd buffer to queue");
     }
@@ -182,6 +185,14 @@ void CommandBuffer::BindIndexBuffer(const IndexBuffer &indexBuffer)
     VkBuffer indexBuffers = {indexBuffer.Get()};
     VkDeviceSize offsets[] = {0};
     vkCmdBindIndexBuffer(m_CommandBuffer, indexBuffers, 0, VkIndexType::VK_INDEX_TYPE_UINT16);
+}
+
+void CommandBuffer::BindUniformBuffer(const UniformBuffer &uniformBuffer, const RasterPipeline& pipeline)
+{
+    auto descriptorSet = uniformBuffer.GetDescriptorSet();
+    auto pipelineLayout = pipeline.GetPipelineLayout();
+    vkCmdBindDescriptorSets(m_CommandBuffer, VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_GRAPHICS,
+                            pipeline.GetPipelineLayout(), 0, 1, &descriptorSet, 0, nullptr);
 }
 
 void CommandBuffer::Copy(const DeviceBuffer &source, const DeviceBuffer &destination)

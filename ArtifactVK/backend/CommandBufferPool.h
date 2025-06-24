@@ -3,6 +3,7 @@
 #include <vector>
 #include <span>
 #include <functional>
+#include <memory>
 
 #include "Semaphore.h"
 #include "Fence.h"
@@ -12,6 +13,7 @@ class Framebuffer;
 class RenderPass;
 class RasterPipeline;
 class VertexBuffer;
+class UniformBuffer;
 class DeviceBuffer;
 class IndexBuffer;
 
@@ -37,14 +39,15 @@ class CommandBuffer
 
     void WaitFence();
     void Begin();
-    void Draw(const Framebuffer& frameBuffer, const RenderPass& renderPass, const RasterPipeline& pipeline, const VertexBuffer& vertexBuffer);
-    void DrawIndexed(const Framebuffer& frameBuffer, const RenderPass& renderPass, const RasterPipeline& pipeline, const VertexBuffer& vertexBuffer, const IndexBuffer& indexBuffer);
+    void Draw(const Framebuffer& frameBuffer, const RenderPass& renderPass, const RasterPipeline& pipeline, const VertexBuffer& vertexBuffer, const UniformBuffer& uniformBuffer);
+    void DrawIndexed(const Framebuffer& frameBuffer, const RenderPass& renderPass, const RasterPipeline& pipeline, const VertexBuffer& vertexBuffer, const IndexBuffer& indexBuffer, const UniformBuffer& uniformBuffer);
     Fence& End(std::span<Semaphore> waitSemaphores, std::span<Semaphore> signalSemaphores);
     Fence& End();
     void Copy(const DeviceBuffer &source, const DeviceBuffer &destination);
   private:
     void BindVertexBuffer(const VertexBuffer &vertexBuffer);
     void BindIndexBuffer(const IndexBuffer &indexBuffer);
+    void BindUniformBuffer(const UniformBuffer &uniformBuffer, const RasterPipeline& pipeline);
     void Reset();
 
     bool m_Moved = false;

@@ -72,6 +72,16 @@ VkExtent2D VulkanDevice::SelectSwapchainExtent(GLFWwindow& window, const Surface
     }
 }
 
+VkDescriptorSet VulkanDevice::CreateDescriptorSet(const UniformBuffer &uniformBuffer)
+{
+    return m_DescriptorPool->CreateDescriptorSet(uniformBuffer);
+}
+
+DeviceBuffer &VulkanDevice::CreateBuffer(const CreateBufferInfo& createInfo)
+{
+    return *m_Buffers.emplace_back(std::make_unique<DeviceBuffer>(m_Device, m_PhysicalDevice, createInfo));
+}
+
 void VulkanDevice::WaitForIdle() const
 {
     vkDeviceWaitIdle(m_Device);
@@ -119,15 +129,15 @@ RasterPipeline VulkanDevice::CreateRasterPipeline(RasterPipelineBuilder &&pipeli
     auto vertexShader = LoadShaderModule(pipelineBuilder.GetVertexShaderPath());
 
     VkPipelineShaderStageCreateInfo fragCreateInfo{};
-    fragCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    fragCreateInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+    fragCreateInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    fragCreateInfo.stage = VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT;
     fragCreateInfo.module = fragmentShader.Get();
     fragCreateInfo.pName = "main";
     fragCreateInfo.pSpecializationInfo = nullptr;
 
     VkPipelineShaderStageCreateInfo vertexCreateInfo{};
-    vertexCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    vertexCreateInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
+    vertexCreateInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    vertexCreateInfo.stage = VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT;
     vertexCreateInfo.module = vertexShader.Get();
     vertexCreateInfo.pName = "main";
     vertexCreateInfo.pSpecializationInfo = nullptr;
@@ -135,13 +145,12 @@ RasterPipeline VulkanDevice::CreateRasterPipeline(RasterPipelineBuilder &&pipeli
     VkPipelineShaderStageCreateInfo stages[] = {fragCreateInfo, vertexCreateInfo};
 
     std::array<VkDynamicState, 2> dynamicStates = {
-        // Only when d
         VK_DYNAMIC_STATE_SCISSOR,
         VK_DYNAMIC_STATE_VIEWPORT,
     };
 
     VkPipelineDynamicStateCreateInfo dynamicState{};
-    dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+    dynamicState.sType = VkStructureType::VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
     //dynamicState.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
     //dynamicState.pDynamicStates = dynamicStates.data();
 
@@ -229,7 +238,10 @@ RasterPipeline VulkanDevice::CreateRasterPipeline(RasterPipelineBuilder &&pipeli
     pipelineInfo.pColorBlendState = &colorBlendState;
     pipelineInfo.pDynamicState = &dynamicState;
     
-    return RasterPipeline(m_Device, pipelineInfo, renderPass);
+    auto createInfo = PipelineCreateInfo{pipelineInfo, pipelineBuilder.GetDescriptorSets(), renderPass};
+    // TODO: Manage here so that you cannot destory a pipeline before destroying its
+    // descriptor set (layout)
+    return RasterPipeline(m_Device, createInfo);
 }
 
 VulkanDevice::VulkanDevice(PhysicalDevice &physicalDevice, const VkPhysicalDevice &physicalDeviceHandle,
@@ -275,6 +287,8 @@ VulkanDevice::VulkanDevice(PhysicalDevice &physicalDevice, const VkPhysicalDevic
     m_TransferQueue = Queue(m_Device, physicalDevice.GetQueueFamilies().TransferFamilyIndex.value());
     
     m_TransferCommandBufferPool = m_CommandBufferPools.emplace_back(std::make_unique<CommandBufferPool>(CreateTransferCommandBufferPool())).get();
+    // Arbitrary size
+    m_DescriptorPool = std::make_unique<DescriptorPool>(m_Device, DescriptorPoolCreateInfo{64});
 }
 
 VulkanDevice::VulkanDevice(VulkanDevice &&other)
@@ -285,7 +299,7 @@ VulkanDevice::VulkanDevice(VulkanDevice &&other)
       m_CommandBufferPools(std::move(other.m_CommandBufferPools)),
       m_Semaphores(std::move(other.m_Semaphores)),
       m_SwapchainFramebuffers(std::move(other.m_SwapchainFramebuffers)), m_Window(other.m_Window),
-      m_TransferCommandBufferPool(other.m_TransferCommandBufferPool)
+      m_TransferCommandBufferPool(other.m_TransferCommandBufferPool), m_DescriptorPool(std::move(other.m_DescriptorPool))
 {
 }
 
@@ -296,6 +310,7 @@ VulkanDevice::~VulkanDevice()
         // Moved
         return;
     }
+    std::cout << "Destroying vk device";
     if (m_PresentQueue.has_value())
     {
         // The present queue may still be in the process of performing
@@ -305,6 +320,12 @@ VulkanDevice::~VulkanDevice()
         // ordering through semaphores and fences for specific operations instead.
         m_PresentQueue->Wait();
     }
+
+    for (VkDescriptorSetLayout descriptorSet : m_DescriptorSetLayouts)
+    {
+        vkDestroyDescriptorSetLayout(m_Device, descriptorSet, nullptr);
+    }
+    m_DescriptorPool.reset();
     // Explicitly order destruction of vulkan objects
     // Prior to swapchain destruction, since framebuffers may be 
     // to swapchain images
@@ -315,6 +336,7 @@ VulkanDevice::~VulkanDevice()
     m_Semaphores.clear();
     m_VertexBuffers.clear();
     m_IndexBuffers.clear();
+    m_Buffers.clear();
 
     std::condition_variable destroyed;
     std::mutex destroyMutex;

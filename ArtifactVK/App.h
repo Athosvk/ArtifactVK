@@ -6,6 +6,7 @@
 #include <iostream>
 #include <stdexcept>
 #include <functional>
+
 #include <array>
 
 #include "backend/VulkanInstance.h"
@@ -16,6 +17,7 @@
 
 class VertexBuffer;
 class IndexBuffer;
+class UniformBuffer;
 
 const uint32_t MAX_FRAMES_IN_FLIGHT = 2;
 
@@ -24,6 +26,8 @@ struct PerFrameState
     Semaphore &ImageAvailable;
     Semaphore &RenderFinished;
     CommandBuffer &CommandBuffer;
+    UniformBuffer &UniformBuffer;
+
 };
 
 struct Vertex
@@ -36,6 +40,12 @@ struct Vertex
     constexpr static VertexBindingDescription GetVertexBindingDescription();
 };
 
+struct UniformConstants {
+    glm::mat4 model;
+    glm::mat4 view;
+    glm::mat4 projection;
+};
+
 class App
 {
   public:
@@ -45,6 +55,7 @@ class App
     void RunRenderLoop();
 
   private:
+    UniformConstants GetUniforms();
     RasterPipeline LoadShaderPipeline(VulkanDevice &vulkanDevice, const RenderPass& renderPass) const;
     void RecordFrame(PerFrameState& state);
     std::vector<std::reference_wrapper<Semaphore>> CreateSemaphorePerInFlightFrame();
@@ -55,9 +66,9 @@ class App
     Window m_Window;
     VulkanInstance m_VulkanInstance;
     RenderPass m_MainPass;
-    RasterPipeline m_RenderFullscreen;
     const SwapchainFramebuffer& m_SwapchainFramebuffers;
     std::vector<PerFrameState> m_PerFrameState;
+    RasterPipeline m_RenderFullscreen;
     uint32_t m_CurrentFrameIndex = 0;
     Swapchain &m_Swapchain;
     VertexBuffer &m_VertexBuffer;

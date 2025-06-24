@@ -1,6 +1,8 @@
 #pragma once
 #include <vulkan/vulkan.h>
 #include <vector>
+#include <optional>
+#include <cassert>
 
 class PhysicalDevice;
 
@@ -9,7 +11,8 @@ struct CreateBufferInfo
     VkDeviceSize Size = 0xFFFFFFFF;
     VkBufferUsageFlags BufferUsage;
     VkMemoryPropertyFlags MemoryProperties;
-    VkSharingMode SharingMode;
+    bool PersistentlyMapped = true;
+    VkSharingMode SharingMode = VkSharingMode::VK_SHARING_MODE_EXCLUSIVE;
 };
 
 class DeviceBuffer
@@ -24,14 +27,23 @@ public:
     VkDeviceSize GetSize() const;
 
     template<typename T>
-    void UploadData(const std::vector<T> vertexData)
+    void UploadData(const std::vector<T> data)
     {
-        void *targetBuffer;
-        auto bufferSize = vertexData.size() * sizeof(T);
-        vkMapMemory(m_Device, m_Memory, 0, bufferSize, 0, &targetBuffer);
-        memcpy(targetBuffer, vertexData.data(), bufferSize);
-        vkUnmapMemory(m_Device, m_Memory);
+        auto bufferSize = data.size() * sizeof(T);
+        assert(bufferSize <= m_CreateInfo.Size && "Buffer too small for provided data");
+        if (m_MappedBuffer.has_value())
+        {
+			memcpy(*m_MappedBuffer, data.data(), bufferSize);
+        }
+        else
+        {
+            void *mappedBuffer;
+            vkMapMemory(m_Device, m_Memory, 0, bufferSize, 0, &mappedBuffer);
+			memcpy(mappedBuffer, data.data(), bufferSize);
+			vkUnmapMemory(m_Device, m_Memory);
+        }
     }
+    VkDescriptorBufferInfo GetDescriptorInfo() const;
 private:
 	uint32_t FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags propertyFlags, const PhysicalDevice& physicalDevice) const;
 
@@ -39,4 +51,5 @@ private:
 	VkBuffer m_Buffer;
 	VkDeviceMemory m_Memory;
     CreateBufferInfo m_CreateInfo;
+    std::optional<void *> m_MappedBuffer;
 };

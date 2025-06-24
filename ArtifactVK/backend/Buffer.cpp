@@ -1,6 +1,7 @@
 #include "Buffer.h"
 
 #include <stdexcept>
+#include <iostream>
 
 #include "PhysicalDevice.h"
 
@@ -36,16 +37,28 @@ DeviceBuffer::DeviceBuffer(VkDevice device, const PhysicalDevice &physicalDevice
 	}
 
 	vkBindBufferMemory(m_Device, m_Buffer, m_Memory, 0);
+    if (bufferInfo.PersistentlyMapped)
+    {
+        void *mappedBuffer;
+        vkMapMemory(m_Device, m_Memory, 0, bufferInfo.Size, 0, &mappedBuffer);
+        m_MappedBuffer.emplace(mappedBuffer);
+        std::cout << "Mapped at " << mappedBuffer << "\n";
+	}
 }
 
 DeviceBuffer::DeviceBuffer(DeviceBuffer && other)
-    : m_Device(other.m_Device), m_Buffer(std::exchange(other.m_Buffer, VK_NULL_HANDLE)), m_Memory(std::exchange(other.m_Memory, VK_NULL_HANDLE)), m_CreateInfo(other.m_CreateInfo)
+    : m_Device(other.m_Device), m_Buffer(std::exchange(other.m_Buffer, VK_NULL_HANDLE)), m_Memory(std::exchange(other.m_Memory, VK_NULL_HANDLE)), 
+	m_CreateInfo(std::move(other.m_CreateInfo)), m_MappedBuffer(std::move(other.m_MappedBuffer))
 {
 
 }
 
 DeviceBuffer::~DeviceBuffer()
 {
+    if (m_MappedBuffer.has_value())
+    {
+        vkUnmapMemory(m_Device, m_Memory);
+	}
 	vkDestroyBuffer(m_Device, m_Buffer, nullptr);
 	vkFreeMemory(m_Device, m_Memory, nullptr);
 }
@@ -60,7 +73,17 @@ VkDeviceSize DeviceBuffer::GetSize() const
     return m_CreateInfo.Size;
 }
 
-uint32_t DeviceBuffer::FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags propertyFlags, const PhysicalDevice& physicalDevice) const
+VkDescriptorBufferInfo DeviceBuffer::GetDescriptorInfo() const
+{
+    VkDescriptorBufferInfo descriptorInfo{};
+    descriptorInfo.buffer = m_Buffer;
+    descriptorInfo.offset = 0;
+    descriptorInfo.range = GetSize();
+    return descriptorInfo;
+}
+
+uint32_t DeviceBuffer::FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags propertyFlags,
+                                      const PhysicalDevice &physicalDevice) const
 {
     auto memoryProperties = physicalDevice.MemoryProperties();
     for (uint32_t i = 0; i < memoryProperties.memoryTypeCount; i++)

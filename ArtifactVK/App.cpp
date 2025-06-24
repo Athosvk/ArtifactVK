@@ -5,6 +5,8 @@
 #include <vector>
 
 #include "backend/ShaderModule.h"
+#include <chrono>
+#include <glm/gtc/matrix_transform.hpp>
 
 const InstanceCreateInfo DefaultCreateInfo()
 {
@@ -20,9 +22,9 @@ App::App()
     : m_Window(WindowCreateInfo{800, 600, "ArtifactVK"}),
       m_VulkanInstance(m_Window.CreateVulkanInstance(DefaultCreateInfo())),
       m_MainPass(m_VulkanInstance.GetActiveDevice().CreateRenderPass()),
-      m_RenderFullscreen(LoadShaderPipeline(m_VulkanInstance.GetActiveDevice(), m_MainPass)),
       m_SwapchainFramebuffers(m_VulkanInstance.GetActiveDevice().CreateSwapchainFramebuffers(m_MainPass)),
       m_PerFrameState(CreatePerFrameState(m_VulkanInstance.GetActiveDevice())),
+      m_RenderFullscreen(LoadShaderPipeline(m_VulkanInstance.GetActiveDevice(), m_MainPass)),
       m_Swapchain(m_VulkanInstance.GetActiveDevice().GetSwapchain()),
       m_VertexBuffer(m_VulkanInstance.GetActiveDevice().CreateVertexBuffer(GetVertices())),
       m_IndexBuffer(m_VulkanInstance.GetActiveDevice().CreateIndexBuffer(GetIndices()))
@@ -57,7 +59,7 @@ void App::RunRenderLoop()
             }
             else
             {
-				RecordFrame(m_PerFrameState[m_CurrentFrameIndex % 2]);
+				RecordFrame(m_PerFrameState[m_CurrentFrameIndex % MAX_FRAMES_IN_FLIGHT]);
 				m_CurrentFrameIndex += 1;
             }
 
@@ -65,11 +67,33 @@ void App::RunRenderLoop()
     }
 }
 
-RasterPipeline App::LoadShaderPipeline(VulkanDevice &vulkanDevice, const RenderPass& renderPass) const
+UniformConstants App::GetUniforms()
 {
-    auto builder = RasterPipelineBuilder("spirv/triangle.vert.spv", "spirv/triangle.frag.spv");
-    // TODO: This doesn't emit a validation warning when no vertex buffer is bound. Bug?
+    static auto startTime = std::chrono::high_resolution_clock::now();
+    auto currentTime = std::chrono::high_resolution_clock::now();
+
+    float secondsElapsed = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
+
+    UniformConstants constants;
+    constants.model = glm::rotate(glm::mat4(1.0f), secondsElapsed * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    constants.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    
+    constants.projection = glm::perspective(
+        glm::radians(45.0f),
+        m_VulkanInstance.GetActiveDevice().GetSwapchain().GetViewportDescription().Viewport.width /
+            (float)m_VulkanInstance.GetActiveDevice().GetSwapchain().GetViewportDescription().Viewport.height,
+        0.1f, 10.0f);
+    return constants;
+}
+
+RasterPipeline App::LoadShaderPipeline(VulkanDevice &vulkanDevice, const RenderPass &renderPass) const
+{
+    auto builder = RasterPipelineBuilder("spirv/shaders/triangle.vert.spv", "spirv/shaders/triangle.frag.spv");
     builder.SetVertexBindingDescription(Vertex::GetVertexBindingDescription());
+    // Just get the first, they're alll the same. 
+
+    // TODO: Have nicer outer bindings for it (i.e. less directly translated from Vulkan)_
+    builder.AddUniformBuffer(m_PerFrameState.front().UniformBuffer);
     return vulkanDevice.CreateRasterPipeline(std::move(builder), renderPass);
 }
 
@@ -79,7 +103,9 @@ void App::RecordFrame(PerFrameState& state)
     // TODO: Can probably be moved to CommandBuffer->Begin()
     state.CommandBuffer.WaitFence();
     state.CommandBuffer.Begin();
-    state.CommandBuffer.DrawIndexed(m_SwapchainFramebuffers.GetCurrent(), m_MainPass, m_RenderFullscreen, m_VertexBuffer, m_IndexBuffer);
+    auto uniforms = GetUniforms();
+    state.UniformBuffer.UploadData(GetUniforms());
+    state.CommandBuffer.DrawIndexed(m_SwapchainFramebuffers.GetCurrent(), m_MainPass, m_RenderFullscreen, m_VertexBuffer, m_IndexBuffer, state.UniformBuffer);
     state.CommandBuffer.End(std::span{ &state.ImageAvailable, 1 }, std::span{ &state.RenderFinished, 1 });
     
     m_VulkanInstance.GetActiveDevice().Present(std::span{&state.RenderFinished, 1});
@@ -100,10 +126,25 @@ std::vector<PerFrameState> App::CreatePerFrameState(VulkanDevice &vulkanDevice)
     std::vector<PerFrameState> perFrameState;
     auto commandBuffers = vulkanDevice.CreateGraphicsCommandBufferPool().CreateCommandBuffers(MAX_FRAMES_IN_FLIGHT, m_VulkanInstance.GetActiveDevice().GetGraphicsQueue());
     perFrameState.reserve(MAX_FRAMES_IN_FLIGHT);
+    
+    auto& uniformBuffer = vulkanDevice.CreateUniformBuffer<UniformConstants>();
     for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
     {
-        perFrameState.emplace_back(PerFrameState{vulkanDevice.CreateDeviceSemaphore(),
-                                                 vulkanDevice.CreateDeviceSemaphore(), commandBuffers[i]});
+        if (i == 0)
+        {
+			perFrameState.emplace_back(PerFrameState{vulkanDevice.CreateDeviceSemaphore(), 
+													 vulkanDevice.CreateDeviceSemaphore(), commandBuffers[i],
+													 uniformBuffer});
+        }
+        else
+        {
+            auto& matchingUniformBuffer =
+                vulkanDevice.CreateUniformBufferFromLayout<UniformConstants>(uniformBuffer.GetDescriptorSetLayout());
+			perFrameState.emplace_back(PerFrameState{vulkanDevice.CreateDeviceSemaphore(), 
+													 vulkanDevice.CreateDeviceSemaphore(), commandBuffers[i],
+													 matchingUniformBuffer});
+        
+        }
     }
     return perFrameState;
 }

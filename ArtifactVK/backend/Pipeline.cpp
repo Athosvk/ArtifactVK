@@ -13,6 +13,12 @@ RasterPipelineBuilder & RasterPipelineBuilder::SetVertexBindingDescription(const
     return *this;
 }
 
+RasterPipelineBuilder &RasterPipelineBuilder::AddUniformBuffer(UniformBuffer& uniformBuffer)
+{
+    m_UniformBuffers.emplace_back(uniformBuffer);
+    return *this;
+}
+
 const std::optional<VertexBindingDescription>& RasterPipelineBuilder::GetVertexBindingDescription() const
 {
     return m_VertexBindingDescription;
@@ -28,13 +34,25 @@ const std::filesystem::path &RasterPipelineBuilder::GetFragmentShaderPath() cons
     return m_FragmentShaderPath;
 }
 
-RasterPipeline::RasterPipeline(VkDevice vulkanDevice, VkGraphicsPipelineCreateInfo createInfo, const RenderPass& renderPass)
+std::vector<VkDescriptorSetLayout> RasterPipelineBuilder::GetDescriptorSets() const
+{
+    // TODO: Don't allocate, allow caller to use a scratch buffer instead
+    std::vector<VkDescriptorSetLayout> descriptors;
+    descriptors.reserve(m_UniformBuffers.size());
+    for (const auto &uniformBuffer : m_UniformBuffers)
+    {
+        descriptors.emplace_back(uniformBuffer.get().GetDescriptorSetLayout());
+    }
+    return descriptors;
+}
+
+RasterPipeline::RasterPipeline(VkDevice vulkanDevice, PipelineCreateInfo createInfo)
     : m_VulkanDevice(vulkanDevice) 
 {
     VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo{};
     pipelineLayoutCreateInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipelineLayoutCreateInfo.setLayoutCount = 0;
-    pipelineLayoutCreateInfo.pSetLayouts = nullptr;
+    pipelineLayoutCreateInfo.setLayoutCount = static_cast<uint32_t>(createInfo.Descriptors.size());
+    pipelineLayoutCreateInfo.pSetLayouts = createInfo.Descriptors.data();
     pipelineLayoutCreateInfo.pushConstantRangeCount = 0;
     pipelineLayoutCreateInfo.pPushConstantRanges = nullptr;
 
@@ -42,14 +60,15 @@ RasterPipeline::RasterPipeline(VkDevice vulkanDevice, VkGraphicsPipelineCreateIn
     {
         throw std::runtime_error("Could not create pipeline layout");
     }
-    createInfo.layout = m_PipelineLayout;
-    createInfo.renderPass = renderPass.Get();
-    createInfo.subpass = 0;
+    VkGraphicsPipelineCreateInfo vkCreateInfo = std::move(createInfo.CreateInfo);
+    vkCreateInfo.layout = m_PipelineLayout;
+    vkCreateInfo.renderPass = createInfo.RenderPass.Get();
+    vkCreateInfo.subpass = 0;
 
     // Unused
-    createInfo.basePipelineHandle = VK_NULL_HANDLE;
-    createInfo.basePipelineIndex = -1;
-    if (vkCreateGraphicsPipelines(vulkanDevice, VK_NULL_HANDLE, 1, &createInfo, nullptr, &m_Pipeline))
+    vkCreateInfo.basePipelineHandle = VK_NULL_HANDLE;
+    vkCreateInfo.basePipelineIndex = -1;
+    if (vkCreateGraphicsPipelines(vulkanDevice, VK_NULL_HANDLE, 1, &vkCreateInfo, nullptr, &m_Pipeline))
     {
         throw std::runtime_error("Could not create pipeline");
     }
@@ -72,7 +91,12 @@ RasterPipeline::~RasterPipeline()
     }
 }
 
-void RasterPipeline::Bind(const VkCommandBuffer &commandBuffer, const Viewport& viewport) const
+VkPipelineLayout RasterPipeline::GetPipelineLayout() const
+{
+    return m_PipelineLayout;
+}
+
+void RasterPipeline::Bind(const VkCommandBuffer &commandBuffer, const Viewport &viewport) const
 {
     vkCmdBindPipeline(commandBuffer, VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_GRAPHICS, m_Pipeline);
     vkCmdSetViewport(commandBuffer, 0, 1, &viewport.Viewport);
