@@ -41,11 +41,9 @@ struct Vertex
 };
 
 struct UniformConstants {
-    /* glm::mat4 model;
+    glm::mat4 model;
     glm::mat4 view;
     glm::mat4 projection;
-    */
-    float test;
 };
 
 class App

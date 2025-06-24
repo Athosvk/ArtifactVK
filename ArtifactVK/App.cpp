@@ -74,7 +74,6 @@ UniformConstants App::GetUniforms()
 
     float secondsElapsed = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
 
-    /*
     UniformConstants constants;
     constants.model = glm::rotate(glm::mat4(1.0f), secondsElapsed * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
     constants.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
@@ -84,9 +83,6 @@ UniformConstants App::GetUniforms()
         m_VulkanInstance.GetActiveDevice().GetSwapchain().GetViewportDescription().Viewport.width /
             (float)m_VulkanInstance.GetActiveDevice().GetSwapchain().GetViewportDescription().Viewport.height,
         0.1f, 10.0f);
-        */
-    UniformConstants constants;
-    constants.test = secondsElapsed;
     return constants;
 }
 
@@ -103,7 +99,6 @@ RasterPipeline App::LoadShaderPipeline(VulkanDevice &vulkanDevice, const RenderP
 
 void App::RecordFrame(PerFrameState& state)
 {
-    std::cout << "\nRecording frame\n";
     m_VulkanInstance.GetActiveDevice().AcquireNext(state.ImageAvailable);
     // TODO: Can probably be moved to CommandBuffer->Begin()
     state.CommandBuffer.WaitFence();
