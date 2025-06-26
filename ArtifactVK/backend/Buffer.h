@@ -46,8 +46,6 @@ public:
     }
     VkDescriptorBufferInfo GetDescriptorInfo() const;
 private:
-	uint32_t FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags propertyFlags, const PhysicalDevice& physicalDevice) const;
-
 	VkDevice m_Device;
 	VkBuffer m_Buffer;
 	VkDeviceMemory m_Memory;

@@ -26,3 +26,12 @@ unsigned char *Image::GetPixels() const
 {
     return m_Data.get();
 }
+
+TextureCreateInfo Image::GetTextureCreateDesc() const
+{
+    return TextureCreateInfo{
+        static_cast<uint32_t>(m_Width),
+        static_cast<uint32_t>(m_Height), 
+        std::span<const unsigned char>(m_Data.get(), m_Width * m_Height)
+    };
+}

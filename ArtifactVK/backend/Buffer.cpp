@@ -22,10 +22,10 @@ DeviceBuffer::DeviceBuffer(VkDevice device, const PhysicalDevice &physicalDevice
 
 	VkMemoryRequirements memoryRequirements;
 	vkGetBufferMemoryRequirements(m_Device, m_Buffer, &memoryRequirements);
-	auto typeIndex = FindMemoryType(memoryRequirements.memoryTypeBits,
+	auto typeIndex = physicalDevice.FindMemoryType(memoryRequirements.memoryTypeBits,
 											   VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_COHERENT_BIT |
 												   VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-												VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, physicalDevice);
+												VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 	VkMemoryAllocateInfo allocationInfo{};
 	allocationInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
 	allocationInfo.memoryTypeIndex = typeIndex;
@@ -82,17 +82,3 @@ VkDescriptorBufferInfo DeviceBuffer::GetDescriptorInfo() const
     return descriptorInfo;
 }
 
-uint32_t DeviceBuffer::FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags propertyFlags,
-                                      const PhysicalDevice &physicalDevice) const
-{
-    auto memoryProperties = physicalDevice.MemoryProperties();
-    for (uint32_t i = 0; i < memoryProperties.memoryTypeCount; i++)
-	{
-		if ((typeFilter & (1 << i)) != 0
-			&& (memoryProperties.memoryTypes[i].propertyFlags & propertyFlags) == propertyFlags)
-		{
-			return i;
-		}
-	}
-	throw std::runtime_error("Could not find suitable memory type for type filter: " + std::to_string(typeFilter));
-}
