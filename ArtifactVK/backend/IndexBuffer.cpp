@@ -7,7 +7,7 @@ IndexBuffer::IndexBuffer(CreateIndexBufferInfo bufferInfo, VkDevice device, cons
       m_IndexBuffer(CreateIndexBuffer(bufferInfo.InitialData.size() * sizeof(uint16_t), device, physicalDevice))
 {
 	m_IndexCount = bufferInfo.InitialData.size();
-	m_StagingBuffer.UploadData(bufferInfo.InitialData);
+    m_StagingBuffer.UploadData(std::span<uint16_t>{bufferInfo.InitialData});
 	transferCommandBuffer.Copy(m_StagingBuffer, m_IndexBuffer);
 	// TODO: Use semaphore instead, allow fetching the semaphore
 	m_TransferFence = transferCommandBuffer.End({}, {});

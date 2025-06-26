@@ -16,7 +16,7 @@ public:
     VkDescriptorSetLayout GetDescriptorSetLayout() const;
     template<typename T> void UploadData(const T &data)
     {
-        m_Buffer.UploadData<T>({data});
+        m_Buffer.UploadData(std::span<const T>(&data, 1));
     }
 
     void SetDescriptorSet(VkDescriptorSet descriptorSet);

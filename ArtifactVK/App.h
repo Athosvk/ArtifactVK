@@ -14,6 +14,7 @@
 #include "backend/Pipeline.h"
 #include "backend/RenderPass.h"
 #include "backend/Swapchain.h"
+#include "Image.h"
 
 class VertexBuffer;
 class IndexBuffer;
@@ -55,6 +56,7 @@ class App
     void RunRenderLoop();
 
   private:
+    void LoadImage();
     UniformConstants GetUniforms();
     RasterPipeline LoadShaderPipeline(VulkanDevice &vulkanDevice, const RenderPass& renderPass) const;
     void RecordFrame(PerFrameState& state);

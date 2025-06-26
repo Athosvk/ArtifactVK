@@ -3,6 +3,7 @@
 #include <vector>
 #include <optional>
 #include <cassert>
+#include <span>
 
 class PhysicalDevice;
 
@@ -27,7 +28,7 @@ public:
     VkDeviceSize GetSize() const;
 
     template<typename T>
-    void UploadData(const std::vector<T> data)
+    void UploadData(std::span<T> data)
     {
         auto bufferSize = data.size() * sizeof(T);
         assert(bufferSize <= m_CreateInfo.Size && "Buffer too small for provided data");

@@ -31,7 +31,7 @@ class VertexBuffer
               m_CommandBuffer(transferCommandBuffer)
     {
         m_VertexCount = bufferInfo.InitialData.size();
-        m_StagingBuffer.UploadData(bufferInfo.InitialData);
+        m_StagingBuffer.UploadData(std::span<T>{bufferInfo.InitialData});
         transferCommandBuffer.Copy(m_StagingBuffer, m_VertexBuffer);
         // TODO: Use semaphore instead, allow fetching the semaphore
         m_TransferFence = transferCommandBuffer.End({}, {});

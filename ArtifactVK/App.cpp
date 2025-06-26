@@ -67,6 +67,15 @@ void App::RunRenderLoop()
     }
 }
 
+void App::LoadImage()
+{
+    Image image("textures/texture.jpg");
+    m_VulkanInstance.GetActiveDevice().LoadTexture(TextureCreateInfo{
+        static_cast<uint32_t>(image.GetWidth()),
+        static_cast<uint32_t>(image.GetHeight()),
+    });
+}
+
 UniformConstants App::GetUniforms()
 {
     static auto startTime = std::chrono::high_resolution_clock::now();

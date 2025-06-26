@@ -21,6 +21,7 @@
 #include "UniformBuffer.h"
 #include "DescriptorPool.h"
 #include "Buffer.h"
+#include "Texture.h"
 
 class PhysicalDevice;
 struct GLFWwindow;
@@ -96,6 +97,7 @@ class VulkanDevice
     }
 
     DeviceBuffer &CreateBuffer(const CreateBufferInfo& createBufferInfo);
+    Texture &LoadTexture(const TextureCreateInfo& createDesc);
   private:
     VkDescriptorSet CreateDescriptorSet(const UniformBuffer& uniformBuffer);
     CommandBufferPool CreateTransferCommandBufferPool() const;
@@ -124,6 +126,7 @@ class VulkanDevice
     std::vector<std::unique_ptr<VertexBuffer>> m_VertexBuffers;
     std::vector<std::unique_ptr<IndexBuffer>> m_IndexBuffers;
     std::vector<std::unique_ptr<UniformBuffer>> m_UniformBuffers;
+    std::vector<std::unique_ptr<Texture>> m_Textures;
     std::vector<VkDescriptorSetLayout> m_DescriptorSetLayouts;
     std::vector<std::unique_ptr<DeviceBuffer>> m_Buffers; 
     std::optional<VkExtent2D> m_LastUnhandledResize;
