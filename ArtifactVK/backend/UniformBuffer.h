@@ -12,7 +12,6 @@ public:
     UniformBuffer(UniformBuffer &&other) = default;
     UniformBuffer(const UniformBuffer &other) = delete;
 
-
     VkDescriptorSetLayout GetDescriptorSetLayout() const;
     template<typename T> void UploadData(const T &data)
     {
