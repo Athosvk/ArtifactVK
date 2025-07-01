@@ -20,7 +20,9 @@ CommandBuffer::CommandBuffer(VkCommandBuffer &&commandBuffer, VkDevice device, Q
 }
 
 CommandBuffer::CommandBuffer(CommandBuffer &&other)
-    : m_CommandBuffer(other.m_CommandBuffer), m_InFlight(std::move(other.m_InFlight)), m_Status(other.m_Status), m_Queue(other.m_Queue)
+    : m_CommandBuffer(other.m_CommandBuffer), 
+    m_InFlight(std::move(other.m_InFlight)), m_Status(other.m_Status), 
+    m_Queue(other.m_Queue), m_PendingBarriers(std::move(other.m_PendingBarriers))
 {
     other.m_Moved = true;
 }
@@ -193,7 +195,6 @@ void CommandBuffer::BindVertexBuffer(VertexBuffer &vertexBuffer)
     VkDeviceSize offsets[] = {0};
     vkCmdBindVertexBuffers(m_CommandBuffer, 0, 1, &vertexBuffers, offsets);
 
-    m_PendingBarriers.emplace_back(buffer.TakePendingAcquire());
     HandleAcquire(buffer);
 }
 
@@ -285,7 +286,7 @@ void CommandBuffer::InsertBarriers(const BufferMemoryBarrierArray &barriers) con
 		vkBarriers.push_back(vkBarrier);
     }
 
-    vkCmdPipelineBarrier(m_CommandBuffer, barriers.SourceStageMask, barriers.DestinationStageMask, 0, 0, nullptr, vkBarriers.size(),
+    vkCmdPipelineBarrier(m_CommandBuffer, barriers.SourceStageMask, barriers.DestinationStageMask, 0, 0, nullptr, static_cast<uint32_t>(vkBarriers.size()),
                          vkBarriers.data(), 0, nullptr);
 }
 
