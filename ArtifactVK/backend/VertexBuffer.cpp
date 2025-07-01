@@ -7,7 +7,7 @@ size_t VertexBuffer::VertexCount() const
     return m_VertexCount;
 }
 
-VkBuffer VertexBuffer::Get() const
+DeviceBuffer& VertexBuffer::GetBuffer()
 {
     if (m_TransferFence)
     {
@@ -17,7 +17,7 @@ VkBuffer VertexBuffer::Get() const
         m_TransferFence->get().WaitAndReset();   
 		m_TransferFence = std::nullopt;
 	}
-    return m_VertexBuffer.Get();
+    return m_VertexBuffer;
 }
 
 DeviceBuffer VertexBuffer::CreateStagingBuffer(VkDeviceSize size, VkDevice device, const PhysicalDevice& physicalDevice) const

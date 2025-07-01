@@ -12,8 +12,8 @@ struct CreateIndexBufferInfo
 {
     // TODO: User configure for uint32_t
     std::vector<uint16_t> InitialData;
-    VkBufferUsageFlags Flags = 0;
     VkSharingMode SharingMode = VkSharingMode::VK_SHARING_MODE_EXCLUSIVE;
+    std::optional<Queue> DestinationQueue;
 };
 
 class IndexBuffer
@@ -23,7 +23,7 @@ class IndexBuffer
         // TODO: Optional so that you don't have to opt in to the copying to device local
         CommandBuffer& transferCommandBuffer);
 
-    VkBuffer Get() const;
+    DeviceBuffer& GetBuffer();
     size_t GetIndexCount() const;
   private:
     DeviceBuffer CreateStagingBuffer(VkDeviceSize size, VkDevice device, const PhysicalDevice& physicalDevice) const;

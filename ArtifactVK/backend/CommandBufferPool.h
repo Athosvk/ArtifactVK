@@ -8,6 +8,7 @@
 #include "Semaphore.h"
 #include "Fence.h"
 #include "Queue.h"
+#include "Barrier.h"
 
 class Framebuffer;
 class RenderPass;
@@ -22,6 +23,7 @@ struct CommandBufferPoolCreateInfo
     VkCommandPoolCreateFlagBits CreationFlags;
     uint32_t QueueIndex;
 };
+
 
 class CommandBuffer
 {
@@ -39,15 +41,19 @@ class CommandBuffer
 
     void WaitFence();
     void Begin();
-    void Draw(const Framebuffer& frameBuffer, const RenderPass& renderPass, const RasterPipeline& pipeline, const VertexBuffer& vertexBuffer, const UniformBuffer& uniformBuffer);
-    void DrawIndexed(const Framebuffer& frameBuffer, const RenderPass& renderPass, const RasterPipeline& pipeline, const VertexBuffer& vertexBuffer, const IndexBuffer& indexBuffer, const UniformBuffer& uniformBuffer);
+    void Draw(const Framebuffer& frameBuffer, const RenderPass& renderPass, const RasterPipeline& pipeline, VertexBuffer& vertexBuffer, const UniformBuffer& uniformBuffer);
+    void DrawIndexed(const Framebuffer& frameBuffer, const RenderPass& renderPass, const RasterPipeline& pipeline, VertexBuffer& vertexBuffer, IndexBuffer& indexBuffer, const UniformBuffer& uniformBuffer);
     Fence& End(std::span<Semaphore> waitSemaphores, std::span<Semaphore> signalSemaphores);
     Fence& End();
     void Copy(const DeviceBuffer &source, const DeviceBuffer &destination);
+    void InsertBarrier(const BufferMemoryBarrier &barrier) const;
+    void InsertBarriers(const BufferMemoryBarrierArray &barriers) const;
+    Queue GetQueue() const;
   private:
-    void BindVertexBuffer(const VertexBuffer &vertexBuffer);
-    void BindIndexBuffer(const IndexBuffer &indexBuffer);
+    void BindVertexBuffer(VertexBuffer &vertexBuffer);
+    void BindIndexBuffer(IndexBuffer &indexBuffer);
     void BindUniformBuffer(const UniformBuffer &uniformBuffer, const RasterPipeline& pipeline);
+    void HandleAcquire(DeviceBuffer &buffer);
     void Reset();
 
     bool m_Moved = false;
@@ -56,6 +62,7 @@ class CommandBuffer
     Fence m_InFlight;
     CommandBufferStatus m_Status = CommandBufferStatus::Reset;
     Queue m_Queue;
+    std::vector<BufferMemoryBarrierArray> m_PendingBarriers;
 };
 
 // TODO: Template with per-type command buffer, so that they only have the matching

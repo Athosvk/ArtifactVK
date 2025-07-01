@@ -91,6 +91,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="App.cpp" />
+    <ClCompile Include="backend\Barrier.cpp" />
     <ClCompile Include="backend\DeviceExtensionMapping.cpp" />
     <ClCompile Include="backend\Framebuffer.cpp" />
     <ClCompile Include="backend\CommandBufferPool.cpp" />
@@ -133,6 +134,7 @@
     <ClInclude Include="backend\Buffer.h" />
     <ClInclude Include="backend\IndexBuffer.h" />
     <ClInclude Include="backend\DescriptorPool.h" />
+    <ClInclude Include="backend\Barrier.h" />
     <ClInclude Include="ManualScope.h" />
     <ClInclude Include="backend\Pipeline.h" />
     <ClInclude Include="backend\ShaderModule.h" />
