@@ -56,7 +56,8 @@ class VulkanDevice
     template<typename T> 
     VertexBuffer &CreateVertexBuffer(std::vector<T> initialData)
     {
-        auto bufferCreateInfo = CreateVertexBufferInfo{initialData};
+        assert(m_GraphicsQueue.has_value() && "Need a graphics queue");
+        auto bufferCreateInfo = CreateVertexBufferInfo{initialData, VkSharingMode::VK_SHARING_MODE_EXCLUSIVE, *m_GraphicsQueue };
         return *m_VertexBuffers.emplace_back(std::make_unique<VertexBuffer>(bufferCreateInfo, m_Device, m_PhysicalDevice, GetTransferCommandBuffer()));
     }
 
