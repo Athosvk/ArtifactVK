@@ -10,7 +10,7 @@ IndexBuffer::IndexBuffer(CreateIndexBufferInfo bufferInfo, VkDevice device, cons
       m_IndexBuffer(CreateIndexBuffer(bufferInfo.InitialData.size() * sizeof(uint16_t), device, physicalDevice))
 {
     assert((bufferInfo.DestinationQueue.has_value() ^
-               bufferInfo.SharingMode == VkSharingMode::VK_SHARING_MODE_CONCURRENT) &&
+               (bufferInfo.SharingMode == VkSharingMode::VK_SHARING_MODE_CONCURRENT)) &&
            "Requires either a target queue or sharing mode to be set to VK_SHARING_MODE_CONCURRENT");
 	m_IndexCount = bufferInfo.InitialData.size();
 	m_StagingBuffer.UploadData(bufferInfo.InitialData);
@@ -22,7 +22,7 @@ IndexBuffer::IndexBuffer(CreateIndexBufferInfo bufferInfo, VkDevice device, cons
 		m_StagingBuffer.Transfer(TransferOp{*bufferInfo.DestinationQueue,
 											VkAccessFlagBits::VK_ACCESS_INDEX_READ_BIT,
 											VkPipelineStageFlagBits::VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT |
-												VkPipelineStageFlagBits::VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT});
+												VkPipelineStageFlagBits::VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT}, transferCommandBuffer);
 	}
 	
 	// TODO: Use semaphore instead, allow fetching the semaphore
