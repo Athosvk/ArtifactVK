@@ -5,6 +5,7 @@
 #include "VertexBuffer.h"
 #include "IndexBuffer.h"
 #include "Pipeline.h"
+#include "Barrier.h"
 
 #include <cassert>
 #include <vulkan/vulkan.h>
@@ -19,7 +20,9 @@ CommandBuffer::CommandBuffer(VkCommandBuffer &&commandBuffer, VkDevice device, Q
 }
 
 CommandBuffer::CommandBuffer(CommandBuffer &&other)
-    : m_CommandBuffer(other.m_CommandBuffer), m_InFlight(std::move(other.m_InFlight)), m_Status(other.m_Status), m_Queue(other.m_Queue)
+    : m_CommandBuffer(other.m_CommandBuffer), 
+    m_InFlight(std::move(other.m_InFlight)), m_Status(other.m_Status), 
+    m_Queue(other.m_Queue), m_PendingBarriers(std::move(other.m_PendingBarriers))
 {
     other.m_Moved = true;
 }
@@ -65,7 +68,7 @@ void CommandBuffer::Begin()
 }
 
 void CommandBuffer::Draw(const Framebuffer& frameBuffer, const RenderPass& renderPass, const RasterPipeline& pipeline, 
-    const VertexBuffer& vertexBuffer, const UniformBuffer& uniformBuffer)
+    VertexBuffer& vertexBuffer, const UniformBuffer& uniformBuffer)
 {
     assert(m_Status == CommandBufferStatus::Recording && "Calling draw before starting recording of command buffer");
     VkRenderPassBeginInfo renderPassBeginInfo{};
@@ -86,12 +89,18 @@ void CommandBuffer::Draw(const Framebuffer& frameBuffer, const RenderPass& rende
     BindVertexBuffer(vertexBuffer);
     BindUniformBuffer(uniformBuffer, pipeline);
     // TODO: Give user control over what to draw
+
+    for (const auto &barrierArray : m_PendingBarriers)
+    {
+        InsertBarriers(barrierArray);
+    }
+    m_PendingBarriers.clear();
     vkCmdDraw(m_CommandBuffer, static_cast<uint32_t>(vertexBuffer.VertexCount()), 1, 0, 0);
     vkCmdEndRenderPass(m_CommandBuffer);
 }
 
 void CommandBuffer::DrawIndexed(const Framebuffer& frameBuffer, const RenderPass& renderPass, const RasterPipeline& pipeline,
-    const VertexBuffer& vertexBuffer, const IndexBuffer& indexBuffer, const UniformBuffer& uniformBuffer)
+    VertexBuffer& vertexBuffer, IndexBuffer& indexBuffer, const UniformBuffer& uniformBuffer)
 {
     assert(m_Status == CommandBufferStatus::Recording && "Calling draw before starting recording of command buffer");
     VkRenderPassBeginInfo renderPassBeginInfo{};
@@ -112,6 +121,12 @@ void CommandBuffer::DrawIndexed(const Framebuffer& frameBuffer, const RenderPass
     BindVertexBuffer(vertexBuffer);
     BindIndexBuffer(indexBuffer);
     BindUniformBuffer(uniformBuffer, pipeline);
+
+    for (const auto &barrierArray : m_PendingBarriers)
+    {
+        InsertBarriers(barrierArray);
+    }
+    m_PendingBarriers.clear();
     // TODO: Give user control over what to draw
     vkCmdDrawIndexed(m_CommandBuffer, static_cast<uint32_t>(indexBuffer.GetIndexCount()), 1, 0, 0, 0);
     vkCmdEndRenderPass(m_CommandBuffer);
@@ -173,18 +188,23 @@ Fence &CommandBuffer::End()
     return End(std::span<Semaphore>(), std::span<Semaphore>());
 }
 
-void CommandBuffer::BindVertexBuffer(const VertexBuffer &vertexBuffer)
+void CommandBuffer::BindVertexBuffer(VertexBuffer &vertexBuffer)
 {
-    VkBuffer vertexBuffers = {vertexBuffer.Get()};
+    auto& buffer = vertexBuffer.GetBuffer();
+    VkBuffer vertexBuffers = {buffer.Get()};
     VkDeviceSize offsets[] = {0};
     vkCmdBindVertexBuffers(m_CommandBuffer, 0, 1, &vertexBuffers, offsets);
+
+    HandleAcquire(buffer);
 }
 
-void CommandBuffer::BindIndexBuffer(const IndexBuffer &indexBuffer)
+void CommandBuffer::BindIndexBuffer(IndexBuffer &indexBuffer)
 {
-    VkBuffer indexBuffers = {indexBuffer.Get()};
+    auto& buffer = indexBuffer.GetBuffer();
+    VkBuffer indexBuffers = {buffer.Get()};
     VkDeviceSize offsets[] = {0};
     vkCmdBindIndexBuffer(m_CommandBuffer, indexBuffers, 0, VkIndexType::VK_INDEX_TYPE_UINT16);
+    HandleAcquire(buffer);
 }
 
 void CommandBuffer::BindUniformBuffer(const UniformBuffer &uniformBuffer, const RasterPipeline& pipeline)
@@ -195,8 +215,30 @@ void CommandBuffer::BindUniformBuffer(const UniformBuffer &uniformBuffer, const 
                             pipeline.GetPipelineLayout(), 0, 1, &descriptorSet, 0, nullptr);
 }
 
+void CommandBuffer::HandleAcquire(DeviceBuffer &buffer)
+{
+    auto pendingAcquire = buffer.TakePendingAcquire();
+    if (pendingAcquire.has_value())
+    {
+        auto array = std::find_if(m_PendingBarriers.begin(), m_PendingBarriers.end(),
+                     [&pendingAcquire](const BufferMemoryBarrierArray &array) {
+                         return array.DestinationStageMask == pendingAcquire->DestinationStageMask &&
+                                array.SourceStageMask == pendingAcquire->SourceStageMask;
+                     });
+        if (array != m_PendingBarriers.end())
+        {
+            array->Barriers.emplace_back(std::move(pendingAcquire->Barrier));
+        }
+        else
+        {
+            m_PendingBarriers.emplace_back(BufferMemoryBarrierArray(std::move(*pendingAcquire)));
+        }
+    }
+}
+
 void CommandBuffer::Copy(const DeviceBuffer &source, const DeviceBuffer &destination)
 {
+    // TODO: Needs to handle pending acquires?
     // TODO: Use `Begin` instead and allow for a one-time fire
     VkCommandBufferBeginInfo beginInfo{};
     beginInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -207,6 +249,50 @@ void CommandBuffer::Copy(const DeviceBuffer &source, const DeviceBuffer &destina
     bufferCopy.dstOffset = 0;
     bufferCopy.size = source.GetSize();
     vkCmdCopyBuffer(m_CommandBuffer, source.Get(), destination.Get(), 1, &bufferCopy);
+}
+
+void CommandBuffer::InsertBarrier(const BufferMemoryBarrier &barrier) const
+{
+    VkBufferMemoryBarrier vkBarrier{};
+    vkBarrier.sType = VkStructureType::VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+    vkBarrier.buffer = barrier.Barrier.Buffer.get().Get();
+    vkBarrier.srcAccessMask = barrier.Barrier.SourceAccessMask;
+    vkBarrier.dstAccessMask = barrier.Barrier.DestinationAccessMask;
+    vkBarrier.srcQueueFamilyIndex = barrier.Barrier.SourceQueue.GetFamilyIndex();
+    vkBarrier.dstQueueFamilyIndex = barrier.Barrier.DestinationQueue.GetFamilyIndex();
+    vkBarrier.offset = 0;
+    vkBarrier.size = VK_WHOLE_SIZE;
+
+    vkCmdPipelineBarrier(m_CommandBuffer, barrier.SourceStageMask, barrier.DestinationStageMask, 0, 0, nullptr, 1,
+                         &vkBarrier, 0, nullptr);
+}
+
+void CommandBuffer::InsertBarriers(const BufferMemoryBarrierArray &barriers) const
+{
+    std::vector<VkBufferMemoryBarrier> vkBarriers{};
+    vkBarriers.reserve(barriers.Barriers.size());
+
+    for (auto &barrier : barriers.Barriers)
+    {
+		VkBufferMemoryBarrier vkBarrier{};
+		vkBarrier.sType = VkStructureType::VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+		vkBarrier.buffer = barrier.Buffer.get().Get();
+		vkBarrier.srcAccessMask = barrier.SourceAccessMask;
+		vkBarrier.dstAccessMask = barrier.DestinationAccessMask;
+		vkBarrier.srcQueueFamilyIndex = barrier.SourceQueue.GetFamilyIndex();
+		vkBarrier.dstQueueFamilyIndex = barrier.DestinationQueue.GetFamilyIndex();
+		vkBarrier.offset = 0;
+		vkBarrier.size = VK_WHOLE_SIZE;
+		vkBarriers.push_back(vkBarrier);
+    }
+
+    vkCmdPipelineBarrier(m_CommandBuffer, barriers.SourceStageMask, barriers.DestinationStageMask, 0, 0, nullptr, static_cast<uint32_t>(vkBarriers.size()),
+                         vkBarriers.data(), 0, nullptr);
+}
+
+Queue CommandBuffer::GetQueue() const
+{
+    return m_Queue;
 }
 
 void CommandBuffer::Reset()

@@ -73,6 +73,37 @@ VkDeviceSize DeviceBuffer::GetSize() const
     return m_CreateInfo.Size;
 }
 
+void DeviceBuffer::Transfer(TransferOp transferOperation, const CommandBuffer& commandBuffer)
+{
+    assert(!m_PendingAcquireBarrier.has_value() && "Re-release before acquire");
+    BufferMemoryBarrier releaseBarrier{
+        (*this),
+        commandBuffer.GetQueue(),
+        transferOperation.Destination,
+        VkAccessFlagBits::VK_ACCESS_TRANSFER_WRITE_BIT,
+        0,
+        VkPipelineStageFlagBits::VK_PIPELINE_STAGE_TRANSFER_BIT,
+        VkPipelineStageFlagBits::VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+    };
+	commandBuffer.InsertBarrier(releaseBarrier);
+	
+    BufferMemoryBarrier acquireBarrier{
+        (*this),
+        commandBuffer.GetQueue(),
+        transferOperation.Destination,
+        0,
+        transferOperation.DestinationAccessMask,
+        VkPipelineStageFlagBits::VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+        transferOperation.DestinationPipelineStage,
+    };
+    m_PendingAcquireBarrier.emplace(acquireBarrier);
+}
+
+std::optional<BufferMemoryBarrier> DeviceBuffer::TakePendingAcquire()
+{
+    return std::move(m_PendingAcquireBarrier);
+}
+
 VkDescriptorBufferInfo DeviceBuffer::GetDescriptorInfo() const
 {
     VkDescriptorBufferInfo descriptorInfo{};

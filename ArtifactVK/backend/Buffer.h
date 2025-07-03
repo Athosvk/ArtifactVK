@@ -5,7 +5,10 @@
 #include <cassert>
 #include <span>
 
+#include "Barrier.h"
+
 class PhysicalDevice;
+class CommandBuffer;
 
 struct CreateBufferInfo
 {
@@ -14,6 +17,13 @@ struct CreateBufferInfo
     VkMemoryPropertyFlags MemoryProperties;
     bool PersistentlyMapped = true;
     VkSharingMode SharingMode = VkSharingMode::VK_SHARING_MODE_EXCLUSIVE;
+};
+
+struct TransferOp
+{
+    Queue Destination;
+    VkAccessFlags DestinationAccessMask;
+    VkPipelineStageFlags DestinationPipelineStage;
 };
 
 class DeviceBuffer
@@ -26,6 +36,8 @@ public:
 
     VkBuffer Get() const;
     VkDeviceSize GetSize() const;
+    void Transfer(TransferOp transferOperation, const CommandBuffer& commandBuffer);
+    std::optional<BufferMemoryBarrier> TakePendingAcquire();
 
     template<typename T>
     void UploadData(std::span<T> data)
@@ -51,4 +63,5 @@ private:
 	VkDeviceMemory m_Memory;
     CreateBufferInfo m_CreateInfo;
     std::optional<void *> m_MappedBuffer;
+    std::optional<BufferMemoryBarrier> m_PendingAcquireBarrier;
 };

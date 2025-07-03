@@ -459,7 +459,9 @@ void VulkanDevice::HandleResizeEvent(const WindowResizeEvent & resizeEvent)
 
 IndexBuffer &VulkanDevice::CreateIndexBuffer(std::vector<uint16_t> data)
 {
-    return *m_IndexBuffers.emplace_back(std::make_unique<IndexBuffer>(IndexBuffer(CreateIndexBufferInfo(data), m_Device, m_PhysicalDevice, GetTransferCommandBuffer())));
+    assert(m_GraphicsQueue.has_value() && "Need a graphics queue");
+    CreateIndexBufferInfo info = CreateIndexBufferInfo(data, VkSharingMode::VK_SHARING_MODE_EXCLUSIVE, m_GraphicsQueue);
+    return *m_IndexBuffers.emplace_back(std::make_unique<IndexBuffer>(IndexBuffer(info, m_Device, m_PhysicalDevice, GetTransferCommandBuffer())));
 }
 
 std::vector<VkDeviceQueueCreateInfo> VulkanDevice::GetQueueCreateInfos(const PhysicalDevice &physicalDevice)

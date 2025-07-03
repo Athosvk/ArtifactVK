@@ -1,4 +1,7 @@
 #include "IndexBuffer.h"
+
+#include <cassert>
+
 #include "CommandBufferPool.h"
 
 IndexBuffer::IndexBuffer(CreateIndexBufferInfo bufferInfo, VkDevice device, const PhysicalDevice& physicalDevice, 
@@ -6,17 +9,38 @@ IndexBuffer::IndexBuffer(CreateIndexBufferInfo bufferInfo, VkDevice device, cons
     m_StagingBuffer(CreateStagingBuffer(bufferInfo.InitialData.size() * sizeof(uint16_t), device, physicalDevice)),
       m_IndexBuffer(CreateIndexBuffer(bufferInfo.InitialData.size() * sizeof(uint16_t), device, physicalDevice))
 {
+    assert((bufferInfo.DestinationQueue.has_value() ^
+               (bufferInfo.SharingMode == VkSharingMode::VK_SHARING_MODE_CONCURRENT)) &&
+           "Requires either a target queue or sharing mode to be set to VK_SHARING_MODE_CONCURRENT");
 	m_IndexCount = bufferInfo.InitialData.size();
     m_StagingBuffer.UploadData(std::span<uint16_t>{bufferInfo.InitialData});
 	transferCommandBuffer.Copy(m_StagingBuffer, m_IndexBuffer);
+
+	if (bufferInfo.SharingMode == VkSharingMode::VK_SHARING_MODE_EXCLUSIVE
+		&& transferCommandBuffer.GetQueue().GetFamilyIndex() != bufferInfo.DestinationQueue->GetFamilyIndex())
+	{
+		m_StagingBuffer.Transfer(TransferOp{*bufferInfo.DestinationQueue,
+											VkAccessFlagBits::VK_ACCESS_INDEX_READ_BIT,
+											VkPipelineStageFlagBits::VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT |
+												VkPipelineStageFlagBits::VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT}, transferCommandBuffer);
+	}
+	
 	// TODO: Use semaphore instead, allow fetching the semaphore
 	m_TransferFence = transferCommandBuffer.End({}, {});
 
 }
 
-VkBuffer IndexBuffer::Get() const
+DeviceBuffer& IndexBuffer::GetBuffer()
 {
-    return m_IndexBuffer.Get();
+    if (m_TransferFence)
+    {
+		// TODO: Allow doing this explciitly instead, as we can't read
+		// the intent behind calling `Get` this can lead to 
+		// unexpected results
+        m_TransferFence->get().WaitAndReset();   
+		m_TransferFence = std::nullopt;
+	}
+    return m_IndexBuffer;
 }
 
 size_t IndexBuffer::GetIndexCount() const
