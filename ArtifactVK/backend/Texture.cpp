@@ -10,7 +10,7 @@ VkDeviceSize TextureCreateInfo::BufferSize() const
     return Width * Height * 4;
 }
 
-Texture::Texture( VkDevice device, const PhysicalDevice &physicalDevice, const TextureCreateInfo &textureCreateInfo) : 
+Texture::Texture(VkDevice device, const PhysicalDevice &physicalDevice, const TextureCreateInfo &textureCreateInfo, CommandBuffer& transferCommandBuffer) :
 	m_StagingBuffer(CreateStagingBuffer(textureCreateInfo.BufferSize(), physicalDevice, device))
 {
     m_StagingBuffer.UploadData(textureCreateInfo.Pixels);
@@ -48,6 +48,7 @@ Texture::Texture( VkDevice device, const PhysicalDevice &physicalDevice, const T
     }
 
     vkBindImageMemory(device, m_Image, m_Memory, 0);
+    transferCommandBuffer.Begin();
 }
 
 Texture::~Texture()

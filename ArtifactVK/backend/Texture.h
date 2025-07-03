@@ -17,7 +17,7 @@ struct TextureCreateInfo
 class Texture
 {
 public:
-    Texture(VkDevice device, const PhysicalDevice &physicalDevice, const TextureCreateInfo &textureCreateDesc);
+    Texture(VkDevice device, const PhysicalDevice &physicalDevice, const TextureCreateInfo &textureCreateInfo, CommandBuffer& transferCommandBuffer);
     ~Texture();
 
 private:
