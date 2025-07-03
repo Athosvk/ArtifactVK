@@ -97,7 +97,7 @@ class VulkanDevice
     }
 
     DeviceBuffer &CreateBuffer(const CreateBufferInfo& createBufferInfo);
-    Texture &LoadTexture(const TextureCreateInfo& createDesc);
+    Texture &CreateTexture(const TextureCreateInfo& createDesc);
   private:
     VkDescriptorSet CreateDescriptorSet(const UniformBuffer& uniformBuffer);
     CommandBufferPool CreateTransferCommandBufferPool() const;

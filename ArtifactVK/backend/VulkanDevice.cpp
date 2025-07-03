@@ -82,7 +82,7 @@ DeviceBuffer &VulkanDevice::CreateBuffer(const CreateBufferInfo& createInfo)
     return *m_Buffers.emplace_back(std::make_unique<DeviceBuffer>(m_Device, m_PhysicalDevice, createInfo));
 }
 
-Texture &VulkanDevice::LoadTexture(const TextureCreateInfo &createInfo)
+Texture &VulkanDevice::CreateTexture(const TextureCreateInfo &createInfo)
 {
     return *m_Textures.emplace_back(std::make_unique<Texture>(m_Device, m_PhysicalDevice, createInfo));
 }
