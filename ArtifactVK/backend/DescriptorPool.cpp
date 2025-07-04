@@ -11,7 +11,7 @@ DescriptorPool::DescriptorPool(VkDevice device, const DescriptorPoolCreateInfo &
     poolSize.descriptorCount = static_cast<uint32_t>(descriptorPoolCreateInfo.Size);
     
     VkDescriptorPoolCreateInfo poolInfo{};
-    poolInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
+    poolInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     poolInfo.poolSizeCount = 1;
     poolInfo.pPoolSizes = &poolSize;
 
