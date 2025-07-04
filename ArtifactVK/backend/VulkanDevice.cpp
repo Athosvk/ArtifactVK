@@ -332,7 +332,8 @@ VulkanDevice::~VulkanDevice()
     {
         vkDestroyDescriptorSetLayout(m_Device, descriptorSet, nullptr);
     }
-    //m_DescriptorSetLayouts.clear();
+    m_DescriptorSetLayouts.clear();
+   
     m_DescriptorPool.reset();
     // Explicitly order destruction of vulkan objects
     // Prior to swapchain destruction, since framebuffers may be 
@@ -345,6 +346,7 @@ VulkanDevice::~VulkanDevice()
     m_VertexBuffers.clear();
     m_IndexBuffers.clear();
     m_Buffers.clear();
+    m_Textures.clear();
 
     std::condition_variable destroyed;
     std::mutex destroyMutex;
