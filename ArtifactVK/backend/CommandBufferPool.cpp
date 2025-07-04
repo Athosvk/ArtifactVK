@@ -293,7 +293,7 @@ void CommandBuffer::InsertBarrier(const BufferMemoryBarrier &barrier) const
 
 void CommandBuffer::InsertBarrier(const ImageMemoryBarrier &barrier) const
 {
-    VkImageMemoryBarrier memoryBarrier;
+    VkImageMemoryBarrier memoryBarrier{};
     memoryBarrier.sType = VkStructureType::VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
     memoryBarrier.oldLayout = barrier.SourceLayout;
     memoryBarrier.newLayout = barrier.DestinationLayout;
