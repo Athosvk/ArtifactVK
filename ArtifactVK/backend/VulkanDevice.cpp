@@ -158,11 +158,8 @@ RasterPipeline VulkanDevice::CreateRasterPipeline(RasterPipelineBuilder &&pipeli
 
     VkPipelineDynamicStateCreateInfo dynamicState{};
     dynamicState.sType = VkStructureType::VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-    //dynamicState.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
-    //dynamicState.pDynamicStates = dynamicStates.data();
-
-    dynamicState.dynamicStateCount = 0;
-    dynamicState.pDynamicStates = nullptr;
+    dynamicState.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
+    dynamicState.pDynamicStates = dynamicStates.data();
 
     auto bindingDescription = pipelineBuilder.GetVertexBindingDescription();
     VkPipelineVertexInputStateCreateInfo vertexInputCreateInfo = bindingDescription.has_value() ? bindingDescription->GetVkPipelineInputStateCreateInfo() 
