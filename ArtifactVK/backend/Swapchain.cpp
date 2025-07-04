@@ -64,7 +64,7 @@ Viewport Swapchain::GetViewportDescription() const
 
 VkAttachmentDescription Swapchain::AttachmentDescription() const
 {
-    VkAttachmentDescription attachmentDescription;
+    VkAttachmentDescription attachmentDescription{};
 
     attachmentDescription.format = m_OriginalCreateInfo.SurfaceFormat.format;
     attachmentDescription.samples = VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT;
