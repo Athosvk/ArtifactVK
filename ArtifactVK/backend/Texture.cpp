@@ -11,8 +11,9 @@ VkDeviceSize TextureCreateInfo::BufferSize() const
 }
 
 Texture::Texture(VkDevice device, const PhysicalDevice &physicalDevice, const TextureCreateInfo &textureCreateInfo, CommandBuffer& transferCommandBuffer,
-    Queue destinationQueue) 
-    : m_StagingBuffer(CreateStagingBuffer(textureCreateInfo.BufferSize(), physicalDevice, device)),
+    Queue destinationQueue) : 
+    m_Device(device),
+    m_StagingBuffer(CreateStagingBuffer(textureCreateInfo.BufferSize(), physicalDevice, device)),
     m_Width(textureCreateInfo.Width),
     m_Height(textureCreateInfo.Height)
 {
@@ -30,6 +31,7 @@ Texture::Texture(VkDevice device, const PhysicalDevice &physicalDevice, const Te
     vkCreateInfo.usage =
         VkImageUsageFlagBits::VK_IMAGE_USAGE_TRANSFER_DST_BIT | VkImageUsageFlagBits::VK_IMAGE_USAGE_SAMPLED_BIT;
     vkCreateInfo.sharingMode = VkSharingMode::VK_SHARING_MODE_EXCLUSIVE;
+    vkCreateInfo.samples = VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT;
 
     if (vkCreateImage(device, &vkCreateInfo, nullptr, &m_Image) != VkResult::VK_SUCCESS)
     {
