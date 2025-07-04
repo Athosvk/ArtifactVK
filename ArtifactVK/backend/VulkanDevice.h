@@ -132,6 +132,5 @@ class VulkanDevice
     std::vector<std::unique_ptr<DeviceBuffer>> m_Buffers; 
     std::optional<VkExtent2D> m_LastUnhandledResize;
     std::unique_ptr<DescriptorPool> m_DescriptorPool;
-    std::vector<VkDescriptorSet> m_DescriptorSets;
 };
 

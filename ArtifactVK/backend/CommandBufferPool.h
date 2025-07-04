@@ -46,7 +46,9 @@ class CommandBuffer
     Fence& End(std::span<Semaphore> waitSemaphores, std::span<Semaphore> signalSemaphores);
     Fence& End();
     void Copy(const DeviceBuffer &source, const DeviceBuffer &destination);
+    void CopyBufferToImage(const DeviceBuffer& source, const Texture& texture);
     void InsertBarrier(const BufferMemoryBarrier &barrier) const;
+    void InsertBarrier(const ImageMemoryBarrier &barrier) const;
     void InsertBarriers(const BufferMemoryBarrierArray &barriers) const;
     Queue GetQueue() const;
   private:

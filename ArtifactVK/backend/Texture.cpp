@@ -10,8 +10,11 @@ VkDeviceSize TextureCreateInfo::BufferSize() const
     return Width * Height * 4;
 }
 
-Texture::Texture(VkDevice device, const PhysicalDevice &physicalDevice, const TextureCreateInfo &textureCreateInfo, CommandBuffer& transferCommandBuffer) :
-	m_StagingBuffer(CreateStagingBuffer(textureCreateInfo.BufferSize(), physicalDevice, device))
+Texture::Texture(VkDevice device, const PhysicalDevice &physicalDevice, const TextureCreateInfo &textureCreateInfo, CommandBuffer& transferCommandBuffer,
+    Queue destinationQueue) 
+    : m_StagingBuffer(CreateStagingBuffer(textureCreateInfo.BufferSize(), physicalDevice, device)),
+    m_Width(textureCreateInfo.Width),
+    m_Height(textureCreateInfo.Height)
 {
     m_StagingBuffer.UploadData(textureCreateInfo.Pixels);
     VkImageCreateInfo vkCreateInfo{};
@@ -48,13 +51,47 @@ Texture::Texture(VkDevice device, const PhysicalDevice &physicalDevice, const Te
     }
 
     vkBindImageMemory(device, m_Image, m_Memory, 0);
-    transferCommandBuffer.Begin();
+    TransitionLayout(VkImageLayout::VK_IMAGE_LAYOUT_UNDEFINED, VkImageLayout::VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                     transferCommandBuffer,
+                     transferCommandBuffer.GetQueue());
+    transferCommandBuffer.CopyBufferToImage(m_StagingBuffer, *this);
+
+    TransitionLayout(VkImageLayout::VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                     VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, transferCommandBuffer, destinationQueue);
+    
+}
+
+Texture::Texture(Texture && other) : 
+    m_Device(other.m_Device), m_StagingBuffer(std::move(other.m_StagingBuffer)), 
+    m_Image(std::exchange(other.m_Image, VK_NULL_HANDLE)), 
+    m_Memory(std::exchange(other.m_Memory, VK_NULL_HANDLE)),
+    m_Width(other.m_Width),
+    m_Height(other.m_Height)
+{  
 }
 
 Texture::~Texture()
 {
-    vkDestroyImage(m_Device, m_Image, nullptr);
-    vkFreeMemory(m_Device, m_Memory, nullptr);
+    if (m_Image != VK_NULL_HANDLE)
+    {
+        vkDestroyImage(m_Device, m_Image, nullptr);
+        vkFreeMemory(m_Device, m_Memory, nullptr);
+    }
+}
+
+VkImage Texture::Get() const
+{
+    return m_Image;
+}
+
+uint32_t Texture::GetWidth() const
+{
+    return m_Width;
+}
+
+uint32_t Texture::GetHeight() const
+{
+    return m_Height;
 }
 
 DeviceBuffer Texture::CreateStagingBuffer(size_t size, const PhysicalDevice &physicalDevice, VkDevice device) const
@@ -65,5 +102,11 @@ DeviceBuffer Texture::CreateStagingBuffer(size_t size, const PhysicalDevice &phy
 							 VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
 						false};
     return DeviceBuffer(device, physicalDevice, createStagingBufferInfo);
+}
+
+void Texture::TransitionLayout(VkImageLayout from, VkImageLayout to, CommandBuffer &commandBuffer, Queue destinationQueue)
+{
+    commandBuffer.InsertBarrier(
+        ImageMemoryBarrier{*this, commandBuffer.GetQueue(), destinationQueue, 0, 0, from, to, 0, 0});
 }
 

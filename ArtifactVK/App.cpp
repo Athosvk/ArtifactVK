@@ -70,7 +70,7 @@ void App::RunRenderLoop()
 void App::LoadImage()
 {
     Image image("textures/texture.jpg");
-    m_VulkanInstance.GetActiveDevice().LoadTexture(image.GetTextureCreateDesc());
+    m_VulkanInstance.GetActiveDevice().CreateTexture(image.GetTextureCreateDesc());
 }
 
 UniformConstants App::GetUniforms()

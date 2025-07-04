@@ -84,7 +84,9 @@ DeviceBuffer &VulkanDevice::CreateBuffer(const CreateBufferInfo& createInfo)
 
 Texture &VulkanDevice::CreateTexture(const TextureCreateInfo &createInfo)
 {
-    return *m_Textures.emplace_back(std::make_unique<Texture>(m_Device, m_PhysicalDevice, createInfo));
+    return *m_Textures.emplace_back(std::make_unique<Texture>(m_Device, m_PhysicalDevice, createInfo, GetTransferCommandBuffer(), 
+        // TODO: Should also allow transferring to compute
+        *m_GraphicsQueue));
 }
 
 void VulkanDevice::WaitForIdle() const
@@ -330,6 +332,7 @@ VulkanDevice::~VulkanDevice()
     {
         vkDestroyDescriptorSetLayout(m_Device, descriptorSet, nullptr);
     }
+    //m_DescriptorSetLayouts.clear();
     m_DescriptorPool.reset();
     // Explicitly order destruction of vulkan objects
     // Prior to swapchain destruction, since framebuffers may be 

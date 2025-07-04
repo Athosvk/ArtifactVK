@@ -251,6 +251,30 @@ void CommandBuffer::Copy(const DeviceBuffer &source, const DeviceBuffer &destina
     vkCmdCopyBuffer(m_CommandBuffer, source.Get(), destination.Get(), 1, &bufferCopy);
 }
 
+void CommandBuffer::CopyBufferToImage(const DeviceBuffer &source, const Texture &texture)
+{
+    VkCommandBufferBeginInfo beginInfo{};
+    beginInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    beginInfo.flags = VkCommandBufferUsageFlagBits::VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+    vkBeginCommandBuffer(m_CommandBuffer, &beginInfo);
+    VkBufferImageCopy bufferImageCopy{};
+    bufferImageCopy.bufferOffset = 0;
+    bufferImageCopy.bufferRowLength = 0;
+    bufferImageCopy.bufferImageHeight = 0;
+
+    bufferImageCopy.imageSubresource.aspectMask = VkImageAspectFlagBits::VK_IMAGE_ASPECT_COLOR_BIT;
+    bufferImageCopy.imageSubresource.mipLevel = 0;
+    bufferImageCopy.imageSubresource.baseArrayLayer = 0;
+    bufferImageCopy.imageSubresource.layerCount = 1;
+
+    bufferImageCopy.imageOffset = {0, 0, 0};
+    bufferImageCopy.imageExtent = {texture.GetWidth(), texture.GetHeight(), 1};
+
+    vkCmdCopyBufferToImage(m_CommandBuffer, source.Get(), texture.Get(),
+                           VkImageLayout::VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &bufferImageCopy);
+}
+
 void CommandBuffer::InsertBarrier(const BufferMemoryBarrier &barrier) const
 {
     VkBufferMemoryBarrier vkBarrier{};
@@ -265,6 +289,28 @@ void CommandBuffer::InsertBarrier(const BufferMemoryBarrier &barrier) const
 
     vkCmdPipelineBarrier(m_CommandBuffer, barrier.SourceStageMask, barrier.DestinationStageMask, 0, 0, nullptr, 1,
                          &vkBarrier, 0, nullptr);
+}
+
+void CommandBuffer::InsertBarrier(const ImageMemoryBarrier &barrier) const
+{
+    VkImageMemoryBarrier memoryBarrier;
+    memoryBarrier.sType = VkStructureType::VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    memoryBarrier.oldLayout = barrier.SourceLayout;
+    memoryBarrier.newLayout = barrier.DestinationLayout;
+    memoryBarrier.srcQueueFamilyIndex = barrier.SourceQueue.GetFamilyIndex();
+    memoryBarrier.dstQueueFamilyIndex = barrier.DestinationQueue.GetFamilyIndex();
+    memoryBarrier.image = barrier.Image.get().Get();
+
+    memoryBarrier.subresourceRange.aspectMask = VkImageAspectFlagBits::VK_IMAGE_ASPECT_COLOR_BIT;
+    memoryBarrier.subresourceRange.baseMipLevel = 0;
+    memoryBarrier.subresourceRange.levelCount = 1;
+    memoryBarrier.subresourceRange.baseArrayLayer = 0;
+    memoryBarrier.subresourceRange.layerCount = 1;
+
+    memoryBarrier.srcAccessMask = barrier.SourceAccessMask;
+    memoryBarrier.dstAccessMask = barrier.DestinationAccessMask;
+    vkCmdPipelineBarrier(m_CommandBuffer, barrier.SourceStageMask, barrier.DestinationAccessMask, 0, 0, nullptr, 0,
+                         nullptr, 1, &memoryBarrier);
 }
 
 void CommandBuffer::InsertBarriers(const BufferMemoryBarrierArray &barriers) const
