@@ -29,6 +29,7 @@ App::App()
       m_VertexBuffer(m_VulkanInstance.GetActiveDevice().CreateVertexBuffer(GetVertices())),
       m_IndexBuffer(m_VulkanInstance.GetActiveDevice().CreateIndexBuffer(GetIndices()))
 {
+    LoadImage();
 }
 
 App::~App()
