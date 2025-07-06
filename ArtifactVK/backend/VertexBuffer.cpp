@@ -11,11 +11,11 @@ DeviceBuffer& VertexBuffer::GetBuffer()
 {
     if (m_TransferFence)
     {
-		// TODO: Allow doing this explciitly instead, as we can't read
+		// TODO: Allow doing this explicitly instead, as we can't read
 		// the intent behind calling `Get` this can lead to 
 		// unexpected results
-        m_TransferFence->get().WaitAndReset();   
-		m_TransferFence = std::nullopt;
+        m_TransferFence->WaitAndReset();   
+		m_TransferFence.reset();
 	}
     return m_VertexBuffer;
 }

@@ -15,7 +15,7 @@
 
 CommandBuffer::CommandBuffer(VkCommandBuffer &&commandBuffer, VkDevice device, Queue queue) : m_CommandBuffer(commandBuffer), 
     // Start the Fence signaled so that we can query for correct usage prior to beginning the command buffer (again)
-      m_InFlight(Fence(device)), m_Queue(queue)
+      m_InFlight(std::make_shared<Fence>(device)), m_Queue(queue)
 {
 }
 
@@ -31,7 +31,7 @@ CommandBuffer::~CommandBuffer()
 {
     if (!m_Moved)
     {
-        assert(m_InFlight.QueryStatus() != FenceStatus::UnsignaledOrReset &&
+        assert(m_InFlight->QueryStatus() != FenceStatus::UnsignaledOrReset &&
                "Attempting to delete a command buffer that is still in flight."
                "Wait for the returned fence in `CommandBuffer::End`");
     }
@@ -42,7 +42,7 @@ void CommandBuffer::WaitFence()
     // No use in waiting for a fence that cannot possibly have been signaled
     if (m_Status != CommandBufferStatus::Reset) 
     {
-        m_InFlight.WaitAndReset();
+        m_InFlight->WaitAndReset();
     }
 }
 
@@ -50,7 +50,7 @@ void CommandBuffer::WaitFence()
 void CommandBuffer::Begin()
 {
     assert(m_Status != CommandBufferStatus::Recording && "Command buffer already recording");
-    assert(m_InFlight.WasReset() && "Attempting to begin a command buffer that may still be in flight. Wait for the returned fence");
+    assert(m_InFlight->WasReset() && "Attempting to begin a command buffer that may still be in flight. Wait for the returned fence");
     if (m_Status == CommandBufferStatus::Submitted)
     {
         // Reset in case this command buffer was previously submitted
@@ -147,7 +147,7 @@ void CommandBuffer::DrawIndexed(const Framebuffer& frameBuffer, const RenderPass
 }
 
 // TODO: Bind command buffer to a queue at creation time
-Fence& CommandBuffer::End(std::span<Semaphore> waitSemaphores, std::span<Semaphore> signalSemaphores)
+std::shared_ptr<Fence> CommandBuffer::End(std::span<Semaphore> waitSemaphores, std::span<Semaphore> signalSemaphores)
 {
     if (vkEndCommandBuffer(m_CommandBuffer) != VK_SUCCESS)
     {
@@ -188,7 +188,7 @@ Fence& CommandBuffer::End(std::span<Semaphore> waitSemaphores, std::span<Semapho
 
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &m_CommandBuffer;
-    auto res = vkQueueSubmit(m_Queue.Get(), 1, &submitInfo, m_InFlight.Get());
+    auto res = vkQueueSubmit(m_Queue.Get(), 1, &submitInfo, m_InFlight->Get());
     if (res != VkResult::VK_SUCCESS)
     {
         throw std::runtime_error("Faied to submit cmd buffer to queue");
@@ -197,7 +197,7 @@ Fence& CommandBuffer::End(std::span<Semaphore> waitSemaphores, std::span<Semapho
     return m_InFlight;
 }
 
-Fence &CommandBuffer::End()
+std::shared_ptr<Fence> CommandBuffer::End()
 {
     return End(std::span<Semaphore>(), std::span<Semaphore>());
 }
@@ -259,7 +259,7 @@ void CommandBuffer::Copy(const DeviceBuffer &source, const DeviceBuffer &destina
     vkCmdCopyBuffer(m_CommandBuffer, source.Get(), destination.Get(), 1, &bufferCopy);
 }
 
-void CommandBuffer::CopyBufferToImage(const DeviceBuffer &source, const Texture &texture)
+void CommandBuffer::CopyBufferToImage(const DeviceBuffer &source, Texture &texture)
 {
     VkBufferImageCopy bufferImageCopy{};
     bufferImageCopy.bufferOffset = 0;

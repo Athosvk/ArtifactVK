@@ -62,7 +62,7 @@ Texture::Texture(VkDevice device, const PhysicalDevice &physicalDevice, const Te
 
     TransitionLayout(VkImageLayout::VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                      VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, transferCommandBuffer, destinationQueue);
-    transferCommandBuffer.End();
+    m_PendingTransferFence = transferCommandBuffer.End();
 }
 
 Texture::Texture(Texture && other) : 
@@ -83,8 +83,16 @@ Texture::~Texture()
     }
 }
 
-VkImage Texture::Get() const
+VkImage Texture::Get()
 {
+    if (m_PendingTransferFence)
+    {
+		// TODO: Allow doing this explicitly instead, as we can't read
+		// the intent behind calling `Get` this can lead to 
+		// unexpected results
+        m_PendingTransferFence->WaitAndReset();   
+		m_PendingTransferFence.reset();
+	}
     return m_Image;
 }
 
