@@ -109,7 +109,8 @@ bool PhysicalDevice::Validate(std::span<const EDeviceExtension> requiredExtensio
             m_Properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU) &&
            m_Features.geometryShader && m_QueueFamilies.GraphicsFamilyIndex.has_value() &&
            m_QueueFamilies.PresentFamilyIndex.has_value() && !m_SurfaceProperties.Formats.empty() &&
-           !m_SurfaceProperties.PresentModes.empty() && AllExtensionsAvailable(requiredExtensions);
+           !m_SurfaceProperties.PresentModes.empty() && AllExtensionsAvailable(requiredExtensions) &&
+           m_Features.samplerAnisotropy;
 }
 
 bool PhysicalDevice::AllExtensionsAvailable(std::span<const EDeviceExtension> extensions) const
