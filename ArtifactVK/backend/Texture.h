@@ -1,9 +1,11 @@
 #pragma once
 #include <span>
+#include <memory>
 
 #include <vulkan/vulkan.h>
 
 #include "Buffer.h"
+#include "Fence.h"
 
 struct TextureCreateInfo
 {
@@ -12,11 +14,6 @@ struct TextureCreateInfo
     std::span<const unsigned char> Pixels;
 
     VkDeviceSize BufferSize() const;
-};
-
-struct LayoutTransition
-{
-
 };
 
 class Texture
@@ -28,7 +25,7 @@ public:
     Texture(Texture && other);
     ~Texture();
 
-    VkImage Get() const;
+    VkImage Get();
 
     uint32_t GetWidth() const;
     uint32_t GetHeight() const;
@@ -49,4 +46,5 @@ public:
     uint32_t m_Height;
 
     std::optional<ImageMemoryBarrier> m_PendingAcquireBarrier;
+    std::shared_ptr<Fence> m_PendingTransferFence;
 };

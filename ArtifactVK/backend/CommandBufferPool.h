@@ -44,10 +44,10 @@ class CommandBuffer
     void BeginSingleTake();
     void Draw(const Framebuffer& frameBuffer, const RenderPass& renderPass, const RasterPipeline& pipeline, VertexBuffer& vertexBuffer, const UniformBuffer& uniformBuffer);
     void DrawIndexed(const Framebuffer& frameBuffer, const RenderPass& renderPass, const RasterPipeline& pipeline, VertexBuffer& vertexBuffer, IndexBuffer& indexBuffer, const UniformBuffer& uniformBuffer);
-    Fence& End(std::span<Semaphore> waitSemaphores, std::span<Semaphore> signalSemaphores);
-    Fence& End();
+    std::shared_ptr<Fence> End(std::span<Semaphore> waitSemaphores, std::span<Semaphore> signalSemaphores);
+    std::shared_ptr<Fence> End();
     void Copy(const DeviceBuffer &source, const DeviceBuffer &destination);
-    void CopyBufferToImage(const DeviceBuffer& source, const Texture& texture);
+    void CopyBufferToImage(const DeviceBuffer& source, Texture& texture);
     void InsertBarrier(const BufferMemoryBarrier &barrier) const;
     void InsertBarrier(const ImageMemoryBarrier &barrier) const;
     void InsertBarriers(const BufferMemoryBarrierArray &barriers) const;
@@ -62,7 +62,13 @@ class CommandBuffer
     bool m_Moved = false;
     VkCommandBuffer m_CommandBuffer;
     // TODO: Pool these fences in the CommandBufferPool
-    Fence m_InFlight;
+    // This is a shared ptr so that the fence can outlive (the ArtifactVK
+    // representation of) the command buffer
+    // TODO: But, do we really have to? We can probably map the construct
+    // better so that End consumes into an executed command buffer,
+    // possibly with a recyclable command buffer handle if it wasn't single
+    // take
+    std::shared_ptr<Fence> m_InFlight;
     CommandBufferStatus m_Status = CommandBufferStatus::Reset;
     Queue m_Queue;
     std::vector<BufferMemoryBarrierArray> m_PendingBarriers;
