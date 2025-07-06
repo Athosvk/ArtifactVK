@@ -19,3 +19,8 @@ uint32_t Queue::GetFamilyIndex() const
 {
     return m_QueueFamilyIndex;
 }
+
+bool Queue::RequiresTransfer(const Queue &other)
+{
+    return other.m_QueueFamilyIndex != m_QueueFamilyIndex;
+}

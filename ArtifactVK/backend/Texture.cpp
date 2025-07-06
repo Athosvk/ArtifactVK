@@ -53,14 +53,16 @@ Texture::Texture(VkDevice device, const PhysicalDevice &physicalDevice, const Te
     }
 
     vkBindImageMemory(device, m_Image, m_Memory, 0);
+
+    transferCommandBuffer.BeginSingleTake();
     TransitionLayout(VkImageLayout::VK_IMAGE_LAYOUT_UNDEFINED, VkImageLayout::VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                      transferCommandBuffer,
-                     transferCommandBuffer.GetQueue());
+                     std::nullopt);
     transferCommandBuffer.CopyBufferToImage(m_StagingBuffer, *this);
 
     TransitionLayout(VkImageLayout::VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                      VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, transferCommandBuffer, destinationQueue);
-    
+    transferCommandBuffer.End();
 }
 
 Texture::Texture(Texture && other) : 
@@ -96,6 +98,12 @@ uint32_t Texture::GetHeight() const
     return m_Height;
 }
 
+
+std::optional<ImageMemoryBarrier> Texture::TakePendingAcquire()
+{
+    return std::move(m_PendingAcquireBarrier);
+}
+
 DeviceBuffer Texture::CreateStagingBuffer(size_t size, const PhysicalDevice &physicalDevice, VkDevice device) const
 {
 	auto createStagingBufferInfo =
@@ -106,9 +114,22 @@ DeviceBuffer Texture::CreateStagingBuffer(size_t size, const PhysicalDevice &phy
     return DeviceBuffer(device, physicalDevice, createStagingBufferInfo);
 }
 
-void Texture::TransitionLayout(VkImageLayout from, VkImageLayout to, CommandBuffer &commandBuffer, Queue destinationQueue)
+void Texture::TransitionLayout(VkImageLayout from, VkImageLayout to, CommandBuffer &commandBuffer, std::optional<Queue> destinationQueue)
 {
-    auto barrier = ImageMemoryBarrier{*this, commandBuffer.GetQueue(), destinationQueue, 0, 0, from, to, 0, 0};
+    // Only handle transfer requests for post-upload QOT requests
+    // TODO: Properly handle other QOTs as well?
+    assert(destinationQueue.has_value() ^ !(from == VkImageLayout::VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL &&
+                                            to == VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL));
+    auto shouldTransfer = destinationQueue.has_value() && destinationQueue->RequiresTransfer(commandBuffer.GetQueue());
+    
+    auto queueSpecifier = shouldTransfer ? QueueSpecifier
+    {
+        .SourceQueue = commandBuffer.GetQueue(), .DestionationQueue = *destinationQueue
+    } : std::optional<QueueSpecifier>(std::nullopt);
+
+    auto barrier = ImageMemoryBarrier{*this,
+        queueSpecifier,
+        0, 0, from, to, 0, 0};
     if (from == VkImageLayout::VK_IMAGE_LAYOUT_UNDEFINED && to == VkImageLayout::VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
     {
         barrier.SourceAccessMask = 0;   
@@ -120,16 +141,43 @@ void Texture::TransitionLayout(VkImageLayout from, VkImageLayout to, CommandBuff
              to == VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
     {
         barrier.SourceAccessMask = VkAccessFlagBits::VK_ACCESS_TRANSFER_WRITE_BIT;
-        barrier.DestinationAccessMask = VkAccessFlagBits::VK_ACCESS_SHADER_READ_BIT;
+        // We'll split the barrier if we transfer (and VK_ACCESS_SHADER_READ_BIT
+        // won't mean anything when performed on a dedicated transfer queue).
+        // Same for the pipeline stage.
+        // TODO: Allow for more granularity than general shader read?
+        barrier.DestinationAccessMask = shouldTransfer ? 0 : VkAccessFlagBits::VK_ACCESS_SHADER_READ_BIT;
         barrier.SourceStageMask = VkPipelineStageFlagBits::VK_PIPELINE_STAGE_TRANSFER_BIT;
         // TODO: Be more general or allow specifying it?
-        barrier.DestinationStageMask = VkPipelineStageFlagBits::VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT |
-                                       VkPipelineStageFlagBits::VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+        barrier.DestinationStageMask = shouldTransfer ? VkPipelineStageFlagBits::VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT : 
+            // TODO: Allow reads in vertex/other shader stages?
+            VkPipelineStageFlagBits::VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VkPipelineStageFlagBits::VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
     }
     else
     {
         throw std::invalid_argument("Combination not supported");
     }
+
     commandBuffer.InsertBarrier(barrier);
+
+    if (shouldTransfer)
+    {
+        ImageMemoryBarrier acquireBarrier
+        {
+            (*this), 
+            queueSpecifier, 
+            // TODO: Allow for more granularity than general shader read?
+            0, VkAccessFlagBits::VK_ACCESS_SHADER_READ_BIT,
+            // See vulkan spec 1.3 - 6.6.1: we need to re-specify the 
+            // layout transition parameters here, even though the transition
+            // already occurred during the release
+            from,
+            to,
+			VkPipelineStageFlagBits::VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+            // TODO: Allow reads in vertex/other shader stages?
+			VkPipelineStageFlagBits::VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT |
+                                       VkPipelineStageFlagBits::VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT
+		};
+		m_PendingAcquireBarrier.emplace(acquireBarrier);
+    }
 }
 
