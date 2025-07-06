@@ -108,7 +108,28 @@ DeviceBuffer Texture::CreateStagingBuffer(size_t size, const PhysicalDevice &phy
 
 void Texture::TransitionLayout(VkImageLayout from, VkImageLayout to, CommandBuffer &commandBuffer, Queue destinationQueue)
 {
-    commandBuffer.InsertBarrier(
-        ImageMemoryBarrier{*this, commandBuffer.GetQueue(), destinationQueue, 0, 0, from, to, 0, 0});
+    auto barrier = ImageMemoryBarrier{*this, commandBuffer.GetQueue(), destinationQueue, 0, 0, from, to, 0, 0};
+    if (from == VkImageLayout::VK_IMAGE_LAYOUT_UNDEFINED && to == VkImageLayout::VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
+    {
+        barrier.SourceAccessMask = 0;   
+        barrier.DestinationAccessMask = VkAccessFlagBits::VK_ACCESS_TRANSFER_WRITE_BIT;
+        barrier.SourceStageMask = VkPipelineStageFlagBits::VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+        barrier.DestinationStageMask = VkPipelineStageFlagBits::VK_PIPELINE_STAGE_TRANSFER_BIT;
+    }
+    else if (from == VkImageLayout::VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL &&
+             to == VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+    {
+        barrier.SourceAccessMask = VkAccessFlagBits::VK_ACCESS_TRANSFER_WRITE_BIT;
+        barrier.DestinationAccessMask = VkAccessFlagBits::VK_ACCESS_SHADER_READ_BIT;
+        barrier.SourceStageMask = VkPipelineStageFlagBits::VK_PIPELINE_STAGE_TRANSFER_BIT;
+        // TODO: Be more general or allow specifying it?
+        barrier.DestinationStageMask = VkPipelineStageFlagBits::VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT |
+                                       VkPipelineStageFlagBits::VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+    }
+    else
+    {
+        throw std::invalid_argument("Combination not supported");
+    }
+    commandBuffer.InsertBarrier(barrier);
 }
 
