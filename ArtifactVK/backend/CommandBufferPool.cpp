@@ -67,6 +67,20 @@ void CommandBuffer::Begin()
     m_Status = CommandBufferStatus::Recording;
 }
 
+void CommandBuffer::BeginSingleTake()
+{
+    // TODO: Needs to handle pending acquires?
+    // TODO: Use `Begin` instead and allow for a one-time fire
+    VkCommandBufferBeginInfo beginInfo{};
+    beginInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    beginInfo.flags = VkCommandBufferUsageFlagBits::VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+    if (vkBeginCommandBuffer(m_CommandBuffer, &beginInfo) != VkResult::VK_SUCCESS)
+    {
+        throw std::runtime_error("Could not begin command buffer");
+    }
+    m_Status = CommandBufferStatus::Recording;
+}
+
 void CommandBuffer::Draw(const Framebuffer& frameBuffer, const RenderPass& renderPass, const RasterPipeline& pipeline, 
     VertexBuffer& vertexBuffer, const UniformBuffer& uniformBuffer)
 {
@@ -238,12 +252,6 @@ void CommandBuffer::HandleAcquire(DeviceBuffer &buffer)
 
 void CommandBuffer::Copy(const DeviceBuffer &source, const DeviceBuffer &destination)
 {
-    // TODO: Needs to handle pending acquires?
-    // TODO: Use `Begin` instead and allow for a one-time fire
-    VkCommandBufferBeginInfo beginInfo{};
-    beginInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    beginInfo.flags = VkCommandBufferUsageFlagBits::VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-    vkBeginCommandBuffer(m_CommandBuffer, &beginInfo);
     VkBufferCopy bufferCopy{};
     bufferCopy.srcOffset = 0;
     bufferCopy.dstOffset = 0;
@@ -253,11 +261,6 @@ void CommandBuffer::Copy(const DeviceBuffer &source, const DeviceBuffer &destina
 
 void CommandBuffer::CopyBufferToImage(const DeviceBuffer &source, const Texture &texture)
 {
-    VkCommandBufferBeginInfo beginInfo{};
-    beginInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    beginInfo.flags = VkCommandBufferUsageFlagBits::VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-    vkBeginCommandBuffer(m_CommandBuffer, &beginInfo);
     VkBufferImageCopy bufferImageCopy{};
     bufferImageCopy.bufferOffset = 0;
     bufferImageCopy.bufferRowLength = 0;
@@ -282,8 +285,16 @@ void CommandBuffer::InsertBarrier(const BufferMemoryBarrier &barrier) const
     vkBarrier.buffer = barrier.Barrier.Buffer.get().Get();
     vkBarrier.srcAccessMask = barrier.Barrier.SourceAccessMask;
     vkBarrier.dstAccessMask = barrier.Barrier.DestinationAccessMask;
-    vkBarrier.srcQueueFamilyIndex = barrier.Barrier.SourceQueue.GetFamilyIndex();
-    vkBarrier.dstQueueFamilyIndex = barrier.Barrier.DestinationQueue.GetFamilyIndex();
+    if (barrier.Barrier.Queues.has_value())
+    {
+		vkBarrier.srcQueueFamilyIndex = barrier.Barrier.Queues->SourceQueue.GetFamilyIndex();
+		vkBarrier.dstQueueFamilyIndex = barrier.Barrier.Queues->DestionationQueue.GetFamilyIndex();
+    }
+    else
+    {
+		vkBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		vkBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    }
     vkBarrier.offset = 0;
     vkBarrier.size = VK_WHOLE_SIZE;
 
@@ -297,8 +308,16 @@ void CommandBuffer::InsertBarrier(const ImageMemoryBarrier &barrier) const
     memoryBarrier.sType = VkStructureType::VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
     memoryBarrier.oldLayout = barrier.SourceLayout;
     memoryBarrier.newLayout = barrier.DestinationLayout;
-    memoryBarrier.srcQueueFamilyIndex = barrier.SourceQueue.GetFamilyIndex();
-    memoryBarrier.dstQueueFamilyIndex = barrier.DestinationQueue.GetFamilyIndex();
+    if (barrier.Queues.has_value())
+    {
+		memoryBarrier.srcQueueFamilyIndex = barrier.Queues->SourceQueue.GetFamilyIndex();
+		memoryBarrier.dstQueueFamilyIndex = barrier.Queues->DestionationQueue.GetFamilyIndex();
+    }
+    else
+    {
+		memoryBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		memoryBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    }
     memoryBarrier.image = barrier.Image.get().Get();
 
     memoryBarrier.subresourceRange.aspectMask = VkImageAspectFlagBits::VK_IMAGE_ASPECT_COLOR_BIT;
@@ -325,8 +344,16 @@ void CommandBuffer::InsertBarriers(const BufferMemoryBarrierArray &barriers) con
 		vkBarrier.buffer = barrier.Buffer.get().Get();
 		vkBarrier.srcAccessMask = barrier.SourceAccessMask;
 		vkBarrier.dstAccessMask = barrier.DestinationAccessMask;
-		vkBarrier.srcQueueFamilyIndex = barrier.SourceQueue.GetFamilyIndex();
-		vkBarrier.dstQueueFamilyIndex = barrier.DestinationQueue.GetFamilyIndex();
+        if (barrier.Queues.has_value())
+        {
+            vkBarrier.srcQueueFamilyIndex = barrier.Queues->SourceQueue.GetFamilyIndex();
+            vkBarrier.dstQueueFamilyIndex = barrier.Queues->DestionationQueue.GetFamilyIndex();
+        }
+        else
+        {
+            vkBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            vkBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        }
 		vkBarrier.offset = 0;
 		vkBarrier.size = VK_WHOLE_SIZE;
 		vkBarriers.push_back(vkBarrier);

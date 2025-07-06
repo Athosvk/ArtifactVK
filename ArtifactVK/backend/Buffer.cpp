@@ -78,8 +78,7 @@ void DeviceBuffer::Transfer(TransferOp transferOperation, const CommandBuffer& c
     assert(!m_PendingAcquireBarrier.has_value() && "Re-release before acquire");
     BufferMemoryBarrier releaseBarrier{
         (*this),
-        commandBuffer.GetQueue(),
-        transferOperation.Destination,
+        {{commandBuffer.GetQueue(), transferOperation.Destination}},
         VkAccessFlagBits::VK_ACCESS_TRANSFER_WRITE_BIT,
         0,
         VkPipelineStageFlagBits::VK_PIPELINE_STAGE_TRANSFER_BIT,
@@ -89,8 +88,7 @@ void DeviceBuffer::Transfer(TransferOp transferOperation, const CommandBuffer& c
 	
     BufferMemoryBarrier acquireBarrier{
         (*this),
-        commandBuffer.GetQueue(),
-        transferOperation.Destination,
+        {{commandBuffer.GetQueue(), transferOperation.Destination}},
         0,
         transferOperation.DestinationAccessMask,
         VkPipelineStageFlagBits::VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,

@@ -36,7 +36,18 @@ public:
 
     VkBuffer Get() const;
     VkDeviceSize GetSize() const;
+    /// <summary>
+    /// Transfer the buffer ownership to another queue (family)
+    ///
+    /// This assuems the most recent operation was an upload (i.e. `VkPipelineStageFlagBits::VK_PIPELINE_STAGE_TRANSFER_BIT`)
+    /// </summary>
+    /// <param name="transferOperation">The transfer operation parameters, specifying the context in which the buffer will be used on the target</param>
+    /// <param name="commandBuffer">The (transfer) command buffer from which` queue (family) the buffer will be released</param>
     void Transfer(TransferOp transferOperation, const CommandBuffer& commandBuffer);
+
+    /// <summary>
+    /// Takes the transfer acquire barrier, if there is any, for a previously enqueued release barrier used for uploading data
+    /// </summary>
     std::optional<BufferMemoryBarrier> TakePendingAcquire();
 
     template<typename T>

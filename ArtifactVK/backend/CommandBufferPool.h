@@ -41,6 +41,7 @@ class CommandBuffer
 
     void WaitFence();
     void Begin();
+    void BeginSingleTake();
     void Draw(const Framebuffer& frameBuffer, const RenderPass& renderPass, const RasterPipeline& pipeline, VertexBuffer& vertexBuffer, const UniformBuffer& uniformBuffer);
     void DrawIndexed(const Framebuffer& frameBuffer, const RenderPass& renderPass, const RasterPipeline& pipeline, VertexBuffer& vertexBuffer, IndexBuffer& indexBuffer, const UniformBuffer& uniformBuffer);
     Fence& End(std::span<Semaphore> waitSemaphores, std::span<Semaphore> signalSemaphores);
