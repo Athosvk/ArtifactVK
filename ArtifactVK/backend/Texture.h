@@ -7,6 +7,8 @@
 #include "Buffer.h"
 #include "Fence.h"
 
+class PhysicalDevice;
+
 struct TextureCreateInfo
 {
     uint32_t Width;
@@ -35,6 +37,7 @@ public:
     /// </summary>
     std::optional<ImageMemoryBarrier> TakePendingAcquire();
   private:
+    void CreateTextureSampler(VkDevice device, const PhysicalDevice& physicalDevice);
     DeviceBuffer CreateStagingBuffer(size_t size, const PhysicalDevice &physicalDevice, VkDevice device) const;
     void TransitionLayout(VkImageLayout from, VkImageLayout to, CommandBuffer &commandBuffer, std::optional<Queue> destinationQueue);
 
@@ -47,4 +50,6 @@ public:
 
     std::optional<ImageMemoryBarrier> m_PendingAcquireBarrier;
     std::shared_ptr<Fence> m_PendingTransferFence;
+    VkImageView m_ImageView;
+    VkSampler m_Sampler;
 };
