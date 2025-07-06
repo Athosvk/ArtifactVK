@@ -63,14 +63,31 @@ Texture::Texture(VkDevice device, const PhysicalDevice &physicalDevice, const Te
     TransitionLayout(VkImageLayout::VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                      VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, transferCommandBuffer, destinationQueue);
     m_PendingTransferFence = transferCommandBuffer.End();
+
+    VkImageViewCreateInfo viewInfo{};
+    viewInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    viewInfo.image = m_Image;
+    viewInfo.viewType = VkImageViewType::VK_IMAGE_VIEW_TYPE_2D;
+    viewInfo.format = VkFormat::VK_FORMAT_R8G8B8A8_SRGB;
+    viewInfo.subresourceRange.aspectMask = VkImageAspectFlagBits::VK_IMAGE_ASPECT_COLOR_BIT;
+    viewInfo.subresourceRange.baseMipLevel = 0;
+    viewInfo.subresourceRange.levelCount = 1;
+    viewInfo.subresourceRange.baseArrayLayer = 0;
+    viewInfo.subresourceRange.layerCount = 1;
+
+    if (vkCreateImageView(device, &viewInfo, nullptr, &m_ImageView) != VkResult::VK_SUCCESS)
+    {
+        throw std::runtime_error("Failed to create texture image view");
+    }
+    CreateTextureSampler(device, physicalDevice);
 }
 
 Texture::Texture(Texture && other) : 
     m_Device(other.m_Device), m_StagingBuffer(std::move(other.m_StagingBuffer)), 
-    m_Image(std::exchange(other.m_Image, VK_NULL_HANDLE)), 
-    m_Memory(std::exchange(other.m_Memory, VK_NULL_HANDLE)),
-    m_Width(other.m_Width),
-    m_Height(other.m_Height)
+    m_Image(std::exchange(other.m_Image, VK_NULL_HANDLE)), m_Memory(std::exchange(other.m_Memory, VK_NULL_HANDLE)),
+    m_Width(other.m_Width), m_Height(other.m_Height), 
+    m_PendingAcquireBarrier(std::move(other.m_PendingAcquireBarrier)), 
+    m_PendingTransferFence(other.m_PendingTransferFence), m_ImageView(other.m_ImageView)
 {  
 }
 
@@ -78,7 +95,9 @@ Texture::~Texture()
 {
     if (m_Image != VK_NULL_HANDLE)
     {
+        vkDestroyImageView(m_Device, m_ImageView, nullptr);
         vkDestroyImage(m_Device, m_Image, nullptr);
+        vkDestroySampler(m_Device, m_Sampler, nullptr);
         vkFreeMemory(m_Device, m_Memory, nullptr);
     }
 }
@@ -110,6 +129,33 @@ uint32_t Texture::GetHeight() const
 std::optional<ImageMemoryBarrier> Texture::TakePendingAcquire()
 {
     return std::move(m_PendingAcquireBarrier);
+}
+
+void Texture::CreateTextureSampler(VkDevice device, const PhysicalDevice& physicalDevice)
+{
+    VkSamplerCreateInfo samplerInfo{};
+    samplerInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    samplerInfo.magFilter = VkFilter::VK_FILTER_LINEAR;
+    samplerInfo.minFilter = VkFilter::VK_FILTER_LINEAR;
+
+    samplerInfo.addressModeU = VkSamplerAddressMode::VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    samplerInfo.addressModeV = VkSamplerAddressMode::VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    samplerInfo.addressModeW = VkSamplerAddressMode::VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    samplerInfo.anisotropyEnable = VK_TRUE;
+    samplerInfo.maxAnisotropy = physicalDevice.GetProperties().limits.maxSamplerAnisotropy;
+    samplerInfo.borderColor = VkBorderColor::VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+    samplerInfo.unnormalizedCoordinates = VK_FALSE;
+    samplerInfo.compareEnable = VK_FALSE;
+    samplerInfo.compareOp = VkCompareOp::VK_COMPARE_OP_ALWAYS;
+    samplerInfo.mipmapMode = VkSamplerMipmapMode::VK_SAMPLER_MIPMAP_MODE_LINEAR;
+    samplerInfo.mipLodBias = 0.0f;
+    samplerInfo.minLod = 0.0f;
+    samplerInfo.maxLod = 0.0f;
+
+    if (vkCreateSampler(device, &samplerInfo, nullptr, &m_Sampler) != VkResult::VK_SUCCESS)
+    {
+        throw std::runtime_error("Could not create sampler for texture");
+    }
 }
 
 DeviceBuffer Texture::CreateStagingBuffer(size_t size, const PhysicalDevice &physicalDevice, VkDevice device) const
