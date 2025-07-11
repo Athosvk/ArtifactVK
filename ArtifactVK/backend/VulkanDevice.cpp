@@ -84,6 +84,15 @@ DeviceBuffer &VulkanDevice::CreateBuffer(const CreateBufferInfo& createInfo)
 
 Texture &VulkanDevice::CreateTexture(const TextureCreateInfo &createInfo)
 {
+    // TODO: Allow use of multiple textures, use shared layout binding.
+    VkDescriptorSetLayoutBinding layoutBinding{};
+    layoutBinding.binding = 1;
+    layoutBinding.descriptorCount = 1;
+    layoutBinding.descriptorType = VkDescriptorType::VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    layoutBinding.pImmutableSamplers = nullptr;
+    layoutBinding.stageFlags =
+        VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT | VkShaderStageFlagBits::VK_SHADER_STAGE_COMPUTE_BIT;
+    
     return *m_Textures.emplace_back(std::make_unique<Texture>(m_Device, m_PhysicalDevice, createInfo, GetTransferCommandBuffer(), 
         // TODO: Should also allow transferring to compute
         *m_GraphicsQueue));
@@ -327,7 +336,6 @@ VulkanDevice::~VulkanDevice()
 
     for (VkDescriptorSetLayout descriptorSet : m_DescriptorSetLayouts)
     {
-        vkDestroyDescriptorSetLayout(m_Device, descriptorSet, nullptr);
     }
     m_DescriptorSetLayouts.clear();
    
