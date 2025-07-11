@@ -96,6 +96,7 @@
     <ClCompile Include="backend\Framebuffer.cpp" />
     <ClCompile Include="backend\CommandBufferPool.cpp" />
     <ClCompile Include="backend\Fence.cpp" />
+    <ClCompile Include="backend\Viewport.cpp" />
     <ClCompile Include="Image.cpp" />
     <ClCompile Include="backend\PhysicalDevice.cpp" />
     <ClCompile Include="backend\Queue.cpp" />
