@@ -96,7 +96,7 @@ RasterPipeline App::LoadShaderPipeline(VulkanDevice &vulkanDevice, const RenderP
 {
     auto builder = RasterPipelineBuilder("spirv/shaders/triangle.vert.spv", "spirv/shaders/triangle.frag.spv");
     builder.SetVertexBindingDescription(Vertex::GetVertexBindingDescription());
-    // Just get the first, they're alll the same. 
+    // Just get the first, they're all the same. 
 
     // TODO: Have nicer outer bindings for it (i.e. less directly translated from Vulkan)_
     builder.AddUniformBuffer(m_PerFrameState.front().UniformBuffer);
