@@ -10,8 +10,8 @@ BindSet::BindSet(const DescriptorSet &descriptorSet, VkDevice device) :
 {
 }
 
-BindSet::BindSet(BindSet &&other) : 
-	m_DescriptorSet(other.m_DescriptorSet),
+BindSet::BindSet(BindSet &&other)
+    : m_DescriptorSet(other.m_DescriptorSet),
       m_StagingDescriptorSetWrites(std::move(other.m_StagingDescriptorSetWrites)), m_Device(other.m_Device),
       m_FinishedOrMoved(false)
 {
@@ -20,16 +20,16 @@ BindSet::BindSet(BindSet &&other) :
 
 BindSet::~BindSet()
 {
-    if (!m_FinishedOrMoved)
-    {
-		// TODO: In a destructor?! Not nice, maybe find a different way
-        throw std::runtime_error("Did not call Finish on a bindset. Any bind actions were discarded");
-	}
+    assert(m_FinishedOrMoved && "Did not call Finish on a bindset. Any bind actions were discarded");
 }
 
 BindSet &BindSet::operator=(BindSet && other)
 {
-	
+    m_DescriptorSet = other.m_DescriptorSet;
+    m_StagingDescriptorSetWrites = std::move(other.m_StagingDescriptorSetWrites);
+    m_Device = other.m_Device;
+    m_FinishedOrMoved = false;
+    return *this;
 }
 
 BindSet &BindSet::BindTexture(const Texture &texture)
@@ -42,7 +42,7 @@ BindSet &BindSet::BindUniformBuffer(const UniformBuffer& buffer)
 {
 	VkWriteDescriptorSet descriptorWriteInfo{};
 	descriptorWriteInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	descriptorWriteInfo.dstSet = m_DescriptorSet.Get();
+	descriptorWriteInfo.dstSet = m_DescriptorSet.get().Get();
 	descriptorWriteInfo.dstBinding = 0;
 
 	descriptorWriteInfo.descriptorType = VkDescriptorType::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -50,8 +50,10 @@ BindSet &BindSet::BindUniformBuffer(const UniformBuffer& buffer)
 	descriptorWriteInfo.dstArrayElement = 0;
 	descriptorWriteInfo.descriptorCount = 1;
 
-	VkDescriptorBufferInfo bufferInfo = buffer.GetDescriptorInfo();
-	descriptorWriteInfo.pBufferInfo = &bufferInfo;
+	// Just need to keep this alive up to the point at which we bulk write
+    auto& bufferInfo = m_BufferInfos.emplace_back(std::make_unique<VkDescriptorBufferInfo>(buffer.GetDescriptorInfo()));
+
+	descriptorWriteInfo.pBufferInfo = bufferInfo.get();
 	descriptorWriteInfo.pImageInfo = nullptr;
 	descriptorWriteInfo.pTexelBufferView = nullptr;
     m_StagingDescriptorSetWrites.emplace_back(descriptorWriteInfo);
@@ -77,12 +79,16 @@ VkDescriptorSetLayout DescriptorSet::GetLayout() const
 
 BindSet DescriptorSet::BindTexture(const Texture& texture)
 {
-    return BindSet(*this, m_Device).BindTexture(texture);
+    auto bindset = BindSet(*this, m_Device);
+    bindset.BindTexture(texture);
+    return bindset;
 }
 
 BindSet DescriptorSet::BindUniformBuffer(const UniformBuffer& buffer)
 {
-    return BindSet(*this, m_Device).BindUniformBuffer(buffer);
+    auto bindset = BindSet(*this, m_Device);
+    bindset.BindUniformBuffer(buffer);
+    return bindset;
 }
 
 DescriptorSet::DescriptorSet(VkDescriptorSetLayout layout, VkDevice device, VkDescriptorSet set) : 

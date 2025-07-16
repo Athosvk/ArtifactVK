@@ -112,8 +112,9 @@ void App::RecordFrame(PerFrameState& state)
     state.CommandBuffer.Begin();
     auto uniforms = GetUniforms();
     state.UniformBuffer.UploadData(GetUniforms());
+    m_DescriptorSet.BindUniformBuffer(state.UniformBuffer).Finish();
     state.CommandBuffer.DrawIndexed(m_SwapchainFramebuffers.GetCurrent(), m_MainPass, m_RenderFullscreen, m_VertexBuffer, m_IndexBuffer, 
-        state.UniformBuffer);
+        m_DescriptorSet);
     state.CommandBuffer.End(std::span{ &state.ImageAvailable, 1 }, std::span{ &state.RenderFinished, 1 });
     
     m_VulkanInstance.GetActiveDevice().Present(std::span{&state.RenderFinished, 1});

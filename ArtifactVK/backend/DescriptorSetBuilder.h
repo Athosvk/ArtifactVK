@@ -25,8 +25,9 @@ class BindSet
     void Finish();
 
   private:
-    const DescriptorSet &m_DescriptorSet;
+    std::reference_wrapper<const DescriptorSet> m_DescriptorSet;
     std::vector<VkWriteDescriptorSet> m_StagingDescriptorSetWrites;
+    std::vector<std::unique_ptr<VkDescriptorBufferInfo>> m_BufferInfos;
     VkDevice m_Device;
     bool m_FinishedOrMoved = false;
 };

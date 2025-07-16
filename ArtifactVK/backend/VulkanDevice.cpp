@@ -308,7 +308,8 @@ VulkanDevice::VulkanDevice(PhysicalDevice &physicalDevice, const VkPhysicalDevic
     
     m_TransferCommandBufferPool = m_CommandBufferPools.emplace_back(std::make_unique<CommandBufferPool>(CreateTransferCommandBufferPool())).get();
     // Arbitrary size
-    m_DescriptorPool = std::make_unique<DescriptorPool>(m_Device, DescriptorPoolCreateInfo{64});
+    m_DescriptorPool = std::make_unique<DescriptorPool>(
+        m_Device, DescriptorPoolCreateInfo{64, {VkDescriptorType::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER}});
 }
 
 VulkanDevice::VulkanDevice(VulkanDevice &&other)

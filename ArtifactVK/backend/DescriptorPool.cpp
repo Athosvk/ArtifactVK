@@ -43,7 +43,7 @@ VkDescriptorSet DescriptorPool::CreateDescriptorSet(VkDescriptorSetLayout layout
     // TODO: Allocate for all uniform buffers at once
     VkDescriptorSetAllocateInfo allocInfo{};
     allocInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    allocInfo.descriptorPool = m_DescriptorPools[VkDescriptorType::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER];
+    allocInfo.descriptorPool = m_DescriptorPools.at(VkDescriptorType::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
     allocInfo.descriptorSetCount = 1;
     allocInfo.pSetLayouts = &layout;
 
