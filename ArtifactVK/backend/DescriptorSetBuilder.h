@@ -13,6 +13,12 @@ class BindSet
 {
   public:
     BindSet(const DescriptorSet& descriptorSet, VkDevice device);
+    BindSet(const BindSet &) = delete;
+    BindSet(BindSet&& other);
+    ~BindSet();
+
+    BindSet &operator=(const BindSet &) = delete;
+    BindSet &operator=(BindSet && other);
 
     BindSet &BindTexture(const Texture& texture);
     BindSet &BindUniformBuffer(const UniformBuffer& buffer);
@@ -22,6 +28,7 @@ class BindSet
     const DescriptorSet &m_DescriptorSet;
     std::vector<VkWriteDescriptorSet> m_StagingDescriptorSetWrites;
     VkDevice m_Device;
+    bool m_FinishedOrMoved = false;
 };
 
 class DescriptorSet

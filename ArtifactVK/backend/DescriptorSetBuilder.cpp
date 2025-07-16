@@ -10,6 +10,28 @@ BindSet::BindSet(const DescriptorSet &descriptorSet, VkDevice device) :
 {
 }
 
+BindSet::BindSet(BindSet &&other) : 
+	m_DescriptorSet(other.m_DescriptorSet),
+      m_StagingDescriptorSetWrites(std::move(other.m_StagingDescriptorSetWrites)), m_Device(other.m_Device),
+      m_FinishedOrMoved(false)
+{
+    other.m_FinishedOrMoved = true;
+}
+
+BindSet::~BindSet()
+{
+    if (!m_FinishedOrMoved)
+    {
+		// TODO: In a destructor?! Not nice, maybe find a different way
+        throw std::runtime_error("Did not call Finish on a bindset. Any bind actions were discarded");
+	}
+}
+
+BindSet &BindSet::operator=(BindSet && other)
+{
+	
+}
+
 BindSet &BindSet::BindTexture(const Texture &texture)
 {
 	// TODO
@@ -38,6 +60,7 @@ BindSet &BindSet::BindUniformBuffer(const UniformBuffer& buffer)
 
 void BindSet::Finish()
 {
+    m_FinishedOrMoved = true;
     vkUpdateDescriptorSets(m_Device, static_cast<uint32_t>(m_StagingDescriptorSetWrites.size()),
 		m_StagingDescriptorSetWrites.data(), 0, nullptr);
 }
