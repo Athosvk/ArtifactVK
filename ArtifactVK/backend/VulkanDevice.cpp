@@ -72,11 +72,6 @@ VkExtent2D VulkanDevice::SelectSwapchainExtent(GLFWwindow& window, const Surface
     }
 }
 
-VkDescriptorSet VulkanDevice::CreateDescriptorSet(const UniformBuffer &uniformBuffer)
-{
-    return m_DescriptorPool->CreateDescriptorSet(uniformBuffer);
-}
-
 DeviceBuffer &VulkanDevice::CreateBuffer(const CreateBufferInfo& createInfo)
 {
     return *m_Buffers.emplace_back(std::make_unique<DeviceBuffer>(m_Device, m_PhysicalDevice, createInfo));
@@ -96,6 +91,11 @@ Texture &VulkanDevice::CreateTexture(const TextureCreateInfo &createInfo)
     return *m_Textures.emplace_back(std::make_unique<Texture>(m_Device, m_PhysicalDevice, createInfo, GetTransferCommandBuffer(), 
         // TODO: Should also allow transferring to compute
         *m_GraphicsQueue));
+}
+
+DescriptorSet VulkanDevice::CreateDescriptorSet(DescriptorSetBuilder builder)
+{
+    return builder.Build(*m_DescriptorPool.get(), m_Device);
 }
 
 void VulkanDevice::WaitForIdle() const
@@ -250,8 +250,15 @@ RasterPipeline VulkanDevice::CreateRasterPipeline(RasterPipelineBuilder &&pipeli
 
     pipelineInfo.pColorBlendState = &colorBlendState;
     pipelineInfo.pDynamicState = &dynamicState;
+    auto descriptorSetLayout = pipelineBuilder.GetDescriptorSet();
     
-    auto createInfo = PipelineCreateInfo{pipelineInfo, pipelineBuilder.GetDescriptorSets(), renderPass};
+    std::vector<VkDescriptorSetLayout> layouts{};
+    if (descriptorSetLayout.has_value())
+    {
+        layouts = {descriptorSetLayout->get().GetLayout()};
+    }
+    
+    auto createInfo = PipelineCreateInfo{pipelineInfo, layouts, renderPass};
     // TODO: Manage here so that you cannot destory a pipeline before destroying its
     // descriptor set (layout)
     return RasterPipeline(m_Device, createInfo);

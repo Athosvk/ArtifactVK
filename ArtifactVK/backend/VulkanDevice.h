@@ -22,6 +22,7 @@
 #include "DescriptorPool.h"
 #include "Buffer.h"
 #include "Texture.h"
+#include "DescriptorSetBuilder.h"
 
 class PhysicalDevice;
 struct GLFWwindow;
@@ -72,8 +73,9 @@ class VulkanDevice
 
     DeviceBuffer &CreateBuffer(const CreateBufferInfo& createBufferInfo);
     Texture &CreateTexture(const TextureCreateInfo& createDesc);
+    // TODO: Store for re-use
+    DescriptorSet CreateDescriptorSet(DescriptorSetBuilder builder);
   private:
-    VkDescriptorSet CreateDescriptorSet(const UniformBuffer& uniformBuffer);
     CommandBufferPool CreateTransferCommandBufferPool() const;
     void RecreateSwapchain(VkExtent2D newSize);
     ShaderModule LoadShaderModule(const std::filesystem::path &filename);

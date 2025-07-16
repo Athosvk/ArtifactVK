@@ -6,6 +6,7 @@
 #include "IndexBuffer.h"
 #include "Pipeline.h"
 #include "Barrier.h"
+#include "DescriptorSetBuilder.h"
 
 #include <cassert>
 #include <vulkan/vulkan.h>
@@ -82,7 +83,7 @@ void CommandBuffer::BeginSingleTake()
 }
 
 void CommandBuffer::Draw(const Framebuffer& frameBuffer, const RenderPass& renderPass, const RasterPipeline& pipeline, 
-    VertexBuffer& vertexBuffer, const UniformBuffer& uniformBuffer)
+    VertexBuffer& vertexBuffer, const DescriptorSet& descriptorSet)
 {
     assert(m_Status == CommandBufferStatus::Recording && "Calling draw before starting recording of command buffer");
     VkRenderPassBeginInfo renderPassBeginInfo{};
@@ -101,7 +102,7 @@ void CommandBuffer::Draw(const Framebuffer& frameBuffer, const RenderPass& rende
     vkCmdBeginRenderPass(m_CommandBuffer, &renderPassBeginInfo, VkSubpassContents::VK_SUBPASS_CONTENTS_INLINE);
     pipeline.Bind(m_CommandBuffer, viewport);
     BindVertexBuffer(vertexBuffer);
-    BindUniformBuffer(uniformBuffer, pipeline);
+    BindDescriptorSet(descriptorSet, pipeline);
     // TODO: Give user control over what to draw
 
     for (const auto &barrierArray : m_PendingBarriers)
@@ -114,7 +115,7 @@ void CommandBuffer::Draw(const Framebuffer& frameBuffer, const RenderPass& rende
 }
 
 void CommandBuffer::DrawIndexed(const Framebuffer& frameBuffer, const RenderPass& renderPass, const RasterPipeline& pipeline,
-    VertexBuffer& vertexBuffer, IndexBuffer& indexBuffer, const UniformBuffer& uniformBuffer)
+    VertexBuffer& vertexBuffer, IndexBuffer& indexBuffer, const DescriptorSet& descriptorSet)
 {
     assert(m_Status == CommandBufferStatus::Recording && "Calling draw before starting recording of command buffer");
     VkRenderPassBeginInfo renderPassBeginInfo{};
@@ -134,7 +135,7 @@ void CommandBuffer::DrawIndexed(const Framebuffer& frameBuffer, const RenderPass
     pipeline.Bind(m_CommandBuffer, viewport);
     BindVertexBuffer(vertexBuffer);
     BindIndexBuffer(indexBuffer);
-    BindUniformBuffer(uniformBuffer, pipeline);
+    BindDescriptorSet(descriptorSet, pipeline);
 
     for (const auto &barrierArray : m_PendingBarriers)
     {
@@ -221,12 +222,12 @@ void CommandBuffer::BindIndexBuffer(IndexBuffer &indexBuffer)
     HandleAcquire(buffer);
 }
 
-void CommandBuffer::BindUniformBuffer(const UniformBuffer &uniformBuffer, const RasterPipeline& pipeline)
+void CommandBuffer::BindDescriptorSet(const DescriptorSet &descriptorSet, const RasterPipeline& pipeline)
 {
-    auto descriptorSet = uniformBuffer.GetDescriptorSet();
     auto pipelineLayout = pipeline.GetPipelineLayout();
+    auto descriptorSetHandle = descriptorSet.Get();
     vkCmdBindDescriptorSets(m_CommandBuffer, VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            pipeline.GetPipelineLayout(), 0, 1, &descriptorSet, 0, nullptr);
+                            pipeline.GetPipelineLayout(), 0, 1, &descriptorSetHandle, 0, nullptr);
 }
 
 void CommandBuffer::HandleAcquire(DeviceBuffer &buffer)

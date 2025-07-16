@@ -17,6 +17,7 @@ class VertexBuffer;
 class UniformBuffer;
 class DeviceBuffer;
 class IndexBuffer;
+class DescriptorSet;
 
 struct CommandBufferPoolCreateInfo
 {
@@ -42,8 +43,8 @@ class CommandBuffer
     void WaitFence();
     void Begin();
     void BeginSingleTake();
-    void Draw(const Framebuffer& frameBuffer, const RenderPass& renderPass, const RasterPipeline& pipeline, VertexBuffer& vertexBuffer, const UniformBuffer& uniformBuffer);
-    void DrawIndexed(const Framebuffer& frameBuffer, const RenderPass& renderPass, const RasterPipeline& pipeline, VertexBuffer& vertexBuffer, IndexBuffer& indexBuffer, const UniformBuffer& uniformBuffer);
+    void Draw(const Framebuffer& frameBuffer, const RenderPass& renderPass, const RasterPipeline& pipeline, VertexBuffer& vertexBuffer, const DescriptorSet& descriptorSet);
+    void DrawIndexed(const Framebuffer& frameBuffer, const RenderPass& renderPass, const RasterPipeline& pipeline, VertexBuffer& vertexBuffer, IndexBuffer& indexBuffer, const DescriptorSet& descriptorSet);
     std::shared_ptr<Fence> End(std::span<Semaphore> waitSemaphores, std::span<Semaphore> signalSemaphores);
     std::shared_ptr<Fence> End();
     void Copy(const DeviceBuffer &source, const DeviceBuffer &destination);
@@ -55,7 +56,7 @@ class CommandBuffer
   private:
     void BindVertexBuffer(VertexBuffer &vertexBuffer);
     void BindIndexBuffer(IndexBuffer &indexBuffer);
-    void BindUniformBuffer(const UniformBuffer &uniformBuffer, const RasterPipeline& pipeline);
+    void BindDescriptorSet(const DescriptorSet &uniformBuffer, const RasterPipeline& pipeline);
     void HandleAcquire(DeviceBuffer &buffer);
     void Reset();
 

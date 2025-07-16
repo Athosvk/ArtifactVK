@@ -14,6 +14,7 @@
 #include "backend/Pipeline.h"
 #include "backend/RenderPass.h"
 #include "backend/Swapchain.h"
+#include "backend/DescriptorSetBuilder.h"
 #include "Image.h"
 
 class VertexBuffer;
@@ -64,12 +65,14 @@ class App
     std::vector<PerFrameState> CreatePerFrameState(VulkanDevice &vulkanDevice);
     constexpr static std::vector<Vertex> GetVertices();
     constexpr static std::vector<uint16_t> GetIndices();
+    DescriptorSet BuildDescriptorSet(VulkanDevice &vulkanDevice) const;
 
     Window m_Window;
     VulkanInstance m_VulkanInstance;
     RenderPass m_MainPass;
     const SwapchainFramebuffer& m_SwapchainFramebuffers;
     std::vector<PerFrameState> m_PerFrameState;
+    DescriptorSet m_DescriptorSet;
     RasterPipeline m_RenderFullscreen;
     uint32_t m_CurrentFrameIndex = 0;
     Swapchain &m_Swapchain;

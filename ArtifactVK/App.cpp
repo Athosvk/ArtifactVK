@@ -24,6 +24,7 @@ App::App()
       m_MainPass(m_VulkanInstance.GetActiveDevice().CreateRenderPass()),
       m_SwapchainFramebuffers(m_VulkanInstance.GetActiveDevice().CreateSwapchainFramebuffers(m_MainPass)),
       m_PerFrameState(CreatePerFrameState(m_VulkanInstance.GetActiveDevice())),
+      m_DescriptorSet(BuildDescriptorSet(m_VulkanInstance.GetActiveDevice())),
       m_RenderFullscreen(LoadShaderPipeline(m_VulkanInstance.GetActiveDevice(), m_MainPass)),
       m_Swapchain(m_VulkanInstance.GetActiveDevice().GetSwapchain()),
       m_VertexBuffer(m_VulkanInstance.GetActiveDevice().CreateVertexBuffer(GetVertices())),
@@ -99,7 +100,7 @@ RasterPipeline App::LoadShaderPipeline(VulkanDevice &vulkanDevice, const RenderP
     // Just get the first, they're all the same. 
 
     // TODO: Have nicer outer bindings for it (i.e. less directly translated from Vulkan)_
-    builder.AddUniformBuffer(m_PerFrameState.front().UniformBuffer);
+    builder.SetDescriptorSet(m_DescriptorSet);
     return vulkanDevice.CreateRasterPipeline(std::move(builder), renderPass);
 }
 
@@ -111,7 +112,8 @@ void App::RecordFrame(PerFrameState& state)
     state.CommandBuffer.Begin();
     auto uniforms = GetUniforms();
     state.UniformBuffer.UploadData(GetUniforms());
-    state.CommandBuffer.DrawIndexed(m_SwapchainFramebuffers.GetCurrent(), m_MainPass, m_RenderFullscreen, m_VertexBuffer, m_IndexBuffer, state.UniformBuffer);
+    state.CommandBuffer.DrawIndexed(m_SwapchainFramebuffers.GetCurrent(), m_MainPass, m_RenderFullscreen, m_VertexBuffer, m_IndexBuffer, 
+        state.UniformBuffer);
     state.CommandBuffer.End(std::span{ &state.ImageAvailable, 1 }, std::span{ &state.RenderFinished, 1 });
     
     m_VulkanInstance.GetActiveDevice().Present(std::span{&state.RenderFinished, 1});
@@ -133,24 +135,12 @@ std::vector<PerFrameState> App::CreatePerFrameState(VulkanDevice &vulkanDevice)
     auto commandBuffers = vulkanDevice.CreateGraphicsCommandBufferPool().CreateCommandBuffers(MAX_FRAMES_IN_FLIGHT, m_VulkanInstance.GetActiveDevice().GetGraphicsQueue());
     perFrameState.reserve(MAX_FRAMES_IN_FLIGHT);
     
-    auto& uniformBuffer = vulkanDevice.CreateUniformBuffer<UniformConstants>();
     for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
     {
-        if (i == 0)
-        {
-			perFrameState.emplace_back(PerFrameState{vulkanDevice.CreateDeviceSemaphore(), 
-													 vulkanDevice.CreateDeviceSemaphore(), commandBuffers[i],
-													 uniformBuffer});
-        }
-        else
-        {
-            auto& matchingUniformBuffer =
-                vulkanDevice.CreateUniformBufferFromLayout<UniformConstants>(uniformBuffer.GetDescriptorSetLayout());
-			perFrameState.emplace_back(PerFrameState{vulkanDevice.CreateDeviceSemaphore(), 
-													 vulkanDevice.CreateDeviceSemaphore(), commandBuffers[i],
-													 matchingUniformBuffer});
-        
-        }
+        auto &uniformBuffer = vulkanDevice.CreateUniformBuffer<UniformConstants>();
+        perFrameState.emplace_back(PerFrameState{vulkanDevice.CreateDeviceSemaphore(),
+                                                 vulkanDevice.CreateDeviceSemaphore(), commandBuffers[i],
+                                                 uniformBuffer});
     }
     return perFrameState;
 }
@@ -171,6 +161,11 @@ constexpr std::vector<uint16_t> App::GetIndices()
     return {
         0, 1, 2, 2, 3, 0
     };
+}
+
+DescriptorSet App::BuildDescriptorSet(VulkanDevice &vulkanDevice) const
+{
+    return vulkanDevice.CreateDescriptorSet(DescriptorSetBuilder().AddUniformBuffer());
 }
 
 constexpr VkVertexInputBindingDescription Vertex::GetBindingDescription()
