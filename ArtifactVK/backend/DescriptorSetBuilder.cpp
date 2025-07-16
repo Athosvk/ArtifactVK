@@ -1,8 +1,8 @@
 #include "DescriptorSetBuilder.h"
 
-#include "backend/UniformBuffer.h"
-#include "backend/Texture.h"
-#include "backend/DescriptorPool.h"
+#include "UniformBuffer.h"
+#include "Texture.h"
+#include "DescriptorPool.h"
 
 BindSet::BindSet(const DescriptorSet &descriptorSet, VkDevice device) : 
     m_DescriptorSet(descriptorSet),
@@ -32,7 +32,7 @@ BindSet &BindSet::BindUniformBuffer(const UniformBuffer& buffer)
 	descriptorWriteInfo.pBufferInfo = &bufferInfo;
 	descriptorWriteInfo.pImageInfo = nullptr;
 	descriptorWriteInfo.pTexelBufferView = nullptr;
-    m_StagingDescriptorSetWrites.emplace_back(buffer);
+    m_StagingDescriptorSetWrites.emplace_back(descriptorWriteInfo);
     return *this;
 }
 
@@ -45,6 +45,11 @@ void BindSet::Finish()
 VkDescriptorSet DescriptorSet::Get() const
 {
     return m_DescriptorSet;
+}
+
+VkDescriptorSetLayout DescriptorSet::GetLayout() const
+{
+    return m_Layout;
 }
 
 BindSet DescriptorSet::BindTexture(const Texture& texture)
@@ -77,7 +82,7 @@ DescriptorSet::~DescriptorSet()
 DescriptorSetBuilder &DescriptorSetBuilder::AddUniformBuffer()
 {
 	VkDescriptorSetLayoutBinding uboLayoutBinding{};
-	uboLayoutBinding.binding = m_Bindings.size();
+	uboLayoutBinding.binding = static_cast<uint32_t>(m_Bindings.size());
 	uboLayoutBinding.descriptorType = VkDescriptorType::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	uboLayoutBinding.descriptorCount = 1;
     uboLayoutBinding.stageFlags = VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT |
@@ -92,7 +97,7 @@ DescriptorSetBuilder &DescriptorSetBuilder::AddUniformBuffer()
 DescriptorSetBuilder &DescriptorSetBuilder::AddTexture()
 {
 	VkDescriptorSetLayoutBinding textureLayoutBinding{};
-	textureLayoutBinding.binding = m_Bindings.size();
+	textureLayoutBinding.binding = static_cast<uint32_t>(m_Bindings.size());
 	textureLayoutBinding.descriptorType = VkDescriptorType::VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	textureLayoutBinding.descriptorCount = 1;
     textureLayoutBinding.stageFlags = VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT |
@@ -108,7 +113,8 @@ DescriptorSet DescriptorSetBuilder::Build(DescriptorPool& pool, VkDevice device)
 {
 	VkDescriptorSetLayoutCreateInfo createInfo{};
 	createInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-	createInfo.bindingCount = m_Bindings.size();
+	// TODO: Consider a small vector or even array, as this hould be at most four bindings.
+	createInfo.bindingCount = static_cast<uint32_t>(m_Bindings.size());
 	createInfo.pBindings = m_Bindings.data();
 		
 	VkDescriptorSetLayout descriptorSetLayout;

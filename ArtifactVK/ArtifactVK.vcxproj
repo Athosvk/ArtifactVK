@@ -96,7 +96,7 @@
     <ClCompile Include="backend\Framebuffer.cpp" />
     <ClCompile Include="backend\CommandBufferPool.cpp" />
     <ClCompile Include="backend\Fence.cpp" />
-    <ClCompile Include="DescriptorSetBuilder.cpp" />
+    <ClCompile Include="backend\DescriptorSetBuilder.cpp" />
     <ClCompile Include="backend\Viewport.cpp" />
     <ClCompile Include="Image.cpp" />
     <ClCompile Include="backend\PhysicalDevice.cpp" />
@@ -122,7 +122,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="App.h" />
-    <ClInclude Include="DescriptorSetBuilder.h" />
+    <ClInclude Include="backend\DescriptorSetBuilder.h" />
     <ClInclude Include="Image.h" />
     <ClInclude Include="backend\PhysicalDevice.h" />
     <ClInclude Include="backend\Queue.h" />
