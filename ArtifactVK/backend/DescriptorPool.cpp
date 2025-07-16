@@ -6,36 +6,41 @@
 DescriptorPool::DescriptorPool(VkDevice device, const DescriptorPoolCreateInfo &descriptorPoolCreateInfo) 
     : m_Device(device)
 {
-    m_DescriptorPools.reserve(descriptorPoolCreateInfo.Types.size());
+    // TODO: Might not need a Vector here
+    std::vector<VkDescriptorPoolSize> poolSizes;
+    poolSizes.reserve(descriptorPoolCreateInfo.Types.size());
     for (auto descriptorType : descriptorPoolCreateInfo.Types)
     {
 		VkDescriptorPoolSize poolSize{};
-		poolSize.type = VkDescriptorType::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		poolSize.type = descriptorType;
 		poolSize.descriptorCount = static_cast<uint32_t>(descriptorPoolCreateInfo.SizePerType);
-		
-		VkDescriptorPoolCreateInfo poolInfo{};
-		poolInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-		poolInfo.poolSizeCount = 1;
-		poolInfo.pPoolSizes = &poolSize;
-
-		// TODO: Incorrect?
-		poolInfo.maxSets = static_cast<uint32_t>(descriptorPoolCreateInfo.SizePerType);
-
-        VkDescriptorPool pool;
-		if (vkCreateDescriptorPool(m_Device, &poolInfo, nullptr, &pool) != VkResult::VK_SUCCESS)
-		{
-			throw std::runtime_error("Failed to create descriptor pool");
-		}
-        m_DescriptorPools.emplace(descriptorType, pool);
+        poolSizes.emplace_back(poolSize);
     }
+		
+	VkDescriptorPoolCreateInfo poolInfo{};
+	poolInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+	poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
+	poolInfo.pPoolSizes = poolSizes.data();
+	poolInfo.maxSets = static_cast<uint32_t>(descriptorPoolCreateInfo.SizePerType);
+
+	if (vkCreateDescriptorPool(m_Device, &poolInfo, nullptr, &m_DescriptorPool) != VkResult::VK_SUCCESS)
+	{
+		throw std::runtime_error("Failed to create descriptor pool");
+	}
 }
 
 DescriptorPool::~DescriptorPool()
 {
-    for (auto [poolType, pool] : m_DescriptorPools) 
+    if (m_DescriptorPool != VK_NULL_HANDLE)
     {
-        vkDestroyDescriptorPool(m_Device, pool, nullptr);
+        vkDestroyDescriptorPool(m_Device, m_DescriptorPool, nullptr);
     }
+}
+
+DescriptorPool::DescriptorPool(DescriptorPool && other) : 
+    m_DescriptorPool(std::exchange(other.m_DescriptorPool, VK_NULL_HANDLE)), 
+    m_Device(other.m_Device)
+{
 }
 
 VkDescriptorSet DescriptorPool::CreateDescriptorSet(VkDescriptorSetLayout layout)
@@ -43,7 +48,7 @@ VkDescriptorSet DescriptorPool::CreateDescriptorSet(VkDescriptorSetLayout layout
     // TODO: Allocate for all uniform buffers at once
     VkDescriptorSetAllocateInfo allocInfo{};
     allocInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    allocInfo.descriptorPool = m_DescriptorPools.at(VkDescriptorType::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+    allocInfo.descriptorPool = m_DescriptorPool;
     allocInfo.descriptorSetCount = 1;
     allocInfo.pSetLayouts = &layout;
 

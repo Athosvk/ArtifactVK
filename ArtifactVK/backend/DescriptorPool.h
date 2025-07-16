@@ -10,6 +10,7 @@ class UniformBuffer;
 struct DescriptorPoolCreateInfo
 {
     uint32_t SizePerType = 4096;
+    // TODO: Convert to custom flags to prevent allocations
     std::vector<VkDescriptorType> Types;
 };
 
@@ -19,10 +20,10 @@ class DescriptorPool
     DescriptorPool(VkDevice device, const DescriptorPoolCreateInfo& descriptorPoolCreateInfo);
     ~DescriptorPool();
     DescriptorPool(const DescriptorPool&) = delete;
-    DescriptorPool(DescriptorPool&&) = default;
+    DescriptorPool(DescriptorPool&& other);
 
     VkDescriptorSet CreateDescriptorSet(VkDescriptorSetLayout layout);
 private:
-    std::unordered_map<VkDescriptorType, VkDescriptorPool> m_DescriptorPools;
+    VkDescriptorPool m_DescriptorPool;
     VkDevice m_Device;
 };
