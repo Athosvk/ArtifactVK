@@ -13,9 +13,9 @@ RasterPipelineBuilder & RasterPipelineBuilder::SetVertexBindingDescription(const
     return *this;
 }
 
-RasterPipelineBuilder &RasterPipelineBuilder::SetDescriptorSet(const DescriptorSet& descriptorSet)
+RasterPipelineBuilder &RasterPipelineBuilder::SetDescriptorSetLayout(const DescriptorSetLayout &descriptorSetLayout)
 {
-    m_DescriptorSet.emplace(descriptorSet);
+    m_DescriptorSetLayout = descriptorSetLayout;
     return *this;
 }
 
@@ -34,9 +34,9 @@ const std::filesystem::path &RasterPipelineBuilder::GetFragmentShaderPath() cons
     return m_FragmentShaderPath;
 }
 
-std::optional<std::reference_wrapper<const DescriptorSet>> RasterPipelineBuilder::GetDescriptorSet() const
+std::optional<std::reference_wrapper<const DescriptorSetLayout>> RasterPipelineBuilder::GetDescriptorSetLayout() const
 {
-    return m_DescriptorSet;
+    return m_DescriptorSetLayout;
 }
 
 RasterPipeline::RasterPipeline(VkDevice vulkanDevice, PipelineCreateInfo createInfo)

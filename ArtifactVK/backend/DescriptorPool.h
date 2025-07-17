@@ -5,11 +5,14 @@
 
 #include <vulkan/vulkan.h>
 
+#include "DescriptorSetBuilder.h"
+
 class UniformBuffer;
+class DescriptorSetLayout;
 
 struct DescriptorPoolCreateInfo
 {
-    uint32_t SizePerType = 4096;
+    uint32_t SizePerType = 32;
     // TODO: Convert to custom flags to prevent allocations
     std::vector<VkDescriptorType> Types;
 };
@@ -22,7 +25,7 @@ class DescriptorPool
     DescriptorPool(const DescriptorPool&) = delete;
     DescriptorPool(DescriptorPool&& other);
 
-    VkDescriptorSet CreateDescriptorSet(VkDescriptorSetLayout layout);
+    DescriptorSet CreateDescriptorSet(const DescriptorSetLayout& layout);
 private:
     VkDescriptorPool m_DescriptorPool;
     VkDevice m_Device;

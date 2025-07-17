@@ -43,19 +43,20 @@ DescriptorPool::DescriptorPool(DescriptorPool && other) :
 {
 }
 
-VkDescriptorSet DescriptorPool::CreateDescriptorSet(VkDescriptorSetLayout layout)
+DescriptorSet DescriptorPool::CreateDescriptorSet(const DescriptorSetLayout& layout)
 {
+    auto vkLayout = layout.Get();
     // TODO: Allocate for all uniform buffers at once
     VkDescriptorSetAllocateInfo allocInfo{};
     allocInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     allocInfo.descriptorPool = m_DescriptorPool;
     allocInfo.descriptorSetCount = 1;
-    allocInfo.pSetLayouts = &layout;
+    allocInfo.pSetLayouts = &vkLayout;
 
     VkDescriptorSet descriptorSet;
     if (vkAllocateDescriptorSets(m_Device, &allocInfo, &descriptorSet) != VkResult::VK_SUCCESS)
     {
         throw std::runtime_error("Failed to allocate descriptor sets");
     }
-    return descriptorSet;
+    return DescriptorSet(layout, m_Device, descriptorSet);
 }

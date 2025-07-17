@@ -55,14 +55,14 @@ class RasterPipelineBuilder
     RasterPipelineBuilder(std::filesystem::path &&vertexShaderPath, std::filesystem::path &&fragmentShaderPath);
 
     RasterPipelineBuilder& SetVertexBindingDescription(const VertexBindingDescription& vertexBinding);
-    RasterPipelineBuilder& SetDescriptorSet(const DescriptorSet& descriptorSet);
+    RasterPipelineBuilder& SetDescriptorSetLayout(const DescriptorSetLayout& descriptorSet);
     const std::optional<VertexBindingDescription>& GetVertexBindingDescription() const;
     const std::filesystem::path& GetVertexShaderPath() const;
     const std::filesystem::path& GetFragmentShaderPath() const;
-    std::optional<std::reference_wrapper<const DescriptorSet>> GetDescriptorSet() const;
+    std::optional<std::reference_wrapper<const DescriptorSetLayout>> GetDescriptorSetLayout() const;
   private:
     std::filesystem::path m_VertexShaderPath;
     std::filesystem::path m_FragmentShaderPath;
     std::optional<VertexBindingDescription> m_VertexBindingDescription;
-    std::optional<std::reference_wrapper<const DescriptorSet>> m_DescriptorSet;
+    std::optional<std::reference_wrapper<const DescriptorSetLayout>> m_DescriptorSetLayout;
 };

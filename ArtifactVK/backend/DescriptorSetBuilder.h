@@ -32,24 +32,36 @@ class BindSet
     bool m_FinishedOrMoved = false;
 };
 
+class DescriptorSetLayout
+{
+  public:
+    DescriptorSetLayout(VkDevice device, std::vector<VkDescriptorSetLayoutBinding> bindings);
+    ~DescriptorSetLayout();
+    DescriptorSetLayout(const DescriptorSetLayout&) = delete;
+    DescriptorSetLayout(DescriptorSetLayout&& other);
+
+    VkDescriptorSetLayout Get() const;
+  private:
+    VkDescriptorSetLayout m_Layout = VK_NULL_HANDLE;
+    VkDevice m_Device;
+
+    // For validation only
+    std::vector<VkDescriptorSetLayoutBinding> m_Bindings; 
+};
+
 class DescriptorSet
 {
   public:
-    DescriptorSet(VkDescriptorSetLayout layout, VkDevice device, VkDescriptorSet set);
-    DescriptorSet(const DescriptorSet &) = delete;
-    DescriptorSet(DescriptorSet && other);
-    ~DescriptorSet();
+    DescriptorSet(const DescriptorSetLayout& layout, VkDevice device, VkDescriptorSet set);
 
     BindSet BindTexture(const Texture& texture);
     BindSet BindUniformBuffer(const UniformBuffer& buffer);
     VkDescriptorSet Get() const;
-    VkDescriptorSetLayout GetLayout() const;
+    const DescriptorSetLayout& GetLayout() const;
   private:
-    VkDescriptorSetLayout m_Layout;
+    const DescriptorSetLayout& m_Layout;
     VkDevice m_Device;
     VkDescriptorSet m_DescriptorSet;
-    // For validation only
-    std::vector<VkDescriptorSetLayoutBinding> m_Bindings;
 };
 
 class DescriptorSetBuilder
@@ -57,7 +69,12 @@ class DescriptorSetBuilder
   public:
     DescriptorSetBuilder& AddUniformBuffer();
     DescriptorSetBuilder& AddTexture();
-    DescriptorSet Build(DescriptorPool& pool, VkDevice device);
+    /// <summary>
+    /// Builds a descriptor set layout and clears the current builder
+    /// </summary>
+    /// <param name="device">The device to use for building</param>
+    /// <returns>The layout based on the bindings</returns>
+    DescriptorSetLayout Build(VkDevice device);
   private:
     std::vector<VkDescriptorSetLayoutBinding> m_Bindings;
 };

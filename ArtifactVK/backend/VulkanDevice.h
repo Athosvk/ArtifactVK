@@ -74,7 +74,8 @@ class VulkanDevice
     DeviceBuffer &CreateBuffer(const CreateBufferInfo& createBufferInfo);
     Texture &CreateTexture(const TextureCreateInfo& createDesc);
     // TODO: Store for re-use
-    DescriptorSet CreateDescriptorSet(DescriptorSetBuilder builder);
+    DescriptorSet CreateDescriptorSet(const DescriptorSetLayout& layout);
+    const DescriptorSetLayout& CreateDescriptorSetLayout(DescriptorSetBuilder builder);
   private:
     CommandBufferPool CreateTransferCommandBufferPool() const;
     void RecreateSwapchain(VkExtent2D newSize);
@@ -103,9 +104,9 @@ class VulkanDevice
     std::vector<std::unique_ptr<IndexBuffer>> m_IndexBuffers;
     std::vector<std::unique_ptr<UniformBuffer>> m_UniformBuffers;
     std::vector<std::unique_ptr<Texture>> m_Textures;
-    std::vector<VkDescriptorSetLayout> m_DescriptorSetLayouts;
     std::vector<std::unique_ptr<DeviceBuffer>> m_Buffers; 
     std::optional<VkExtent2D> m_LastUnhandledResize;
+    std::vector<std::unique_ptr<DescriptorSetLayout>> m_DescriptorSetLayouts;
     std::unique_ptr<DescriptorPool> m_DescriptorPool;
 };
 

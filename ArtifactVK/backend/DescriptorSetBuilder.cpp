@@ -34,12 +34,14 @@ BindSet &BindSet::operator=(BindSet && other)
 
 BindSet &BindSet::BindTexture(const Texture &texture)
 {
+	// TODO: Verify which slot this goes into with original layout
 	// TODO
     return *this;
 }
 
 BindSet &BindSet::BindUniformBuffer(const UniformBuffer& buffer)
 {
+	// TODO: Verify which slot this goes into with original layout
 	VkWriteDescriptorSet descriptorWriteInfo{};
 	descriptorWriteInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 	descriptorWriteInfo.dstSet = m_DescriptorSet.get().Get();
@@ -72,12 +74,17 @@ VkDescriptorSet DescriptorSet::Get() const
     return m_DescriptorSet;
 }
 
-VkDescriptorSetLayout DescriptorSet::GetLayout() const
+const DescriptorSetLayout& DescriptorSet::GetLayout() const
 {
     return m_Layout;
 }
 
-BindSet DescriptorSet::BindTexture(const Texture& texture)
+DescriptorSet::DescriptorSet(const DescriptorSetLayout &layout, VkDevice device, VkDescriptorSet set)
+    : m_Layout(layout), m_Device(device), m_DescriptorSet(set)
+{
+}
+
+BindSet DescriptorSet::BindTexture(const Texture &texture)
 {
     auto bindset = BindSet(*this, m_Device);
     bindset.BindTexture(texture);
@@ -91,21 +98,38 @@ BindSet DescriptorSet::BindUniformBuffer(const UniformBuffer& buffer)
     return bindset;
 }
 
-DescriptorSet::DescriptorSet(VkDescriptorSetLayout layout, VkDevice device, VkDescriptorSet set) : 
-	m_Layout(layout), m_Device(device), m_DescriptorSet(set)
+
+VkDescriptorSetLayout DescriptorSetLayout::Get() const
 {
+    return m_Layout;
 }
 
-DescriptorSet::DescriptorSet(DescriptorSet && other) : 
-	m_Layout(std::exchange(other.m_Layout, VK_NULL_HANDLE)), m_Device(other.m_Device), 
-	m_DescriptorSet(std::move(other.m_DescriptorSet))
+DescriptorSetLayout::DescriptorSetLayout(VkDevice device, std::vector<VkDescriptorSetLayoutBinding> bindings) : 
+    m_Device(device), m_Bindings(std::move(bindings))
 {
+	VkDescriptorSetLayoutCreateInfo createInfo{};
+	createInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+	// TODO: Consider a small vector or even array, as this hould be at most four bindings.
+	createInfo.bindingCount = static_cast<uint32_t>(m_Bindings.size());
+	createInfo.pBindings = m_Bindings.data();
+		
+    if (vkCreateDescriptorSetLayout(device, &createInfo, nullptr, &m_Layout) != VkResult::VK_SUCCESS)
+    {
+        throw std::runtime_error("Could not create descriptor set for uniform buffer");
+    }
 }
 
-DescriptorSet::~DescriptorSet()
+DescriptorSetLayout::~DescriptorSetLayout()
 {
-    vkDestroyDescriptorSetLayout(m_Device, m_Layout, nullptr);
-	// TODO: Free m_DescriptorSet;
+    if (m_Layout != VK_NULL_HANDLE)
+    {
+        vkDestroyDescriptorSetLayout(m_Device, m_Layout, nullptr);
+    }
+}
+
+DescriptorSetLayout::DescriptorSetLayout(DescriptorSetLayout &&other)
+    : m_Layout(std::exchange(other.m_Layout, VK_NULL_HANDLE)), m_Device(other.m_Device), m_Bindings(std::move(other.m_Bindings))
+{
 }
 
 DescriptorSetBuilder &DescriptorSetBuilder::AddUniformBuffer()
@@ -138,17 +162,8 @@ DescriptorSetBuilder &DescriptorSetBuilder::AddTexture()
     return *this;
 }
 
-DescriptorSet DescriptorSetBuilder::Build(DescriptorPool& pool, VkDevice device)
+DescriptorSetLayout DescriptorSetBuilder::Build(VkDevice device)
 {
-	VkDescriptorSetLayoutCreateInfo createInfo{};
-	createInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-	// TODO: Consider a small vector or even array, as this hould be at most four bindings.
-	createInfo.bindingCount = static_cast<uint32_t>(m_Bindings.size());
-	createInfo.pBindings = m_Bindings.data();
-		
-	VkDescriptorSetLayout descriptorSetLayout;
-	if (vkCreateDescriptorSetLayout(device, &createInfo, nullptr, &descriptorSetLayout) != VkResult::VK_SUCCESS) {
-		throw std::runtime_error("Could not create descriptor set for uniform buffer");
-	}
-    return DescriptorSet{descriptorSetLayout, device, pool.CreateDescriptorSet(descriptorSetLayout)};
+    return DescriptorSetLayout{device, std::move(m_Bindings)};
 }
+

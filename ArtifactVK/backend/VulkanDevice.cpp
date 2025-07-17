@@ -72,30 +72,26 @@ VkExtent2D VulkanDevice::SelectSwapchainExtent(GLFWwindow& window, const Surface
     }
 }
 
-DeviceBuffer &VulkanDevice::CreateBuffer(const CreateBufferInfo& createInfo)
+DeviceBuffer &VulkanDevice::CreateBuffer(const CreateBufferInfo &createInfo)
 {
     return *m_Buffers.emplace_back(std::make_unique<DeviceBuffer>(m_Device, m_PhysicalDevice, createInfo));
 }
 
 Texture &VulkanDevice::CreateTexture(const TextureCreateInfo &createInfo)
 {
-    // TODO: Allow use of multiple textures, use shared layout binding.
-    VkDescriptorSetLayoutBinding layoutBinding{};
-    layoutBinding.binding = 1;
-    layoutBinding.descriptorCount = 1;
-    layoutBinding.descriptorType = VkDescriptorType::VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    layoutBinding.pImmutableSamplers = nullptr;
-    layoutBinding.stageFlags =
-        VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT | VkShaderStageFlagBits::VK_SHADER_STAGE_COMPUTE_BIT;
-    
     return *m_Textures.emplace_back(std::make_unique<Texture>(m_Device, m_PhysicalDevice, createInfo, GetTransferCommandBuffer(), 
         // TODO: Should also allow transferring to compute
         *m_GraphicsQueue));
 }
 
-DescriptorSet VulkanDevice::CreateDescriptorSet(DescriptorSetBuilder builder)
+DescriptorSet VulkanDevice::CreateDescriptorSet(const DescriptorSetLayout& layout)
 {
-    return builder.Build(*m_DescriptorPool.get(), m_Device);
+    return m_DescriptorPool->CreateDescriptorSet(layout);
+}
+
+const DescriptorSetLayout& VulkanDevice::CreateDescriptorSetLayout(DescriptorSetBuilder builder)
+{
+    return *m_DescriptorSetLayouts.emplace_back(std::make_unique<DescriptorSetLayout>(builder.Build(m_Device)));
 }
 
 void VulkanDevice::WaitForIdle() const
@@ -250,12 +246,12 @@ RasterPipeline VulkanDevice::CreateRasterPipeline(RasterPipelineBuilder &&pipeli
 
     pipelineInfo.pColorBlendState = &colorBlendState;
     pipelineInfo.pDynamicState = &dynamicState;
-    auto descriptorSetLayout = pipelineBuilder.GetDescriptorSet();
+    auto descriptorSetLayout = pipelineBuilder.GetDescriptorSetLayout();
     
     std::vector<VkDescriptorSetLayout> layouts{};
     if (descriptorSetLayout.has_value())
     {
-        layouts = {descriptorSetLayout->get().GetLayout()};
+        layouts = {descriptorSetLayout->get().Get()};
     }
     
     auto createInfo = PipelineCreateInfo{pipelineInfo, layouts, renderPass};
@@ -342,9 +338,6 @@ VulkanDevice::~VulkanDevice()
         m_PresentQueue->Wait();
     }
 
-    for (VkDescriptorSetLayout descriptorSet : m_DescriptorSetLayouts)
-    {
-    }
     m_DescriptorSetLayouts.clear();
    
     m_DescriptorPool.reset();

@@ -20,6 +20,7 @@
 class VertexBuffer;
 class IndexBuffer;
 class UniformBuffer;
+class DescriptorSetLayout;
 
 const uint32_t MAX_FRAMES_IN_FLIGHT = 2;
 
@@ -29,7 +30,7 @@ struct PerFrameState
     Semaphore &RenderFinished;
     CommandBuffer &CommandBuffer;
     UniformBuffer &UniformBuffer;
-
+    DescriptorSet DescriptorSet;
 };
 
 struct Vertex
@@ -65,14 +66,14 @@ class App
     std::vector<PerFrameState> CreatePerFrameState(VulkanDevice &vulkanDevice);
     constexpr static std::vector<Vertex> GetVertices();
     constexpr static std::vector<uint16_t> GetIndices();
-    DescriptorSet BuildDescriptorSet(VulkanDevice &vulkanDevice) const;
+    const DescriptorSetLayout& BuildDescriptorSet(VulkanDevice &vulkanDevice) const;
 
     Window m_Window;
     VulkanInstance m_VulkanInstance;
     RenderPass m_MainPass;
     const SwapchainFramebuffer& m_SwapchainFramebuffers;
+    const DescriptorSetLayout &m_DescriptorSetLayout;
     std::vector<PerFrameState> m_PerFrameState;
-    DescriptorSet m_DescriptorSet;
     RasterPipeline m_RenderFullscreen;
     uint32_t m_CurrentFrameIndex = 0;
     Swapchain &m_Swapchain;
