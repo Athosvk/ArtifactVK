@@ -53,22 +53,41 @@ Texture::Texture(VkDevice device, const PhysicalDevice &physicalDevice, const Te
     }
 
     vkBindImageMemory(device, m_Image, m_Memory, 0);
+
+    transferCommandBuffer.BeginSingleTake();
     TransitionLayout(VkImageLayout::VK_IMAGE_LAYOUT_UNDEFINED, VkImageLayout::VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                      transferCommandBuffer,
-                     transferCommandBuffer.GetQueue());
+                     std::nullopt);
     transferCommandBuffer.CopyBufferToImage(m_StagingBuffer, *this);
 
     TransitionLayout(VkImageLayout::VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                      VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, transferCommandBuffer, destinationQueue);
-    
+    m_PendingTransferFence = transferCommandBuffer.End();
+
+    VkImageViewCreateInfo viewInfo{};
+    viewInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    viewInfo.image = m_Image;
+    viewInfo.viewType = VkImageViewType::VK_IMAGE_VIEW_TYPE_2D;
+    viewInfo.format = VkFormat::VK_FORMAT_R8G8B8A8_SRGB;
+    viewInfo.subresourceRange.aspectMask = VkImageAspectFlagBits::VK_IMAGE_ASPECT_COLOR_BIT;
+    viewInfo.subresourceRange.baseMipLevel = 0;
+    viewInfo.subresourceRange.levelCount = 1;
+    viewInfo.subresourceRange.baseArrayLayer = 0;
+    viewInfo.subresourceRange.layerCount = 1;
+
+    if (vkCreateImageView(device, &viewInfo, nullptr, &m_ImageView) != VkResult::VK_SUCCESS)
+    {
+        throw std::runtime_error("Failed to create texture image view");
+    }
+    CreateTextureSampler(device, physicalDevice);
 }
 
 Texture::Texture(Texture && other) : 
     m_Device(other.m_Device), m_StagingBuffer(std::move(other.m_StagingBuffer)), 
-    m_Image(std::exchange(other.m_Image, VK_NULL_HANDLE)), 
-    m_Memory(std::exchange(other.m_Memory, VK_NULL_HANDLE)),
-    m_Width(other.m_Width),
-    m_Height(other.m_Height)
+    m_Image(std::exchange(other.m_Image, VK_NULL_HANDLE)), m_Memory(std::exchange(other.m_Memory, VK_NULL_HANDLE)),
+    m_Width(other.m_Width), m_Height(other.m_Height), 
+    m_PendingAcquireBarrier(std::move(other.m_PendingAcquireBarrier)), 
+    m_PendingTransferFence(other.m_PendingTransferFence), m_ImageView(other.m_ImageView)
 {  
 }
 
@@ -76,13 +95,23 @@ Texture::~Texture()
 {
     if (m_Image != VK_NULL_HANDLE)
     {
+        vkDestroyImageView(m_Device, m_ImageView, nullptr);
         vkDestroyImage(m_Device, m_Image, nullptr);
+        vkDestroySampler(m_Device, m_Sampler, nullptr);
         vkFreeMemory(m_Device, m_Memory, nullptr);
     }
 }
 
-VkImage Texture::Get() const
+VkImage Texture::Get()
 {
+    if (m_PendingTransferFence)
+    {
+		// TODO: Allow doing this explicitly instead, as we can't read
+		// the intent behind calling `Get` this can lead to 
+		// unexpected results
+        m_PendingTransferFence->WaitAndReset();   
+		m_PendingTransferFence.reset();
+	}
     return m_Image;
 }
 
@@ -96,6 +125,39 @@ uint32_t Texture::GetHeight() const
     return m_Height;
 }
 
+
+std::optional<ImageMemoryBarrier> Texture::TakePendingAcquire()
+{
+    return std::move(m_PendingAcquireBarrier);
+}
+
+void Texture::CreateTextureSampler(VkDevice device, const PhysicalDevice& physicalDevice)
+{
+    VkSamplerCreateInfo samplerInfo{};
+    samplerInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    samplerInfo.magFilter = VkFilter::VK_FILTER_LINEAR;
+    samplerInfo.minFilter = VkFilter::VK_FILTER_LINEAR;
+
+    samplerInfo.addressModeU = VkSamplerAddressMode::VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    samplerInfo.addressModeV = VkSamplerAddressMode::VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    samplerInfo.addressModeW = VkSamplerAddressMode::VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    samplerInfo.anisotropyEnable = VK_TRUE;
+    samplerInfo.maxAnisotropy = physicalDevice.GetProperties().limits.maxSamplerAnisotropy;
+    samplerInfo.borderColor = VkBorderColor::VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+    samplerInfo.unnormalizedCoordinates = VK_FALSE;
+    samplerInfo.compareEnable = VK_FALSE;
+    samplerInfo.compareOp = VkCompareOp::VK_COMPARE_OP_ALWAYS;
+    samplerInfo.mipmapMode = VkSamplerMipmapMode::VK_SAMPLER_MIPMAP_MODE_LINEAR;
+    samplerInfo.mipLodBias = 0.0f;
+    samplerInfo.minLod = 0.0f;
+    samplerInfo.maxLod = 0.0f;
+
+    if (vkCreateSampler(device, &samplerInfo, nullptr, &m_Sampler) != VkResult::VK_SUCCESS)
+    {
+        throw std::runtime_error("Could not create sampler for texture");
+    }
+}
+
 DeviceBuffer Texture::CreateStagingBuffer(size_t size, const PhysicalDevice &physicalDevice, VkDevice device) const
 {
 	auto createStagingBufferInfo =
@@ -106,9 +168,70 @@ DeviceBuffer Texture::CreateStagingBuffer(size_t size, const PhysicalDevice &phy
     return DeviceBuffer(device, physicalDevice, createStagingBufferInfo);
 }
 
-void Texture::TransitionLayout(VkImageLayout from, VkImageLayout to, CommandBuffer &commandBuffer, Queue destinationQueue)
+void Texture::TransitionLayout(VkImageLayout from, VkImageLayout to, CommandBuffer &commandBuffer, std::optional<Queue> destinationQueue)
 {
-    commandBuffer.InsertBarrier(
-        ImageMemoryBarrier{*this, commandBuffer.GetQueue(), destinationQueue, 0, 0, from, to, 0, 0});
+    // Only handle transfer requests for post-upload QOT requests
+    // TODO: Properly handle other QOTs as well?
+    assert(destinationQueue.has_value() ^ !(from == VkImageLayout::VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL &&
+                                            to == VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL));
+    auto shouldTransfer = destinationQueue.has_value() && destinationQueue->RequiresTransfer(commandBuffer.GetQueue());
+    
+    auto queueSpecifier = shouldTransfer ? QueueSpecifier
+    {
+        .SourceQueue = commandBuffer.GetQueue(), .DestionationQueue = *destinationQueue
+    } : std::optional<QueueSpecifier>(std::nullopt);
+
+    auto barrier = ImageMemoryBarrier{*this,
+        queueSpecifier,
+        0, 0, from, to, 0, 0};
+    if (from == VkImageLayout::VK_IMAGE_LAYOUT_UNDEFINED && to == VkImageLayout::VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
+    {
+        barrier.SourceAccessMask = 0;   
+        barrier.DestinationAccessMask = VkAccessFlagBits::VK_ACCESS_TRANSFER_WRITE_BIT;
+        barrier.SourceStageMask = VkPipelineStageFlagBits::VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+        barrier.DestinationStageMask = VkPipelineStageFlagBits::VK_PIPELINE_STAGE_TRANSFER_BIT;
+    }
+    else if (from == VkImageLayout::VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL &&
+             to == VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+    {
+        barrier.SourceAccessMask = VkAccessFlagBits::VK_ACCESS_TRANSFER_WRITE_BIT;
+        // We'll split the barrier if we transfer (and VK_ACCESS_SHADER_READ_BIT
+        // won't mean anything when performed on a dedicated transfer queue).
+        // Same for the pipeline stage.
+        // TODO: Allow for more granularity than general shader read?
+        barrier.DestinationAccessMask = shouldTransfer ? 0 : VkAccessFlagBits::VK_ACCESS_SHADER_READ_BIT;
+        barrier.SourceStageMask = VkPipelineStageFlagBits::VK_PIPELINE_STAGE_TRANSFER_BIT;
+        // TODO: Be more general or allow specifying it?
+        barrier.DestinationStageMask = shouldTransfer ? VkPipelineStageFlagBits::VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT : 
+            // TODO: Allow reads in vertex/other shader stages?
+            VkPipelineStageFlagBits::VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VkPipelineStageFlagBits::VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+    }
+    else
+    {
+        throw std::invalid_argument("Combination not supported");
+    }
+
+    commandBuffer.InsertBarrier(barrier);
+
+    if (shouldTransfer)
+    {
+        ImageMemoryBarrier acquireBarrier
+        {
+            (*this), 
+            queueSpecifier, 
+            // TODO: Allow for more granularity than general shader read?
+            0, VkAccessFlagBits::VK_ACCESS_SHADER_READ_BIT,
+            // See vulkan spec 1.3 - 6.6.1: we need to re-specify the 
+            // layout transition parameters here, even though the transition
+            // already occurred during the release
+            from,
+            to,
+			VkPipelineStageFlagBits::VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+            // TODO: Allow reads in vertex/other shader stages?
+			VkPipelineStageFlagBits::VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT |
+                                       VkPipelineStageFlagBits::VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT
+		};
+		m_PendingAcquireBarrier.emplace(acquireBarrier);
+    }
 }
 

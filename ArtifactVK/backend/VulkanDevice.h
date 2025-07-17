@@ -22,6 +22,7 @@
 #include "DescriptorPool.h"
 #include "Buffer.h"
 #include "Texture.h"
+#include "DescriptorSetBuilder.h"
 
 class PhysicalDevice;
 struct GLFWwindow;
@@ -67,40 +68,15 @@ class VulkanDevice
     template<typename T> 
     UniformBuffer &CreateUniformBuffer()
     {
-		VkDescriptorSetLayoutBinding uboLayoutBinding{};
-		uboLayoutBinding.binding = 0;
-		uboLayoutBinding.descriptorType = VkDescriptorType::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		uboLayoutBinding.descriptorCount = 1;
-        // TODO: Make more universal
-		uboLayoutBinding.stageFlags = VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT;
-		uboLayoutBinding.pImmutableSamplers = nullptr;  
-
-		VkDescriptorSetLayoutCreateInfo createInfo{};
-		createInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-		createInfo.bindingCount = 1;
-		createInfo.pBindings = &uboLayoutBinding;
-			
-        VkDescriptorSetLayout descriptorSetLayout{};
-		if (vkCreateDescriptorSetLayout(m_Device, &createInfo, nullptr, &descriptorSetLayout) != VkResult::VK_SUCCESS) {
-			throw std::runtime_error("Could not create descriptor set for uniform buffer");
-		}
-        m_DescriptorSetLayouts.emplace_back(descriptorSetLayout);
-
-        return CreateUniformBufferFromLayout<T>(descriptorSetLayout);
-    }
-
-    template<typename T> 
-    UniformBuffer &CreateUniformBufferFromLayout(VkDescriptorSetLayout descriptorLayout)
-    {
-        UniformBuffer& uniformBuffer = *m_UniformBuffers.emplace_back(std::make_unique<UniformBuffer>(*this, m_Device, sizeof(T), descriptorLayout));
-        uniformBuffer.SetDescriptorSet(CreateDescriptorSet(uniformBuffer));
-        return uniformBuffer;
+        return *m_UniformBuffers.emplace_back(std::make_unique<UniformBuffer>(*this, m_Device, sizeof(T)));
     }
 
     DeviceBuffer &CreateBuffer(const CreateBufferInfo& createBufferInfo);
     Texture &CreateTexture(const TextureCreateInfo& createDesc);
+    // TODO: Store for re-use
+    DescriptorSet CreateDescriptorSet(const DescriptorSetLayout& layout);
+    const DescriptorSetLayout& CreateDescriptorSetLayout(DescriptorSetBuilder builder);
   private:
-    VkDescriptorSet CreateDescriptorSet(const UniformBuffer& uniformBuffer);
     CommandBufferPool CreateTransferCommandBufferPool() const;
     void RecreateSwapchain(VkExtent2D newSize);
     ShaderModule LoadShaderModule(const std::filesystem::path &filename);
@@ -128,9 +104,9 @@ class VulkanDevice
     std::vector<std::unique_ptr<IndexBuffer>> m_IndexBuffers;
     std::vector<std::unique_ptr<UniformBuffer>> m_UniformBuffers;
     std::vector<std::unique_ptr<Texture>> m_Textures;
-    std::vector<VkDescriptorSetLayout> m_DescriptorSetLayouts;
     std::vector<std::unique_ptr<DeviceBuffer>> m_Buffers; 
     std::optional<VkExtent2D> m_LastUnhandledResize;
+    std::vector<std::unique_ptr<DescriptorSetLayout>> m_DescriptorSetLayouts;
     std::unique_ptr<DescriptorPool> m_DescriptorPool;
 };
 

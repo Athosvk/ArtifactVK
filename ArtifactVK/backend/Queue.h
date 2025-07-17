@@ -9,6 +9,7 @@ class Queue
     VkQueue Get() const;
     void Wait() const;
     uint32_t GetFamilyIndex() const;
+    bool RequiresTransfer(const Queue &other);
   private:
     VkQueue m_Queue;
     uint32_t m_QueueFamilyIndex;

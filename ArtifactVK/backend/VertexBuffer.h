@@ -4,6 +4,7 @@
 #include <vector>
 #include <stdexcept>
 #include <optional>
+#include <memory>
 
 #include "Buffer.h"
 #include "CommandBufferPool.h"
@@ -35,6 +36,7 @@ class VertexBuffer
            "Requires either a target queue or sharing mode to be set to VK_SHARING_MODE_CONCURRENT");
         m_VertexCount = bufferInfo.InitialData.size();
         m_StagingBuffer.UploadData(std::span<T>{bufferInfo.InitialData});
+        transferCommandBuffer.BeginSingleTake();
         transferCommandBuffer.Copy(m_StagingBuffer, m_VertexBuffer);
         if (bufferInfo.SharingMode == VkSharingMode::VK_SHARING_MODE_EXCLUSIVE
             && transferCommandBuffer.GetQueue().GetFamilyIndex() != bufferInfo.DestinationQueue->GetFamilyIndex())
@@ -59,5 +61,5 @@ class VertexBuffer
     DeviceBuffer m_StagingBuffer;
     DeviceBuffer m_VertexBuffer;
     size_t m_VertexCount;
-    std::optional<std::reference_wrapper<Fence>> m_TransferFence;
+    std::shared_ptr<Fence> m_TransferFence;
 };

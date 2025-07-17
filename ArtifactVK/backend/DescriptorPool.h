@@ -1,13 +1,20 @@
 #pragma once
 #include <cstdint>
+#include <unordered_map>
+#include <vector>
 
 #include <vulkan/vulkan.h>
 
+#include "DescriptorSetBuilder.h"
+
 class UniformBuffer;
+class DescriptorSetLayout;
 
 struct DescriptorPoolCreateInfo
 {
-    uint32_t Size = 4096;
+    uint32_t SizePerType = 32;
+    // TODO: Convert to custom flags to prevent allocations
+    std::vector<VkDescriptorType> Types;
 };
 
 class DescriptorPool
@@ -16,9 +23,9 @@ class DescriptorPool
     DescriptorPool(VkDevice device, const DescriptorPoolCreateInfo& descriptorPoolCreateInfo);
     ~DescriptorPool();
     DescriptorPool(const DescriptorPool&) = delete;
-    DescriptorPool(DescriptorPool&&);
+    DescriptorPool(DescriptorPool&& other);
 
-    VkDescriptorSet CreateDescriptorSet(const UniformBuffer& uniformBuffer);
+    DescriptorSet CreateDescriptorSet(const DescriptorSetLayout& layout);
 private:
     VkDescriptorPool m_DescriptorPool;
     VkDevice m_Device;

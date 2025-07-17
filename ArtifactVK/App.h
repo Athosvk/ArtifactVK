@@ -14,11 +14,13 @@
 #include "backend/Pipeline.h"
 #include "backend/RenderPass.h"
 #include "backend/Swapchain.h"
+#include "backend/DescriptorSetBuilder.h"
 #include "Image.h"
 
 class VertexBuffer;
 class IndexBuffer;
 class UniformBuffer;
+class DescriptorSetLayout;
 
 const uint32_t MAX_FRAMES_IN_FLIGHT = 2;
 
@@ -28,7 +30,7 @@ struct PerFrameState
     Semaphore &RenderFinished;
     CommandBuffer &CommandBuffer;
     UniformBuffer &UniformBuffer;
-
+    DescriptorSet DescriptorSet;
 };
 
 struct Vertex
@@ -64,11 +66,13 @@ class App
     std::vector<PerFrameState> CreatePerFrameState(VulkanDevice &vulkanDevice);
     constexpr static std::vector<Vertex> GetVertices();
     constexpr static std::vector<uint16_t> GetIndices();
+    const DescriptorSetLayout& BuildDescriptorSet(VulkanDevice &vulkanDevice) const;
 
     Window m_Window;
     VulkanInstance m_VulkanInstance;
     RenderPass m_MainPass;
     const SwapchainFramebuffer& m_SwapchainFramebuffers;
+    const DescriptorSetLayout &m_DescriptorSetLayout;
     std::vector<PerFrameState> m_PerFrameState;
     RasterPipeline m_RenderFullscreen;
     uint32_t m_CurrentFrameIndex = 0;

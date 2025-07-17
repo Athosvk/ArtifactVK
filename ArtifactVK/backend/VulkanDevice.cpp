@@ -72,12 +72,7 @@ VkExtent2D VulkanDevice::SelectSwapchainExtent(GLFWwindow& window, const Surface
     }
 }
 
-VkDescriptorSet VulkanDevice::CreateDescriptorSet(const UniformBuffer &uniformBuffer)
-{
-    return m_DescriptorPool->CreateDescriptorSet(uniformBuffer);
-}
-
-DeviceBuffer &VulkanDevice::CreateBuffer(const CreateBufferInfo& createInfo)
+DeviceBuffer &VulkanDevice::CreateBuffer(const CreateBufferInfo &createInfo)
 {
     return *m_Buffers.emplace_back(std::make_unique<DeviceBuffer>(m_Device, m_PhysicalDevice, createInfo));
 }
@@ -87,6 +82,16 @@ Texture &VulkanDevice::CreateTexture(const TextureCreateInfo &createInfo)
     return *m_Textures.emplace_back(std::make_unique<Texture>(m_Device, m_PhysicalDevice, createInfo, GetTransferCommandBuffer(), 
         // TODO: Should also allow transferring to compute
         *m_GraphicsQueue));
+}
+
+DescriptorSet VulkanDevice::CreateDescriptorSet(const DescriptorSetLayout& layout)
+{
+    return m_DescriptorPool->CreateDescriptorSet(layout);
+}
+
+const DescriptorSetLayout& VulkanDevice::CreateDescriptorSetLayout(DescriptorSetBuilder builder)
+{
+    return *m_DescriptorSetLayouts.emplace_back(std::make_unique<DescriptorSetLayout>(builder.Build(m_Device)));
 }
 
 void VulkanDevice::WaitForIdle() const
@@ -241,8 +246,15 @@ RasterPipeline VulkanDevice::CreateRasterPipeline(RasterPipelineBuilder &&pipeli
 
     pipelineInfo.pColorBlendState = &colorBlendState;
     pipelineInfo.pDynamicState = &dynamicState;
+    auto descriptorSetLayout = pipelineBuilder.GetDescriptorSetLayout();
     
-    auto createInfo = PipelineCreateInfo{pipelineInfo, pipelineBuilder.GetDescriptorSets(), renderPass};
+    std::vector<VkDescriptorSetLayout> layouts{};
+    if (descriptorSetLayout.has_value())
+    {
+        layouts = {descriptorSetLayout->get().Get()};
+    }
+    
+    auto createInfo = PipelineCreateInfo{pipelineInfo, layouts, renderPass};
     // TODO: Manage here so that you cannot destory a pipeline before destroying its
     // descriptor set (layout)
     return RasterPipeline(m_Device, createInfo);
@@ -292,7 +304,8 @@ VulkanDevice::VulkanDevice(PhysicalDevice &physicalDevice, const VkPhysicalDevic
     
     m_TransferCommandBufferPool = m_CommandBufferPools.emplace_back(std::make_unique<CommandBufferPool>(CreateTransferCommandBufferPool())).get();
     // Arbitrary size
-    m_DescriptorPool = std::make_unique<DescriptorPool>(m_Device, DescriptorPoolCreateInfo{64});
+    m_DescriptorPool = std::make_unique<DescriptorPool>(
+        m_Device, DescriptorPoolCreateInfo{64, {VkDescriptorType::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER}});
 }
 
 VulkanDevice::VulkanDevice(VulkanDevice &&other)
@@ -325,10 +338,6 @@ VulkanDevice::~VulkanDevice()
         m_PresentQueue->Wait();
     }
 
-    for (VkDescriptorSetLayout descriptorSet : m_DescriptorSetLayouts)
-    {
-        vkDestroyDescriptorSetLayout(m_Device, descriptorSet, nullptr);
-    }
     m_DescriptorSetLayouts.clear();
    
     m_DescriptorPool.reset();

@@ -1,16 +1,22 @@
 #pragma once
 #include <functional>
+#include <optional>
 
 #include "Queue.h"
 
 class DeviceBuffer;
 class Texture;
 
+struct QueueSpecifier
+{
+    Queue SourceQueue;
+    Queue DestionationQueue;
+};
+
 struct BufferMemoryBarrierElement
 {
     std::reference_wrapper<DeviceBuffer> Buffer;
-    Queue SourceQueue;
-    Queue DestinationQueue;
+    std::optional<QueueSpecifier> Queues;
     VkAccessFlags SourceAccessMask;
     VkAccessFlags DestinationAccessMask;
 };
@@ -32,8 +38,7 @@ struct BufferMemoryBarrierArray {
 struct ImageMemoryBarrier
 {
     std::reference_wrapper<Texture> Image;
-    Queue SourceQueue;
-    Queue DestinationQueue;
+    std::optional<QueueSpecifier> Queues;
     VkAccessFlags SourceAccessMask;
     VkAccessFlags DestinationAccessMask;
     VkImageLayout SourceLayout;

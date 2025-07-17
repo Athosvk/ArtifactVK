@@ -2,26 +2,10 @@
 
 #include "VulkanDevice.h"
 
-UniformBuffer::UniformBuffer(VulkanDevice& vulkanDevice, VkDevice device, size_t bufferSize, VkDescriptorSetLayout descriptorSetLayout) 
+UniformBuffer::UniformBuffer(VulkanDevice& vulkanDevice, VkDevice device, size_t bufferSize) 
 	: m_Device(device),
-	m_Buffer(CreateBuffer(vulkanDevice, bufferSize)), 
-	m_DescriptorSetLayout(descriptorSetLayout)
+	m_Buffer(CreateBuffer(vulkanDevice, bufferSize))
 {
-}
-
-VkDescriptorSetLayout UniformBuffer::GetDescriptorSetLayout() const
-{
-    return m_DescriptorSetLayout;
-}
-
-void UniformBuffer::SetDescriptorSet(VkDescriptorSet descriptorSet)
-{
-    m_DescriptorSet = descriptorSet;
-}
-
-VkDescriptorSet UniformBuffer::GetDescriptorSet() const
-{
-    return m_DescriptorSet;
 }
 
 VkDescriptorBufferInfo UniformBuffer::GetDescriptorInfo() const

@@ -14,6 +14,7 @@ IndexBuffer::IndexBuffer(CreateIndexBufferInfo bufferInfo, VkDevice device, cons
            "Requires either a target queue or sharing mode to be set to VK_SHARING_MODE_CONCURRENT");
 	m_IndexCount = bufferInfo.InitialData.size();
     m_StagingBuffer.UploadData(std::span<uint16_t>{bufferInfo.InitialData});
+    transferCommandBuffer.BeginSingleTake();
 	transferCommandBuffer.Copy(m_StagingBuffer, m_IndexBuffer);
 
 	if (bufferInfo.SharingMode == VkSharingMode::VK_SHARING_MODE_EXCLUSIVE
@@ -27,7 +28,6 @@ IndexBuffer::IndexBuffer(CreateIndexBufferInfo bufferInfo, VkDevice device, cons
 	
 	// TODO: Use semaphore instead, allow fetching the semaphore
 	m_TransferFence = transferCommandBuffer.End({}, {});
-
 }
 
 DeviceBuffer& IndexBuffer::GetBuffer()
@@ -37,8 +37,8 @@ DeviceBuffer& IndexBuffer::GetBuffer()
 		// TODO: Allow doing this explciitly instead, as we can't read
 		// the intent behind calling `Get` this can lead to 
 		// unexpected results
-        m_TransferFence->get().WaitAndReset();   
-		m_TransferFence = std::nullopt;
+        m_TransferFence->WaitAndReset();   
+		m_TransferFence.reset();
 	}
     return m_IndexBuffer;
 }

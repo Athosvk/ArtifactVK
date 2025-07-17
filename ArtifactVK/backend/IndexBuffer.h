@@ -1,6 +1,7 @@
 #pragma once
 #include <vulkan/vulkan.h>
 #include <optional>
+#include <memory>
 
 #include "Buffer.h"
 #include "Fence.h"
@@ -33,5 +34,5 @@ class IndexBuffer
     DeviceBuffer m_IndexBuffer;
     size_t m_IndexCount;
 
-    mutable std::optional<std::reference_wrapper<Fence>> m_TransferFence;
+    std::shared_ptr<Fence> m_TransferFence;
 };
