@@ -51,7 +51,7 @@ VulkanInstance::VulkanInstance(const InstanceCreateInfo &createInfo, GLFWwindow 
     m_ActivePhysicalDevice.ScopeBegin(CreatePhysicalDevice(*m_Surface, std::span{createInfo.RequiredExtensions}));
 
     m_ActiveDevice.ScopeBegin(
-        m_ActivePhysicalDevice->CreateLogicalDevice(m_ValidationLayers, createInfo.RequiredExtensions, window));
+        m_ActivePhysicalDevice->CreateLogicalDevice(m_ValidationLayers, createInfo.RequiredExtensions, window, *this));
     m_ActiveDevice->CreateSwapchain(window, *m_Surface);
 }
 
@@ -82,6 +82,11 @@ VulkanDevice &VulkanInstance::GetActiveDevice()
     return *m_ActiveDevice;
 }
 
+const ExtensionFunctionMapping &VulkanInstance::GetExtensionFunctionMapping() const
+{
+    return m_ExtensionMapper;
+}
+
 std::vector<const char *> VulkanInstance::CheckValidationLayers(const std::vector<ValidationLayer> &validationLayers)
 {
     std::vector<const char *> requestedLayers;
@@ -103,7 +108,7 @@ std::vector<const char *> VulkanInstance::CheckValidationLayers(const std::vecto
     uint32_t availableLayerCount;
     vkEnumerateInstanceLayerProperties(&availableLayerCount, nullptr);
 
-    std::vector<VkLayerProperties> availableLayers(availableLayerCount);
+    std::vector<VkLayerProperties> availableLayers(availableLayerCount, VkLayerProperties{});
     vkEnumerateInstanceLayerProperties(&availableLayerCount, availableLayers.data());
 
     std::unordered_map<std::string_view, bool> foundRequestedDebugLayers;
@@ -138,6 +143,7 @@ VkInstance VulkanInstance::CreateInstance(const InstanceCreateInfo &createInfo)
 {
     VkApplicationInfo appInfo{};
     appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+    appInfo.pNext = nullptr;
     appInfo.pApplicationName = createInfo.Name.c_str();
     appInfo.applicationVersion = createInfo.AppVersion.ToVulkanVersion();
     appInfo.pEngineName = "Artifact";
@@ -146,6 +152,7 @@ VkInstance VulkanInstance::CreateInstance(const InstanceCreateInfo &createInfo)
 
     VkInstanceCreateInfo instanceInfo{};
     instanceInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+    instanceInfo.pNext = nullptr;
     instanceInfo.pApplicationInfo = &appInfo;
 
     uint32_t glfwExtensionCount = 0;
@@ -164,7 +171,7 @@ VkInstance VulkanInstance::CreateInstance(const InstanceCreateInfo &createInfo)
 
     uint32_t availableExtensionCount = 0;
     vkEnumerateInstanceExtensionProperties(nullptr, &availableExtensionCount, nullptr);
-    std::vector<VkExtensionProperties> availableExtensions(availableExtensionCount);
+    std::vector<VkExtensionProperties> availableExtensions(availableExtensionCount, VkExtensionProperties{});
     vkEnumerateInstanceExtensionProperties(nullptr, &availableExtensionCount, availableExtensions.data());
 
     std::cout << "Available extensions: ";
@@ -234,7 +241,7 @@ PhysicalDevice VulkanInstance::CreatePhysicalDevice(const VulkanSurface &targetS
         throw std::runtime_error("No available VK devices found");
     }
 
-    std::vector<VkPhysicalDevice> physicalDevices(count);
+    std::vector<VkPhysicalDevice> physicalDevices(count, VkPhysicalDevice{});
 
     vkEnumeratePhysicalDevices(m_VkInstance, &count, physicalDevices.data());
 

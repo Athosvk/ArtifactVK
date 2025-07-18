@@ -4,9 +4,12 @@
 #include <GLFW/glfw3.h>
 #include <vector>
 
-#include "backend/ShaderModule.h"
 #include <chrono>
 #include <glm/gtc/matrix_transform.hpp>
+
+
+#include "backend/ShaderModule.h"
+#include "backend/DebugMarker.h"
 
 const InstanceCreateInfo DefaultCreateInfo()
 {
@@ -97,7 +100,6 @@ RasterPipeline App::LoadShaderPipeline(VulkanDevice &vulkanDevice, const RenderP
 {
     auto builder = RasterPipelineBuilder("spirv/shaders/triangle.vert.spv", "spirv/shaders/triangle.frag.spv");
     builder.SetVertexBindingDescription(Vertex::GetVertexBindingDescription());
-    // Just get the first, they're all the same. 
 
     // TODO: Have nicer outer bindings for it (i.e. less directly translated from Vulkan)_
     builder.SetDescriptorSetLayout(m_DescriptorSetLayout);
@@ -134,16 +136,22 @@ std::vector<PerFrameState> App::CreatePerFrameState(VulkanDevice &vulkanDevice)
 {
     std::vector<PerFrameState> perFrameState;
     auto commandBuffers = vulkanDevice.CreateGraphicsCommandBufferPool().CreateCommandBuffers(MAX_FRAMES_IN_FLIGHT, m_VulkanInstance.GetActiveDevice().GetGraphicsQueue());
+
     perFrameState.reserve(MAX_FRAMES_IN_FLIGHT);
     
     for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
     {
         auto &uniformBuffer = vulkanDevice.CreateUniformBuffer<UniformConstants>();
+        auto descriptorSet = vulkanDevice.CreateDescriptorSet(m_DescriptorSetLayout);
+
         perFrameState.emplace_back(PerFrameState{vulkanDevice.CreateDeviceSemaphore(),
                                                  vulkanDevice.CreateDeviceSemaphore(), commandBuffers[i],
                                                  uniformBuffer,
-                                                 vulkanDevice.CreateDescriptorSet(m_DescriptorSetLayout)
+                                                 descriptorSet
             });
+        descriptorSet.SetName("Descriptor Set frame index " + std::to_string(i), m_VulkanInstance.GetExtensionFunctionMapping());
+        commandBuffers[i].get().SetName("Graphics CMD frame index " + std::to_string(i), m_VulkanInstance.GetExtensionFunctionMapping());
+
     }
     return perFrameState;
 }

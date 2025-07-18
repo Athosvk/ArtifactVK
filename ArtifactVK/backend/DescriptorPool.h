@@ -12,7 +12,7 @@ class DescriptorSetLayout;
 
 struct DescriptorPoolCreateInfo
 {
-    uint32_t SizePerType = 32;
+    uint32_t SizePerType = 4;
     // TODO: Convert to custom flags to prevent allocations
     std::vector<VkDescriptorType> Types;
 };

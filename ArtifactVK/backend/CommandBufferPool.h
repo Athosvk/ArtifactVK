@@ -20,6 +20,7 @@ class DeviceBuffer;
 class IndexBuffer;
 class DescriptorSet;
 class ExtensionFunctionMapping;
+class VulkanInstance;
 
 struct CommandBufferPoolCreateInfo
 {
@@ -63,6 +64,8 @@ class CommandBuffer
     void HandleAcquire(DeviceBuffer &buffer);
     void Reset();
 
+    std::optional<std::string> m_Name;
+    std::optional<std::reference_wrapper<const ExtensionFunctionMapping>> m_ExtensionFunctionMapping;
     bool m_Moved = false;
     VkDevice m_Device;
     VkCommandBuffer m_CommandBuffer;
@@ -84,14 +87,16 @@ class CommandBuffer
 class CommandBufferPool
 {
   public:
-    CommandBufferPool(VkDevice device, CommandBufferPoolCreateInfo createInfo);
+    CommandBufferPool(VkDevice device, CommandBufferPoolCreateInfo createInfo, const VulkanInstance& instance);
     CommandBufferPool(const CommandBufferPool &other) = delete;
     CommandBufferPool(CommandBufferPool &&other);
     ~CommandBufferPool();
     
     std::vector<std::reference_wrapper<CommandBuffer>> CreateCommandBuffers(uint32_t count, Queue queue);
     CommandBuffer& CreateCommandBuffer(Queue queue);
+    void SetName(const std::string& name, ExtensionFunctionMapping mapping);
   private:
+    const VulkanInstance &m_Instance;
     VkDevice m_Device;
     VkCommandPool m_CommandBufferPool;
     // TODO: Cleanup command buffers

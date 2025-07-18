@@ -3,6 +3,7 @@
 #include "UniformBuffer.h"
 #include "Texture.h"
 #include "DescriptorPool.h"
+#include "DebugMarker.h"
 
 BindSet::BindSet(const DescriptorSet &descriptorSet, VkDevice device) : 
     m_DescriptorSet(descriptorSet),
@@ -77,6 +78,11 @@ VkDescriptorSet DescriptorSet::Get() const
 const DescriptorSetLayout& DescriptorSet::GetLayout() const
 {
     return m_Layout;
+}
+
+void DescriptorSet::SetName(const std::string &name, const ExtensionFunctionMapping& mapping)
+{
+    DebugMarker::SetName(m_Device, mapping, m_DescriptorSet, name);
 }
 
 DescriptorSet::DescriptorSet(const DescriptorSetLayout &layout, VkDevice device, VkDescriptorSet set)

@@ -8,6 +8,7 @@ class UniformBuffer;
 class Texture;
 class DescriptorPool;
 class DescriptorSet;
+class ExtensionFunctionMapping;
 
 class BindSet
 {
@@ -58,6 +59,7 @@ class DescriptorSet
     BindSet BindUniformBuffer(const UniformBuffer& buffer);
     VkDescriptorSet Get() const;
     const DescriptorSetLayout& GetLayout() const;
+    void SetName(const std::string &name, const ExtensionFunctionMapping& mapping);
   private:
     const DescriptorSetLayout& m_Layout;
     VkDevice m_Device;

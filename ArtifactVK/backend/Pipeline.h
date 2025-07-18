@@ -15,7 +15,7 @@ class UniformBuffer;
 
 struct PipelineCreateInfo
 {
-    VkGraphicsPipelineCreateInfo CreateInfo;
+    VkGraphicsPipelineCreateInfo CreateInfo{};
     std::vector<VkDescriptorSetLayout> Descriptors;
     const RenderPass &RenderPass;
 };

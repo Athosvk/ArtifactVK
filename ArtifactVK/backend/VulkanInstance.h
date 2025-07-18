@@ -63,7 +63,7 @@ class VulkanInstance
     VulkanInstance(VulkanInstance &&other);
 
     VulkanDevice &GetActiveDevice();
-
+    const ExtensionFunctionMapping &GetExtensionFunctionMapping() const; 
   private:
     static std::vector<const char *> CheckValidationLayers(const std::vector<ValidationLayer> &validationLayers);
     VkDebugUtilsMessengerEXT CreateDebugMessenger() const;

@@ -16,6 +16,7 @@
 #include "DescriptorSetBuilder.h"
 #include "ExtensionFunctionMapping.h"
 #include "DebugMarker.h"
+#include "VulkanInstance.h"
 
 CommandBuffer::CommandBuffer(VkCommandBuffer &&commandBuffer, VkDevice device, Queue queue) : 
     m_CommandBuffer(commandBuffer), 
@@ -26,9 +27,11 @@ CommandBuffer::CommandBuffer(VkCommandBuffer &&commandBuffer, VkDevice device, Q
 }
 
 CommandBuffer::CommandBuffer(CommandBuffer &&other)
-    : m_CommandBuffer(other.m_CommandBuffer), 
-    m_InFlight(std::move(other.m_InFlight)), m_Status(other.m_Status), 
-    m_Queue(other.m_Queue), m_PendingBarriers(std::move(other.m_PendingBarriers)), m_Device(other.m_Device)
+    : m_Name(std::move(other.m_Name)), 
+      m_ExtensionFunctionMapping(std::move(other.m_ExtensionFunctionMapping)),
+      m_CommandBuffer(other.m_CommandBuffer), m_InFlight(std::move(other.m_InFlight)), m_Status(other.m_Status),
+      m_Queue(other.m_Queue), m_PendingBarriers(std::move(other.m_PendingBarriers)),
+      m_Device(other.m_Device)
 {
     other.m_Moved = true;
 }
@@ -45,6 +48,8 @@ CommandBuffer::~CommandBuffer()
 
 void CommandBuffer::SetName(const std::string& name, const ExtensionFunctionMapping& functionMapping)
 {
+    m_Name = name;
+    m_ExtensionFunctionMapping = functionMapping;
     DebugMarker::SetName(m_Device, functionMapping, m_CommandBuffer, name);
 }
 
@@ -382,10 +387,15 @@ Queue CommandBuffer::GetQueue() const
 void CommandBuffer::Reset()
 {
     vkResetCommandBuffer(m_CommandBuffer, 0);
+    if (m_Name)
+    {
+        SetName(*m_Name, *m_ExtensionFunctionMapping);
+    }
     m_Status = CommandBufferStatus::Reset;
 }
 
-CommandBufferPool::CommandBufferPool(VkDevice device, CommandBufferPoolCreateInfo createInfo) : m_Device(device)
+CommandBufferPool::CommandBufferPool(VkDevice device, CommandBufferPoolCreateInfo createInfo, const VulkanInstance& instance) : 
+   m_Instance(instance), m_Device(device)
 {
     VkCommandPoolCreateInfo commandPoolCreateInfo{};
     commandPoolCreateInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
@@ -401,7 +411,7 @@ CommandBufferPool::CommandBufferPool(VkDevice device, CommandBufferPoolCreateInf
 CommandBufferPool::CommandBufferPool(CommandBufferPool &&other) : 
     m_Device(other.m_Device),
     m_CommandBufferPool(std::exchange(other.m_CommandBufferPool, VK_NULL_HANDLE)),
-    m_CommandBuffers(std::move(other.m_CommandBuffers))
+    m_CommandBuffers(std::move(other.m_CommandBuffers)), m_Instance(other.m_Instance)
 {
 }
 
@@ -428,7 +438,8 @@ std::vector<std::reference_wrapper<CommandBuffer>> CommandBufferPool::CreateComm
     std::vector<std::reference_wrapper<CommandBuffer>> commandBufferHandles;
     for (auto&& vkCommandBuffer : commandBuffers)
     {
-        commandBufferHandles.emplace_back(*m_CommandBuffers.emplace_back(std::make_unique<CommandBuffer>(std::move(vkCommandBuffer), m_Device, queue)));
+        auto& commandBuffer = commandBufferHandles.emplace_back(*m_CommandBuffers.emplace_back(std::make_unique<CommandBuffer>(std::move(vkCommandBuffer), m_Device, queue)));
+        commandBuffer.get().SetName("Hello, Name", m_Instance.GetExtensionFunctionMapping());
     }
 
     return commandBufferHandles;
@@ -437,4 +448,9 @@ std::vector<std::reference_wrapper<CommandBuffer>> CommandBufferPool::CreateComm
 CommandBuffer &CommandBufferPool::CreateCommandBuffer(Queue queue)
 {
     return CreateCommandBuffers(1, queue)[0];
+}
+
+void CommandBufferPool::SetName(const std::string &name, ExtensionFunctionMapping mapping)
+{
+    DebugMarker::SetName(m_Device, mapping, m_CommandBufferPool, name);
 }
