@@ -35,4 +35,4 @@ of persistent buffers (index/vertex buffer). Window and swapchain management is 
 ```
 
 
-![image](https://github.com/user-attachments/assets/a4c799f0-91ba-46dd-91b4-31eaacea8cf9)
+![image](content/sample.png)
