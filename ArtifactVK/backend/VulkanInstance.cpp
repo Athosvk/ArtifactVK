@@ -159,10 +159,8 @@ VkInstance VulkanInstance::CreateInstance(const InstanceCreateInfo &createInfo)
     {
         requestedExtensions[i] = glfwExtensions[i];
     }
-    if (!m_ValidationLayers.empty())
-    {
-        requestedExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-    }
+    // Required for things like debug markers
+    requestedExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 
     uint32_t availableExtensionCount = 0;
     vkEnumerateInstanceExtensionProperties(nullptr, &availableExtensionCount, nullptr);

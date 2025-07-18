@@ -14,7 +14,7 @@ const InstanceCreateInfo DefaultCreateInfo()
     createInfo.Name = "ArtifactVK";
     createInfo.ValidationLayers =
         std::vector<ValidationLayer>{ValidationLayer{EValidationLayer::KhronosValidation, false}};
-    createInfo.RequiredExtensions = std::vector<EDeviceExtension>{EDeviceExtension::VkSwapchain};
+    createInfo.RequiredExtensions = std::vector<EDeviceExtension>{EDeviceExtension::Swapchain};
     return createInfo;
 }
 

@@ -5,7 +5,7 @@
 
 enum class EDeviceExtension
 {
-    VkSwapchain,
+    Swapchain,
     Unknown
 };
 

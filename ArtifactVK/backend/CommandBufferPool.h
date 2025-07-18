@@ -4,6 +4,7 @@
 #include <span>
 #include <functional>
 #include <memory>
+#include <string>
 
 #include "Semaphore.h"
 #include "Fence.h"
@@ -18,13 +19,13 @@ class UniformBuffer;
 class DeviceBuffer;
 class IndexBuffer;
 class DescriptorSet;
+class ExtensionFunctionMapping;
 
 struct CommandBufferPoolCreateInfo
 {
     VkCommandPoolCreateFlagBits CreationFlags;
     uint32_t QueueIndex;
 };
-
 
 class CommandBuffer
 {
@@ -38,8 +39,10 @@ class CommandBuffer
   public:
     CommandBuffer(VkCommandBuffer &&commandBuffer, VkDevice device, Queue queue);
     CommandBuffer(CommandBuffer && other);
+    CommandBuffer(const CommandBuffer & other) = delete;
     ~CommandBuffer();
 
+    void SetName(const std::string& name, const ExtensionFunctionMapping& functionMapping);
     void WaitFence();
     void Begin();
     void BeginSingleTake();
@@ -61,6 +64,7 @@ class CommandBuffer
     void Reset();
 
     bool m_Moved = false;
+    VkDevice m_Device;
     VkCommandBuffer m_CommandBuffer;
     // TODO: Pool these fences in the CommandBufferPool
     // This is a shared ptr so that the fence can outlive (the ArtifactVK

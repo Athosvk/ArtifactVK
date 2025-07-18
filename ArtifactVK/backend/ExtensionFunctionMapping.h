@@ -4,10 +4,13 @@
 
 enum class EExtensionFunction
 {
-    VkCreateDebugUtilsMessengerExt,
-    VkDestroyDebugUtilsMessengerEXT
+    CreateDebugUtilsMessenger,
+    DestroyDebugUtilsMessenger,
+    DebugUtilsSetObjectName
 };
 
+// TODO: Automatically bind requested extensions through DeviceExtensionMapping to the matching functions
+// TODO: Replace with volk?
 class ExtensionFunctionMapping
 {
   public:

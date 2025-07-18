@@ -1,4 +1,11 @@
 #include "CommandBufferPool.h"
+
+#include <cassert>
+#include <vulkan/vulkan.h>
+#include <stdexcept>
+#include <iostream>
+#include <span>
+
 #include "VulkanDevice.h"
 #include "Framebuffer.h"
 #include "RenderPass.h"
@@ -7,23 +14,21 @@
 #include "Pipeline.h"
 #include "Barrier.h"
 #include "DescriptorSetBuilder.h"
+#include "ExtensionFunctionMapping.h"
+#include "DebugMarker.h"
 
-#include <cassert>
-#include <vulkan/vulkan.h>
-#include <stdexcept>
-#include <iostream>
-#include <span>
-
-CommandBuffer::CommandBuffer(VkCommandBuffer &&commandBuffer, VkDevice device, Queue queue) : m_CommandBuffer(commandBuffer), 
+CommandBuffer::CommandBuffer(VkCommandBuffer &&commandBuffer, VkDevice device, Queue queue) : 
+    m_CommandBuffer(commandBuffer), 
     // Start the Fence signaled so that we can query for correct usage prior to beginning the command buffer (again)
-      m_InFlight(std::make_shared<Fence>(device)), m_Queue(queue)
+    m_InFlight(std::make_shared<Fence>(device)), m_Queue(queue),
+    m_Device(device)
 {
 }
 
 CommandBuffer::CommandBuffer(CommandBuffer &&other)
     : m_CommandBuffer(other.m_CommandBuffer), 
     m_InFlight(std::move(other.m_InFlight)), m_Status(other.m_Status), 
-    m_Queue(other.m_Queue), m_PendingBarriers(std::move(other.m_PendingBarriers))
+    m_Queue(other.m_Queue), m_PendingBarriers(std::move(other.m_PendingBarriers)), m_Device(other.m_Device)
 {
     other.m_Moved = true;
 }
@@ -36,6 +41,11 @@ CommandBuffer::~CommandBuffer()
                "Attempting to delete a command buffer that is still in flight."
                "Wait for the returned fence in `CommandBuffer::End`");
     }
+}
+
+void CommandBuffer::SetName(const std::string& name, const ExtensionFunctionMapping& functionMapping)
+{
+    DebugMarker::SetName(m_Device, functionMapping, m_CommandBuffer, name);
 }
 
 void CommandBuffer::WaitFence()
