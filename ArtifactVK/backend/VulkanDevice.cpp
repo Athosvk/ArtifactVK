@@ -272,6 +272,7 @@ VulkanDevice::VulkanDevice(PhysicalDevice &physicalDevice, VkPhysicalDevice phys
 
     VkDeviceCreateInfo deviceCreateInfo{};
     deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+    deviceCreateInfo.pNext = nullptr;
     deviceCreateInfo.pQueueCreateInfos = queueCreateInfos.data();
     deviceCreateInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
     // Also specify here for backwards compatability with old vulkan implementations.
@@ -304,8 +305,8 @@ VulkanDevice::VulkanDevice(PhysicalDevice &physicalDevice, VkPhysicalDevice phys
     m_TransferQueue = Queue(m_Device, physicalDevice.GetQueueFamilies().TransferFamilyIndex.value());
     
     m_TransferCommandBufferPool = m_CommandBufferPools.emplace_back(std::make_unique<CommandBufferPool>(CreateTransferCommandBufferPool())).get();
-    // Arbitrary size
     m_DescriptorPool = std::make_unique<DescriptorPool>(
+        // Arbitrary size
         m_Device, DescriptorPoolCreateInfo{64, {VkDescriptorType::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER}});
 }
 
