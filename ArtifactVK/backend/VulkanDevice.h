@@ -29,11 +29,13 @@ struct GLFWwindow;
 class ShaderModule;
 struct WindowResizeEvent;
 class IndexBuffer;
+class VulkanInstance;
 
 class VulkanDevice
 {
   public:
-    VulkanDevice(PhysicalDevice &physicalDevice, const VkPhysicalDevice &physicalDeviceHandle,
+    VulkanDevice(PhysicalDevice &physicalDevice, VkPhysicalDevice physicalDeviceHandle,
+                        const VulkanInstance& instance,
                         const std::vector<const char *> &validationLayers, std::vector<EDeviceExtension> extensions,
                         const DeviceExtensionMapping &deviceExtensionMapping, GLFWwindow& window);
     VulkanDevice(const VulkanDevice &other) = delete;
@@ -86,6 +88,7 @@ class VulkanDevice
     VkExtent2D SelectSwapchainExtent(GLFWwindow& window, const SurfaceProperties& surfaceProperties) const;
 
     VkDevice m_Device;
+    const VulkanInstance &m_Instance;
     GLFWwindow &m_Window;
     PhysicalDevice &m_PhysicalDevice;
     std::optional<Queue> m_GraphicsQueue;

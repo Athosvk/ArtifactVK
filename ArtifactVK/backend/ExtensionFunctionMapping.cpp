@@ -8,8 +8,9 @@ ExtensionFunctionMapping::ExtensionFunctionMapping(const VkInstance &vkInstance)
 std::unordered_map<EExtensionFunction, const char *> ExtensionFunctionMapping::CreateFunctionNameMapping() const
 {
     std::unordered_map<EExtensionFunction, const char *> nameMapping;
-    nameMapping.insert({EExtensionFunction::VkCreateDebugUtilsMessengerExt, "vkCreateDebugUtilsMessengerEXT"});
-    nameMapping.insert({EExtensionFunction::VkDestroyDebugUtilsMessengerEXT, "vkDestroyDebugUtilsMessengerEXT"});
+    nameMapping.insert({EExtensionFunction::CreateDebugUtilsMessenger, "vkCreateDebugUtilsMessengerEXT"});
+    nameMapping.insert({EExtensionFunction::DestroyDebugUtilsMessenger, "vkDestroyDebugUtilsMessengerEXT"});
+    nameMapping.insert({EExtensionFunction::DebugUtilsSetObjectName, "vkSetDebugUtilsObjectNameEXT"});
     return nameMapping;
 }
 

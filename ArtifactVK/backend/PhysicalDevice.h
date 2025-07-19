@@ -32,8 +32,9 @@ class PhysicalDevice
     const VkPhysicalDeviceProperties& GetProperties() const;
     const VkPhysicalDeviceFeatures& GetFeatures() const;
     std::vector<EDeviceExtension> FilterAvailableExtensions(std::span<const EDeviceExtension> desiredExtensions) const;
-    VulkanDevice CreateLogicalDevice(const std::vector<const char *>& validationLayers,
-                                            std::vector<EDeviceExtension> extensions, GLFWwindow& window);
+    VulkanDevice CreateLogicalDevice(const std::vector<const char *> &validationLayers,
+                                                 std::vector<EDeviceExtension> extensions, GLFWwindow &window,
+                                                 const VulkanInstance &instance);
 
     // TODO: These are the cached values, but not neccessarily the latest. Need to requery this possibly
     SurfaceProperties GetCachedSurfaceProperties() const;

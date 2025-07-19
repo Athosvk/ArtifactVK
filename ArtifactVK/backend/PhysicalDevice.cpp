@@ -47,9 +47,10 @@ std::vector<EDeviceExtension> PhysicalDevice::FilterAvailableExtensions(
 }
 
 VulkanDevice PhysicalDevice::CreateLogicalDevice(const std::vector<const char *> &validationLayers,
-                                                      std::vector<EDeviceExtension> extensions, GLFWwindow& window)
+                                                 std::vector<EDeviceExtension> extensions, GLFWwindow &window,
+                                                 const VulkanInstance &instance)
 {
-    return VulkanDevice(*this, m_PhysicalDevice, validationLayers, extensions, m_ExtensionMapping, window);
+    return VulkanDevice(*this, m_PhysicalDevice, instance, validationLayers, extensions, m_ExtensionMapping, window);
 }
 
 SurfaceProperties PhysicalDevice::GetCachedSurfaceProperties() const
@@ -128,7 +129,7 @@ std::set<EDeviceExtension> PhysicalDevice::QueryExtensions(const DeviceExtension
     uint32_t extensionCount;
     // TODO: Embed support for layer-based extensions
     vkEnumerateDeviceExtensionProperties(m_PhysicalDevice, nullptr, &extensionCount, nullptr);
-    std::vector<VkExtensionProperties> extensions(extensionCount);
+    std::vector<VkExtensionProperties> extensions(extensionCount, VkExtensionProperties{});
     vkEnumerateDeviceExtensionProperties(m_PhysicalDevice, nullptr, &extensionCount, extensions.data());
 
     std::set<EDeviceExtension> mappedExtensions;
