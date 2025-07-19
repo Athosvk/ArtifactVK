@@ -13,7 +13,7 @@ BindSet::BindSet(const DescriptorSet &descriptorSet, VkDevice device) :
 
 BindSet::BindSet(BindSet &&other)
     : m_DescriptorSet(other.m_DescriptorSet),
-      m_StagingDescriptorSetWrites(std::move(other.m_StagingDescriptorSetWrites)), m_Device(other.m_Device),
+      m_Entries(std::move(other.m_Entries)), m_Device(other.m_Device),
       m_FinishedOrMoved(false)
 {
     other.m_FinishedOrMoved = true;
@@ -27,7 +27,7 @@ BindSet::~BindSet()
 BindSet &BindSet::operator=(BindSet && other)
 {
     m_DescriptorSet = other.m_DescriptorSet;
-    m_StagingDescriptorSetWrites = std::move(other.m_StagingDescriptorSetWrites);
+    m_Entries = std::move(other.m_Entries);
     m_Device = other.m_Device;
     m_FinishedOrMoved = false;
     return *this;
@@ -36,7 +36,19 @@ BindSet &BindSet::operator=(BindSet && other)
 BindSet &BindSet::BindTexture(const Texture &texture)
 {
 	// TODO: Verify which slot this goes into with original layout
-	// TODO
+	VkWriteDescriptorSet descriptorWriteInfo{};
+	descriptorWriteInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	descriptorWriteInfo.dstSet = m_DescriptorSet.get().Get();
+	descriptorWriteInfo.dstBinding = 0;
+
+	descriptorWriteInfo.descriptorType = VkDescriptorType::VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	// TODO: Support array bindings
+	descriptorWriteInfo.dstArrayElement = 0;
+	descriptorWriteInfo.descriptorCount = 1;
+
+    // We fill this in once we combine all the writes into one invocation!
+	descriptorWriteInfo.pBufferInfo = nullptr;
+    m_Entries.emplace_back(BindEntry{descriptorWriteInfo, {.ImageInfo = texture.GetDescriptorInfo()}});
     return *this;
 }
 
@@ -53,21 +65,40 @@ BindSet &BindSet::BindUniformBuffer(const UniformBuffer& buffer)
 	descriptorWriteInfo.dstArrayElement = 0;
 	descriptorWriteInfo.descriptorCount = 1;
 
-	// Just need to keep this alive up to the point at which we bulk write
-    auto& bufferInfo = m_BufferInfos.emplace_back(std::make_unique<VkDescriptorBufferInfo>(buffer.GetDescriptorInfo()));
-
-	descriptorWriteInfo.pBufferInfo = bufferInfo.get();
-	descriptorWriteInfo.pImageInfo = nullptr;
-	descriptorWriteInfo.pTexelBufferView = nullptr;
-    m_StagingDescriptorSetWrites.emplace_back(descriptorWriteInfo);
+    // We fill this in once we combine all the writes into one invocation!
+	descriptorWriteInfo.pBufferInfo = nullptr;
+    m_Entries.emplace_back(BindEntry{descriptorWriteInfo, {.BufferInfo = buffer.GetDescriptorInfo()}});
     return *this;
 }
 
 void BindSet::Finish()
 {
     m_FinishedOrMoved = true;
-    vkUpdateDescriptorSets(m_Device, static_cast<uint32_t>(m_StagingDescriptorSetWrites.size()),
-		m_StagingDescriptorSetWrites.data(), 0, nullptr);
+
+    // TODO: Splti the vectors so that we don't have to copy
+    // into this vecotr at the point of submission.
+    std::vector<VkWriteDescriptorSet> writes;
+    writes.reserve(m_Entries.size());
+    for (auto& entry : m_Entries)
+    {
+        // We take the buffer info addresses here, but we're not 
+        // modifying the vector length prior to submission, so at this 
+        // point it's safe
+        switch (entry.StagingDescriptorWrite.descriptorType)
+        {
+        case VkDescriptorType::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
+            entry.StagingDescriptorWrite.pBufferInfo = &entry.DataInfo.BufferInfo;
+            break;
+        case VkDescriptorType::VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
+            entry.StagingDescriptorWrite.pImageInfo = &entry.DataInfo.ImageInfo;
+            break;
+        default:
+            assert(false && "Unhandled descriptor type");
+        }
+        writes.emplace_back(entry.StagingDescriptorWrite);
+    }
+    vkUpdateDescriptorSets(m_Device, static_cast<uint32_t>(m_Entries.size()),
+		writes.data(), 0, nullptr);
 }
 
 VkDescriptorSet DescriptorSet::Get() const

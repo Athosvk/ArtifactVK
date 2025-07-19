@@ -26,14 +26,14 @@ App::App()
       m_VulkanInstance(m_Window.CreateVulkanInstance(DefaultCreateInfo())),
       m_MainPass(m_VulkanInstance.GetActiveDevice().CreateRenderPass()),
       m_SwapchainFramebuffers(m_VulkanInstance.GetActiveDevice().CreateSwapchainFramebuffers(m_MainPass)),
-      m_DescriptorSetLayout(BuildDescriptorSet(m_VulkanInstance.GetActiveDevice())),
+      m_DescriptorSetLayout(BuildDescriptorSetLayout(m_VulkanInstance.GetActiveDevice())),
       m_PerFrameState(CreatePerFrameState(m_VulkanInstance.GetActiveDevice())),
       m_RenderFullscreen(LoadShaderPipeline(m_VulkanInstance.GetActiveDevice(), m_MainPass)),
       m_Swapchain(m_VulkanInstance.GetActiveDevice().GetSwapchain()),
       m_VertexBuffer(m_VulkanInstance.GetActiveDevice().CreateVertexBuffer(GetVertices())),
-      m_IndexBuffer(m_VulkanInstance.GetActiveDevice().CreateIndexBuffer(GetIndices()))
+      m_IndexBuffer(m_VulkanInstance.GetActiveDevice().CreateIndexBuffer(GetIndices())), 
+      m_Texture(LoadImage())
 {
-    LoadImage();
 }
 
 App::~App()
@@ -72,10 +72,10 @@ void App::RunRenderLoop()
     }
 }
 
-void App::LoadImage()
+Texture& App::LoadImage()
 {
     Image image("textures/texture.jpg");
-    m_VulkanInstance.GetActiveDevice().CreateTexture(image.GetTextureCreateDesc());
+    return m_VulkanInstance.GetActiveDevice().CreateTexture(image.GetTextureCreateDesc());
 }
 
 UniformConstants App::GetUniforms()
@@ -114,7 +114,7 @@ void App::RecordFrame(PerFrameState& state)
     state.CommandBuffer.Begin();
     auto uniforms = GetUniforms();
     state.UniformBuffer.UploadData(GetUniforms());
-    state.DescriptorSet.BindUniformBuffer(state.UniformBuffer).Finish();
+    state.DescriptorSet.BindUniformBuffer(state.UniformBuffer).BindTexture(m_Texture).Finish();
     state.CommandBuffer.DrawIndexed(m_SwapchainFramebuffers.GetCurrent(), m_MainPass, m_RenderFullscreen, m_VertexBuffer, m_IndexBuffer, 
         state.DescriptorSet);
     state.CommandBuffer.End(std::span{ &state.ImageAvailable, 1 }, std::span{ &state.RenderFinished, 1 });
@@ -174,9 +174,9 @@ constexpr std::vector<uint16_t> App::GetIndices()
     };
 }
 
-const DescriptorSetLayout& App::BuildDescriptorSet(VulkanDevice &vulkanDevice) const
+const DescriptorSetLayout& App::BuildDescriptorSetLayout(VulkanDevice &vulkanDevice) const
 {
-    return vulkanDevice.CreateDescriptorSetLayout(DescriptorSetBuilder().AddUniformBuffer());
+    return vulkanDevice.CreateDescriptorSetLayout(DescriptorSetBuilder().AddUniformBuffer().AddTexture());
 }
 
 constexpr VkVertexInputBindingDescription Vertex::GetBindingDescription()

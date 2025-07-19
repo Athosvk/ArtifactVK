@@ -12,6 +12,16 @@ class ExtensionFunctionMapping;
 
 class BindSet
 {
+  private:
+    struct BindEntry
+    {
+        VkWriteDescriptorSet StagingDescriptorWrite;
+        union {
+            VkDescriptorBufferInfo BufferInfo;
+            VkDescriptorImageInfo ImageInfo;
+        } DataInfo;
+    };
+
   public:
     BindSet(const DescriptorSet& descriptorSet, VkDevice device);
     BindSet(const BindSet &) = delete;
@@ -27,8 +37,7 @@ class BindSet
 
   private:
     std::reference_wrapper<const DescriptorSet> m_DescriptorSet;
-    std::vector<VkWriteDescriptorSet> m_StagingDescriptorSetWrites;
-    std::vector<std::unique_ptr<VkDescriptorBufferInfo>> m_BufferInfos;
+    std::vector<BindEntry> m_Entries;
     VkDevice m_Device;
     bool m_FinishedOrMoved = false;
 };

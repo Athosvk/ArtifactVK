@@ -125,6 +125,15 @@ uint32_t Texture::GetHeight() const
     return m_Height;
 }
 
+VkDescriptorImageInfo Texture::GetDescriptorInfo() const
+{
+    return VkDescriptorImageInfo 
+    {
+        .sampler = m_Sampler,
+        .imageView = m_ImageView,
+        .imageLayout = VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+    };
+}
 
 std::optional<ImageMemoryBarrier> Texture::TakePendingAcquire()
 {
