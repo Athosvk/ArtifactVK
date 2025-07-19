@@ -260,7 +260,10 @@ PhysicalDevice VulkanInstance::CreatePhysicalDevice(const VulkanSurface &targetS
     {
         if (iter->IsValid())
         {
-            firstValid = iter;
+            if (numValidDevices == 0)
+            {
+                firstValid = iter;
+            }
             numValidDevices++;
         }
     }
