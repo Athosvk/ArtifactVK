@@ -214,7 +214,7 @@ RasterPipeline VulkanDevice::CreateRasterPipeline(RasterPipelineBuilder &&pipeli
     colorBlendAttachmentState.colorWriteMask =
         VkColorComponentFlagBits::VK_COLOR_COMPONENT_R_BIT | VkColorComponentFlagBits::VK_COLOR_COMPONENT_G_BIT |
         VkColorComponentFlagBits::VK_COLOR_COMPONENT_B_BIT | VkColorComponentFlagBits::VK_COLOR_COMPONENT_A_BIT;
-    colorBlendAttachmentState.blendEnable = VK_FALSE;
+    colorBlendAttachmentState.blendEnable = VK_TRUE;
 	colorBlendAttachmentState.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
 	colorBlendAttachmentState.dstColorBlendFactor = VK_BLEND_FACTOR_ZERO;
 	colorBlendAttachmentState.colorBlendOp = VK_BLEND_OP_ADD;

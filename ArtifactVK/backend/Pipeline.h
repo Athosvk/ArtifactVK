@@ -43,7 +43,7 @@ class RasterPipeline
 struct VertexBindingDescription 
 {
     VkVertexInputBindingDescription Description;
-    std::array<VkVertexInputAttributeDescription, 2> AttributeDescriptions; 
+    std::array<VkVertexInputAttributeDescription, 3> AttributeDescriptions; 
 
     VkPipelineVertexInputStateCreateInfo GetVkPipelineInputStateCreateInfo() const;
     static VkPipelineVertexInputStateCreateInfo DefaultPipelineInputStateCreateInfo();

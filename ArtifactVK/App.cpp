@@ -158,13 +158,10 @@ std::vector<PerFrameState> App::CreatePerFrameState(VulkanDevice &vulkanDevice)
 
 constexpr std::vector<Vertex> App::GetVertices()
 {
-    return
-    {
-	    {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-		{{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
-		{{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
-		{{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}
-    };
+    return {{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
+            {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
+            {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
+            {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}};
 }
 
 constexpr std::vector<uint16_t> App::GetIndices()
@@ -188,7 +185,7 @@ constexpr VkVertexInputBindingDescription Vertex::GetBindingDescription()
     return bindingDescription;
 }
 
-constexpr std::array<VkVertexInputAttributeDescription,2> Vertex::GetAttributeDescriptions()
+constexpr std::array<VkVertexInputAttributeDescription, 3> Vertex::GetAttributeDescriptions()
 {
     VkVertexInputAttributeDescription positionAttribute;
     positionAttribute.binding = 0;
@@ -202,9 +199,12 @@ constexpr std::array<VkVertexInputAttributeDescription,2> Vertex::GetAttributeDe
     colorAttribute.format = VkFormat::VK_FORMAT_R32G32B32_SFLOAT;
     colorAttribute.offset = offsetof(Vertex, Color);
 
-    return {
-        positionAttribute, colorAttribute
-    };
+    VkVertexInputAttributeDescription uvAttribute;
+    uvAttribute.binding = 0;
+    uvAttribute.location = 2;
+    uvAttribute.format = VkFormat::VK_FORMAT_R32G32B32_SFLOAT;
+    uvAttribute.offset = offsetof(Vertex, UV);
+    return {positionAttribute, colorAttribute, uvAttribute};
 }
 
 constexpr VertexBindingDescription Vertex::GetVertexBindingDescription()

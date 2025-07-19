@@ -39,7 +39,7 @@ BindSet &BindSet::BindTexture(const Texture &texture)
 	VkWriteDescriptorSet descriptorWriteInfo{};
 	descriptorWriteInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 	descriptorWriteInfo.dstSet = m_DescriptorSet.get().Get();
-	descriptorWriteInfo.dstBinding = 0;
+	descriptorWriteInfo.dstBinding = static_cast<uint32_t>(m_Entries.size());
 
 	descriptorWriteInfo.descriptorType = VkDescriptorType::VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	// TODO: Support array bindings
@@ -58,7 +58,7 @@ BindSet &BindSet::BindUniformBuffer(const UniformBuffer& buffer)
 	VkWriteDescriptorSet descriptorWriteInfo{};
 	descriptorWriteInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 	descriptorWriteInfo.dstSet = m_DescriptorSet.get().Get();
-	descriptorWriteInfo.dstBinding = 0;
+	descriptorWriteInfo.dstBinding = static_cast<uint32_t>(m_Entries.size());
 
 	descriptorWriteInfo.descriptorType = VkDescriptorType::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	// TODO: Support array bindings
@@ -97,7 +97,7 @@ void BindSet::Finish()
         }
         writes.emplace_back(entry.StagingDescriptorWrite);
     }
-    vkUpdateDescriptorSets(m_Device, static_cast<uint32_t>(m_Entries.size()),
+    vkUpdateDescriptorSets(m_Device, static_cast<uint32_t>(writes.size()),
 		writes.data(), 0, nullptr);
 }
 
@@ -140,6 +140,7 @@ VkDescriptorSetLayout DescriptorSetLayout::Get() const
 {
     return m_Layout;
 }
+
 
 DescriptorSetLayout::DescriptorSetLayout(VkDevice device, std::vector<VkDescriptorSetLayoutBinding> bindings) : 
     m_Device(device), m_Bindings(std::move(bindings))
