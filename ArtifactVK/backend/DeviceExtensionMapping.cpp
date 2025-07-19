@@ -40,5 +40,5 @@ std::vector<const char *> DeviceExtensionMapping::ReverseMap(std::span<const EDe
 
 std::unordered_map<std::string_view, EDeviceExtension> DeviceExtensionMapping::CreateNameMapping()
 {
-    return {{VK_KHR_SWAPCHAIN_EXTENSION_NAME, EDeviceExtension::VkSwapchain}};
+    return {{VK_KHR_SWAPCHAIN_EXTENSION_NAME, EDeviceExtension::Swapchain}};
 }

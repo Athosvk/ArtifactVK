@@ -4,9 +4,12 @@
 #include <GLFW/glfw3.h>
 #include <vector>
 
-#include "backend/ShaderModule.h"
 #include <chrono>
 #include <glm/gtc/matrix_transform.hpp>
+
+
+#include "backend/ShaderModule.h"
+#include "backend/DebugMarker.h"
 
 const InstanceCreateInfo DefaultCreateInfo()
 {
@@ -14,7 +17,7 @@ const InstanceCreateInfo DefaultCreateInfo()
     createInfo.Name = "ArtifactVK";
     createInfo.ValidationLayers =
         std::vector<ValidationLayer>{ValidationLayer{EValidationLayer::KhronosValidation, false}};
-    createInfo.RequiredExtensions = std::vector<EDeviceExtension>{EDeviceExtension::VkSwapchain};
+    createInfo.RequiredExtensions = std::vector<EDeviceExtension>{EDeviceExtension::Swapchain};
     return createInfo;
 }
 
@@ -23,6 +26,7 @@ App::App()
       m_VulkanInstance(m_Window.CreateVulkanInstance(DefaultCreateInfo())),
       m_MainPass(m_VulkanInstance.GetActiveDevice().CreateRenderPass()),
       m_SwapchainFramebuffers(m_VulkanInstance.GetActiveDevice().CreateSwapchainFramebuffers(m_MainPass)),
+      m_DescriptorSetLayout(BuildDescriptorSet(m_VulkanInstance.GetActiveDevice())),
       m_PerFrameState(CreatePerFrameState(m_VulkanInstance.GetActiveDevice())),
       m_RenderFullscreen(LoadShaderPipeline(m_VulkanInstance.GetActiveDevice(), m_MainPass)),
       m_Swapchain(m_VulkanInstance.GetActiveDevice().GetSwapchain()),
@@ -86,10 +90,9 @@ UniformConstants App::GetUniforms()
     constants.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
     
     constants.projection = glm::perspective(
-        glm::radians(45.0f),
-        m_VulkanInstance.GetActiveDevice().GetSwapchain().GetViewportDescription().Viewport.width /
-            (float)m_VulkanInstance.GetActiveDevice().GetSwapchain().GetViewportDescription().Viewport.height,
+        glm::radians(45.0f), m_VulkanInstance.GetActiveDevice().GetSwapchain().GetViewportDescription().AspectRatio(),
         0.1f, 10.0f);
+    constants.projection[1][1] *= -1;
     return constants;
 }
 
@@ -97,10 +100,9 @@ RasterPipeline App::LoadShaderPipeline(VulkanDevice &vulkanDevice, const RenderP
 {
     auto builder = RasterPipelineBuilder("spirv/shaders/triangle.vert.spv", "spirv/shaders/triangle.frag.spv");
     builder.SetVertexBindingDescription(Vertex::GetVertexBindingDescription());
-    // Just get the first, they're alll the same. 
 
     // TODO: Have nicer outer bindings for it (i.e. less directly translated from Vulkan)_
-    builder.AddUniformBuffer(m_PerFrameState.front().UniformBuffer);
+    builder.SetDescriptorSetLayout(m_DescriptorSetLayout);
     return vulkanDevice.CreateRasterPipeline(std::move(builder), renderPass);
 }
 
@@ -112,7 +114,9 @@ void App::RecordFrame(PerFrameState& state)
     state.CommandBuffer.Begin();
     auto uniforms = GetUniforms();
     state.UniformBuffer.UploadData(GetUniforms());
-    state.CommandBuffer.DrawIndexed(m_SwapchainFramebuffers.GetCurrent(), m_MainPass, m_RenderFullscreen, m_VertexBuffer, m_IndexBuffer, state.UniformBuffer);
+    state.DescriptorSet.BindUniformBuffer(state.UniformBuffer).Finish();
+    state.CommandBuffer.DrawIndexed(m_SwapchainFramebuffers.GetCurrent(), m_MainPass, m_RenderFullscreen, m_VertexBuffer, m_IndexBuffer, 
+        state.DescriptorSet);
     state.CommandBuffer.End(std::span{ &state.ImageAvailable, 1 }, std::span{ &state.RenderFinished, 1 });
     
     m_VulkanInstance.GetActiveDevice().Present(std::span{&state.RenderFinished, 1});
@@ -132,26 +136,22 @@ std::vector<PerFrameState> App::CreatePerFrameState(VulkanDevice &vulkanDevice)
 {
     std::vector<PerFrameState> perFrameState;
     auto commandBuffers = vulkanDevice.CreateGraphicsCommandBufferPool().CreateCommandBuffers(MAX_FRAMES_IN_FLIGHT, m_VulkanInstance.GetActiveDevice().GetGraphicsQueue());
+
     perFrameState.reserve(MAX_FRAMES_IN_FLIGHT);
     
-    auto& uniformBuffer = vulkanDevice.CreateUniformBuffer<UniformConstants>();
     for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
     {
-        if (i == 0)
-        {
-			perFrameState.emplace_back(PerFrameState{vulkanDevice.CreateDeviceSemaphore(), 
-													 vulkanDevice.CreateDeviceSemaphore(), commandBuffers[i],
-													 uniformBuffer});
-        }
-        else
-        {
-            auto& matchingUniformBuffer =
-                vulkanDevice.CreateUniformBufferFromLayout<UniformConstants>(uniformBuffer.GetDescriptorSetLayout());
-			perFrameState.emplace_back(PerFrameState{vulkanDevice.CreateDeviceSemaphore(), 
-													 vulkanDevice.CreateDeviceSemaphore(), commandBuffers[i],
-													 matchingUniformBuffer});
-        
-        }
+        auto &uniformBuffer = vulkanDevice.CreateUniformBuffer<UniformConstants>();
+        auto descriptorSet = vulkanDevice.CreateDescriptorSet(m_DescriptorSetLayout);
+
+        perFrameState.emplace_back(PerFrameState{vulkanDevice.CreateDeviceSemaphore(),
+                                                 vulkanDevice.CreateDeviceSemaphore(), commandBuffers[i],
+                                                 uniformBuffer,
+                                                 descriptorSet
+            });
+        descriptorSet.SetName("Descriptor Set frame index " + std::to_string(i), m_VulkanInstance.GetExtensionFunctionMapping());
+        commandBuffers[i].get().SetName("Graphics CMD frame index " + std::to_string(i), m_VulkanInstance.GetExtensionFunctionMapping());
+
     }
     return perFrameState;
 }
@@ -172,6 +172,11 @@ constexpr std::vector<uint16_t> App::GetIndices()
     return {
         0, 1, 2, 2, 3, 0
     };
+}
+
+const DescriptorSetLayout& App::BuildDescriptorSet(VulkanDevice &vulkanDevice) const
+{
+    return vulkanDevice.CreateDescriptorSetLayout(DescriptorSetBuilder().AddUniformBuffer());
 }
 
 constexpr VkVertexInputBindingDescription Vertex::GetBindingDescription()

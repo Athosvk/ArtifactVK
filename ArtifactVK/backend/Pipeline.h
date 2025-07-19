@@ -7,6 +7,7 @@
 #include "ShaderModule.h"
 #include "RenderPass.h"
 #include "UniformBuffer.h"
+#include "DescriptorSetBuilder.h"
 
 struct Viewport;
 class VulkanDevice;
@@ -14,7 +15,7 @@ class UniformBuffer;
 
 struct PipelineCreateInfo
 {
-    VkGraphicsPipelineCreateInfo CreateInfo;
+    VkGraphicsPipelineCreateInfo CreateInfo{};
     std::vector<VkDescriptorSetLayout> Descriptors;
     const RenderPass &RenderPass;
 };
@@ -54,14 +55,14 @@ class RasterPipelineBuilder
     RasterPipelineBuilder(std::filesystem::path &&vertexShaderPath, std::filesystem::path &&fragmentShaderPath);
 
     RasterPipelineBuilder& SetVertexBindingDescription(const VertexBindingDescription& vertexBinding);
-    RasterPipelineBuilder& AddUniformBuffer(UniformBuffer& uniformBuffer);
+    RasterPipelineBuilder& SetDescriptorSetLayout(const DescriptorSetLayout& descriptorSet);
     const std::optional<VertexBindingDescription>& GetVertexBindingDescription() const;
     const std::filesystem::path& GetVertexShaderPath() const;
     const std::filesystem::path& GetFragmentShaderPath() const;
-    std::vector<VkDescriptorSetLayout> GetDescriptorSets() const;
+    std::optional<std::reference_wrapper<const DescriptorSetLayout>> GetDescriptorSetLayout() const;
   private:
     std::filesystem::path m_VertexShaderPath;
     std::filesystem::path m_FragmentShaderPath;
     std::optional<VertexBindingDescription> m_VertexBindingDescription;
-    std::vector<std::reference_wrapper<UniformBuffer>> m_UniformBuffers;
+    std::optional<std::reference_wrapper<const DescriptorSetLayout>> m_DescriptorSetLayout;
 };

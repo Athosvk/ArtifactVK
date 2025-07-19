@@ -4,6 +4,7 @@
 #include <span>
 #include <functional>
 #include <memory>
+#include <string>
 
 #include "Semaphore.h"
 #include "Fence.h"
@@ -17,13 +18,15 @@ class VertexBuffer;
 class UniformBuffer;
 class DeviceBuffer;
 class IndexBuffer;
+class DescriptorSet;
+class ExtensionFunctionMapping;
+class VulkanInstance;
 
 struct CommandBufferPoolCreateInfo
 {
     VkCommandPoolCreateFlagBits CreationFlags;
     uint32_t QueueIndex;
 };
-
 
 class CommandBuffer
 {
@@ -37,8 +40,10 @@ class CommandBuffer
   public:
     CommandBuffer(VkCommandBuffer &&commandBuffer, VkDevice device, Queue queue);
     CommandBuffer(CommandBuffer && other);
+    CommandBuffer(const CommandBuffer & other) = delete;
     ~CommandBuffer();
 
+    void SetName(const std::string& name, const ExtensionFunctionMapping& functionMapping);
     void WaitFence();
     void Begin();
     void BeginSingleTake();
@@ -55,11 +60,16 @@ class CommandBuffer
   private:
     void BindVertexBuffer(VertexBuffer &vertexBuffer);
     void BindIndexBuffer(IndexBuffer &indexBuffer);
-    void BindUniformBuffer(const UniformBuffer &uniformBuffer, const RasterPipeline& pipeline);
+    void BindDescriptorSet(const DescriptorSet &uniformBuffer, const RasterPipeline& pipeline);
     void HandleAcquire(DeviceBuffer &buffer);
     void Reset();
 
+    // Only used in case we Reset, which can clear a debug name previously
+    // set.
+    std::optional<std::string> m_Name;
+    std::optional<std::reference_wrapper<const ExtensionFunctionMapping>> m_ExtensionFunctionMapping;
     bool m_Moved = false;
+    VkDevice m_Device;
     VkCommandBuffer m_CommandBuffer;
     // TODO: Pool these fences in the CommandBufferPool
     // This is a shared ptr so that the fence can outlive (the ArtifactVK
@@ -79,14 +89,16 @@ class CommandBuffer
 class CommandBufferPool
 {
   public:
-    CommandBufferPool(VkDevice device, CommandBufferPoolCreateInfo createInfo);
+    CommandBufferPool(VkDevice device, CommandBufferPoolCreateInfo createInfo, const VulkanInstance& instance);
     CommandBufferPool(const CommandBufferPool &other) = delete;
     CommandBufferPool(CommandBufferPool &&other);
     ~CommandBufferPool();
     
     std::vector<std::reference_wrapper<CommandBuffer>> CreateCommandBuffers(uint32_t count, Queue queue);
     CommandBuffer& CreateCommandBuffer(Queue queue);
+    void SetName(const std::string& name, ExtensionFunctionMapping mapping);
   private:
+    const VulkanInstance &m_Instance;
     VkDevice m_Device;
     VkCommandPool m_CommandBufferPool;
     // TODO: Cleanup command buffers

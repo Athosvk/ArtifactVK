@@ -72,12 +72,7 @@ VkExtent2D VulkanDevice::SelectSwapchainExtent(GLFWwindow& window, const Surface
     }
 }
 
-VkDescriptorSet VulkanDevice::CreateDescriptorSet(const UniformBuffer &uniformBuffer)
-{
-    return m_DescriptorPool->CreateDescriptorSet(uniformBuffer);
-}
-
-DeviceBuffer &VulkanDevice::CreateBuffer(const CreateBufferInfo& createInfo)
+DeviceBuffer &VulkanDevice::CreateBuffer(const CreateBufferInfo &createInfo)
 {
     return *m_Buffers.emplace_back(std::make_unique<DeviceBuffer>(m_Device, m_PhysicalDevice, createInfo));
 }
@@ -87,6 +82,16 @@ Texture &VulkanDevice::CreateTexture(const TextureCreateInfo &createInfo)
     return *m_Textures.emplace_back(std::make_unique<Texture>(m_Device, m_PhysicalDevice, createInfo, GetTransferCommandBuffer(), 
         // TODO: Should also allow transferring to compute
         *m_GraphicsQueue));
+}
+
+DescriptorSet VulkanDevice::CreateDescriptorSet(const DescriptorSetLayout& layout)
+{
+    return m_DescriptorPool->CreateDescriptorSet(layout);
+}
+
+const DescriptorSetLayout& VulkanDevice::CreateDescriptorSetLayout(DescriptorSetBuilder builder)
+{
+    return *m_DescriptorSetLayouts.emplace_back(std::make_unique<DescriptorSetLayout>(builder.Build(m_Device)));
 }
 
 void VulkanDevice::WaitForIdle() const
@@ -190,7 +195,7 @@ RasterPipeline VulkanDevice::CreateRasterPipeline(RasterPipelineBuilder &&pipeli
     rasterizationState.polygonMode = VkPolygonMode::VK_POLYGON_MODE_FILL;
     rasterizationState.lineWidth = 1.0f;
     rasterizationState.cullMode = VkCullModeFlagBits::VK_CULL_MODE_BACK_BIT;
-    rasterizationState.frontFace = VK_FRONT_FACE_CLOCKWISE;
+    rasterizationState.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
     rasterizationState.depthBiasEnable = VK_FALSE;
     rasterizationState.depthBiasConstantFactor = 0.0f;
     rasterizationState.depthBiasClamp = 0.0f;
@@ -241,17 +246,25 @@ RasterPipeline VulkanDevice::CreateRasterPipeline(RasterPipelineBuilder &&pipeli
 
     pipelineInfo.pColorBlendState = &colorBlendState;
     pipelineInfo.pDynamicState = &dynamicState;
+    auto descriptorSetLayout = pipelineBuilder.GetDescriptorSetLayout();
     
-    auto createInfo = PipelineCreateInfo{pipelineInfo, pipelineBuilder.GetDescriptorSets(), renderPass};
+    std::vector<VkDescriptorSetLayout> layouts{};
+    if (descriptorSetLayout.has_value())
+    {
+        layouts = {descriptorSetLayout->get().Get()};
+    }
+    
+    auto createInfo = PipelineCreateInfo{pipelineInfo, layouts, renderPass};
     // TODO: Manage here so that you cannot destory a pipeline before destroying its
     // descriptor set (layout)
     return RasterPipeline(m_Device, createInfo);
 }
 
-VulkanDevice::VulkanDevice(PhysicalDevice &physicalDevice, const VkPhysicalDevice &physicalDeviceHandle,
+VulkanDevice::VulkanDevice(PhysicalDevice &physicalDevice, VkPhysicalDevice physicalDeviceHandle,
+                        const VulkanInstance& instance,
                         const std::vector<const char *> &validationLayers, std::vector<EDeviceExtension> extensions,
                         const DeviceExtensionMapping &deviceExtensionMapping, GLFWwindow& window)
-    : m_PhysicalDevice(physicalDevice), m_Window(window)
+    : m_Instance(instance), m_PhysicalDevice(physicalDevice), m_Window(window)
 {
     assert(physicalDevice.IsValid() && "Need a valid physical device");
 
@@ -259,6 +272,7 @@ VulkanDevice::VulkanDevice(PhysicalDevice &physicalDevice, const VkPhysicalDevic
 
     VkDeviceCreateInfo deviceCreateInfo{};
     deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+    deviceCreateInfo.pNext = nullptr;
     deviceCreateInfo.pQueueCreateInfos = queueCreateInfos.data();
     deviceCreateInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
     // Also specify here for backwards compatability with old vulkan implementations.
@@ -291,8 +305,9 @@ VulkanDevice::VulkanDevice(PhysicalDevice &physicalDevice, const VkPhysicalDevic
     m_TransferQueue = Queue(m_Device, physicalDevice.GetQueueFamilies().TransferFamilyIndex.value());
     
     m_TransferCommandBufferPool = m_CommandBufferPools.emplace_back(std::make_unique<CommandBufferPool>(CreateTransferCommandBufferPool())).get();
-    // Arbitrary size
-    m_DescriptorPool = std::make_unique<DescriptorPool>(m_Device, DescriptorPoolCreateInfo{64});
+    m_DescriptorPool = std::make_unique<DescriptorPool>(
+        // Arbitrary size
+        m_Device, DescriptorPoolCreateInfo{64, {VkDescriptorType::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER}});
 }
 
 VulkanDevice::VulkanDevice(VulkanDevice &&other)
@@ -303,7 +318,8 @@ VulkanDevice::VulkanDevice(VulkanDevice &&other)
       m_CommandBufferPools(std::move(other.m_CommandBufferPools)),
       m_Semaphores(std::move(other.m_Semaphores)),
       m_SwapchainFramebuffers(std::move(other.m_SwapchainFramebuffers)), m_Window(other.m_Window),
-      m_TransferCommandBufferPool(other.m_TransferCommandBufferPool), m_DescriptorPool(std::move(other.m_DescriptorPool))
+      m_TransferCommandBufferPool(other.m_TransferCommandBufferPool), m_DescriptorPool(std::move(other.m_DescriptorPool)),
+      m_Instance(other.m_Instance)
 {
 }
 
@@ -325,10 +341,6 @@ VulkanDevice::~VulkanDevice()
         m_PresentQueue->Wait();
     }
 
-    for (VkDescriptorSetLayout descriptorSet : m_DescriptorSetLayouts)
-    {
-        vkDestroyDescriptorSetLayout(m_Device, descriptorSet, nullptr);
-    }
     m_DescriptorSetLayouts.clear();
    
     m_DescriptorPool.reset();
@@ -389,7 +401,9 @@ CommandBufferPool &VulkanDevice::CreateGraphicsCommandBufferPool()
 
     CommandBufferPoolCreateInfo createInfo{VkCommandPoolCreateFlagBits::VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
                                            familyIndices.GraphicsFamilyIndex.value()};
-    return *m_CommandBufferPools.emplace_back(std::make_unique<CommandBufferPool>(m_Device, createInfo));
+    auto& commandBufferPool = *m_CommandBufferPools.emplace_back(std::make_unique<CommandBufferPool>(m_Device, createInfo, m_Instance));
+    commandBufferPool.SetName("Graphics CMD Buffer Pool", m_Instance.GetExtensionFunctionMapping());
+    return commandBufferPool;
 }
 
 CommandBufferPool VulkanDevice::CreateTransferCommandBufferPool() const
@@ -400,7 +414,10 @@ CommandBufferPool VulkanDevice::CreateTransferCommandBufferPool() const
 
     CommandBufferPoolCreateInfo createInfo{VkCommandPoolCreateFlagBits::VK_COMMAND_POOL_CREATE_TRANSIENT_BIT,
                                            familyIndices.TransferFamilyIndex.value()};
-    return CommandBufferPool(m_Device, createInfo);
+
+    auto commandBufferPool = CommandBufferPool(m_Device, createInfo, m_Instance);
+    commandBufferPool.SetName("Transfer CMD Buffer Pool", m_Instance.GetExtensionFunctionMapping());
+    return commandBufferPool;
 }
 
 CommandBuffer &VulkanDevice::GetTransferCommandBuffer()

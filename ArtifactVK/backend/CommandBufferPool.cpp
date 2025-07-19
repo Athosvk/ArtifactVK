@@ -1,11 +1,4 @@
 #include "CommandBufferPool.h"
-#include "VulkanDevice.h"
-#include "Framebuffer.h"
-#include "RenderPass.h"
-#include "VertexBuffer.h"
-#include "IndexBuffer.h"
-#include "Pipeline.h"
-#include "Barrier.h"
 
 #include <cassert>
 #include <vulkan/vulkan.h>
@@ -13,16 +6,32 @@
 #include <iostream>
 #include <span>
 
-CommandBuffer::CommandBuffer(VkCommandBuffer &&commandBuffer, VkDevice device, Queue queue) : m_CommandBuffer(commandBuffer), 
+#include "VulkanDevice.h"
+#include "Framebuffer.h"
+#include "RenderPass.h"
+#include "VertexBuffer.h"
+#include "IndexBuffer.h"
+#include "Pipeline.h"
+#include "Barrier.h"
+#include "DescriptorSetBuilder.h"
+#include "ExtensionFunctionMapping.h"
+#include "DebugMarker.h"
+#include "VulkanInstance.h"
+
+CommandBuffer::CommandBuffer(VkCommandBuffer &&commandBuffer, VkDevice device, Queue queue) : 
+    m_CommandBuffer(commandBuffer), 
     // Start the Fence signaled so that we can query for correct usage prior to beginning the command buffer (again)
-      m_InFlight(std::make_shared<Fence>(device)), m_Queue(queue)
+    m_InFlight(std::make_shared<Fence>(device)), m_Queue(queue),
+    m_Device(device)
 {
 }
 
 CommandBuffer::CommandBuffer(CommandBuffer &&other)
-    : m_CommandBuffer(other.m_CommandBuffer), 
-    m_InFlight(std::move(other.m_InFlight)), m_Status(other.m_Status), 
-    m_Queue(other.m_Queue), m_PendingBarriers(std::move(other.m_PendingBarriers))
+    : m_Name(std::move(other.m_Name)), 
+      m_ExtensionFunctionMapping(std::move(other.m_ExtensionFunctionMapping)),
+      m_CommandBuffer(other.m_CommandBuffer), m_InFlight(std::move(other.m_InFlight)), m_Status(other.m_Status),
+      m_Queue(other.m_Queue), m_PendingBarriers(std::move(other.m_PendingBarriers)),
+      m_Device(other.m_Device)
 {
     other.m_Moved = true;
 }
@@ -35,6 +44,13 @@ CommandBuffer::~CommandBuffer()
                "Attempting to delete a command buffer that is still in flight."
                "Wait for the returned fence in `CommandBuffer::End`");
     }
+}
+
+void CommandBuffer::SetName(const std::string& name, const ExtensionFunctionMapping& functionMapping)
+{
+    m_Name = name;
+    m_ExtensionFunctionMapping = functionMapping;
+    DebugMarker::SetName(m_Device, functionMapping, m_CommandBuffer, name);
 }
 
 void CommandBuffer::WaitFence()
@@ -82,7 +98,7 @@ void CommandBuffer::BeginSingleTake()
 }
 
 void CommandBuffer::Draw(const Framebuffer& frameBuffer, const RenderPass& renderPass, const RasterPipeline& pipeline, 
-    VertexBuffer& vertexBuffer, const UniformBuffer& uniformBuffer)
+    VertexBuffer& vertexBuffer, const DescriptorSet& descriptorSet)
 {
     assert(m_Status == CommandBufferStatus::Recording && "Calling draw before starting recording of command buffer");
     VkRenderPassBeginInfo renderPassBeginInfo{};
@@ -101,7 +117,7 @@ void CommandBuffer::Draw(const Framebuffer& frameBuffer, const RenderPass& rende
     vkCmdBeginRenderPass(m_CommandBuffer, &renderPassBeginInfo, VkSubpassContents::VK_SUBPASS_CONTENTS_INLINE);
     pipeline.Bind(m_CommandBuffer, viewport);
     BindVertexBuffer(vertexBuffer);
-    BindUniformBuffer(uniformBuffer, pipeline);
+    BindDescriptorSet(descriptorSet, pipeline);
     // TODO: Give user control over what to draw
 
     for (const auto &barrierArray : m_PendingBarriers)
@@ -114,7 +130,7 @@ void CommandBuffer::Draw(const Framebuffer& frameBuffer, const RenderPass& rende
 }
 
 void CommandBuffer::DrawIndexed(const Framebuffer& frameBuffer, const RenderPass& renderPass, const RasterPipeline& pipeline,
-    VertexBuffer& vertexBuffer, IndexBuffer& indexBuffer, const UniformBuffer& uniformBuffer)
+    VertexBuffer& vertexBuffer, IndexBuffer& indexBuffer, const DescriptorSet& descriptorSet)
 {
     assert(m_Status == CommandBufferStatus::Recording && "Calling draw before starting recording of command buffer");
     VkRenderPassBeginInfo renderPassBeginInfo{};
@@ -134,7 +150,7 @@ void CommandBuffer::DrawIndexed(const Framebuffer& frameBuffer, const RenderPass
     pipeline.Bind(m_CommandBuffer, viewport);
     BindVertexBuffer(vertexBuffer);
     BindIndexBuffer(indexBuffer);
-    BindUniformBuffer(uniformBuffer, pipeline);
+    BindDescriptorSet(descriptorSet, pipeline);
 
     for (const auto &barrierArray : m_PendingBarriers)
     {
@@ -221,12 +237,12 @@ void CommandBuffer::BindIndexBuffer(IndexBuffer &indexBuffer)
     HandleAcquire(buffer);
 }
 
-void CommandBuffer::BindUniformBuffer(const UniformBuffer &uniformBuffer, const RasterPipeline& pipeline)
+void CommandBuffer::BindDescriptorSet(const DescriptorSet &descriptorSet, const RasterPipeline& pipeline)
 {
-    auto descriptorSet = uniformBuffer.GetDescriptorSet();
     auto pipelineLayout = pipeline.GetPipelineLayout();
+    auto descriptorSetHandle = descriptorSet.Get();
     vkCmdBindDescriptorSets(m_CommandBuffer, VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            pipeline.GetPipelineLayout(), 0, 1, &descriptorSet, 0, nullptr);
+                            pipeline.GetPipelineLayout(), 0, 1, &descriptorSetHandle, 0, nullptr);
 }
 
 void CommandBuffer::HandleAcquire(DeviceBuffer &buffer)
@@ -371,10 +387,16 @@ Queue CommandBuffer::GetQueue() const
 void CommandBuffer::Reset()
 {
     vkResetCommandBuffer(m_CommandBuffer, 0);
+    if (m_Name)
+    {
+        // Reset tends to reset the name as well.
+        SetName(*m_Name, *m_ExtensionFunctionMapping);
+    }
     m_Status = CommandBufferStatus::Reset;
 }
 
-CommandBufferPool::CommandBufferPool(VkDevice device, CommandBufferPoolCreateInfo createInfo) : m_Device(device)
+CommandBufferPool::CommandBufferPool(VkDevice device, CommandBufferPoolCreateInfo createInfo, const VulkanInstance& instance) : 
+   m_Instance(instance), m_Device(device)
 {
     VkCommandPoolCreateInfo commandPoolCreateInfo{};
     commandPoolCreateInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
@@ -390,7 +412,7 @@ CommandBufferPool::CommandBufferPool(VkDevice device, CommandBufferPoolCreateInf
 CommandBufferPool::CommandBufferPool(CommandBufferPool &&other) : 
     m_Device(other.m_Device),
     m_CommandBufferPool(std::exchange(other.m_CommandBufferPool, VK_NULL_HANDLE)),
-    m_CommandBuffers(std::move(other.m_CommandBuffers))
+    m_CommandBuffers(std::move(other.m_CommandBuffers)), m_Instance(other.m_Instance)
 {
 }
 
@@ -417,7 +439,8 @@ std::vector<std::reference_wrapper<CommandBuffer>> CommandBufferPool::CreateComm
     std::vector<std::reference_wrapper<CommandBuffer>> commandBufferHandles;
     for (auto&& vkCommandBuffer : commandBuffers)
     {
-        commandBufferHandles.emplace_back(*m_CommandBuffers.emplace_back(std::make_unique<CommandBuffer>(std::move(vkCommandBuffer), m_Device, queue)));
+        auto& commandBuffer = commandBufferHandles.emplace_back(*m_CommandBuffers.emplace_back(std::make_unique<CommandBuffer>(std::move(vkCommandBuffer), m_Device, queue)));
+        commandBuffer.get().SetName("Hello, Name", m_Instance.GetExtensionFunctionMapping());
     }
 
     return commandBufferHandles;
@@ -426,4 +449,9 @@ std::vector<std::reference_wrapper<CommandBuffer>> CommandBufferPool::CreateComm
 CommandBuffer &CommandBufferPool::CreateCommandBuffer(Queue queue)
 {
     return CreateCommandBuffers(1, queue)[0];
+}
+
+void CommandBufferPool::SetName(const std::string &name, ExtensionFunctionMapping mapping)
+{
+    DebugMarker::SetName(m_Device, mapping, m_CommandBufferPool, name);
 }

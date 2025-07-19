@@ -92,10 +92,13 @@
   <ItemGroup>
     <ClCompile Include="App.cpp" />
     <ClCompile Include="backend\Barrier.cpp" />
+    <ClCompile Include="backend\DebugMarker.cpp" />
     <ClCompile Include="backend\DeviceExtensionMapping.cpp" />
     <ClCompile Include="backend\Framebuffer.cpp" />
     <ClCompile Include="backend\CommandBufferPool.cpp" />
     <ClCompile Include="backend\Fence.cpp" />
+    <ClCompile Include="backend\DescriptorSetBuilder.cpp" />
+    <ClCompile Include="backend\Viewport.cpp" />
     <ClCompile Include="Image.cpp" />
     <ClCompile Include="backend\PhysicalDevice.cpp" />
     <ClCompile Include="backend\Queue.cpp" />
@@ -120,6 +123,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="App.h" />
+    <ClInclude Include="backend\DescriptorSetBuilder.h" />
+    <ClInclude Include="backend\DebugMarker.h" />
     <ClInclude Include="Image.h" />
     <ClInclude Include="backend\PhysicalDevice.h" />
     <ClInclude Include="backend\Queue.h" />
