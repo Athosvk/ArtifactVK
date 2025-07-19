@@ -389,6 +389,7 @@ void CommandBuffer::Reset()
     vkResetCommandBuffer(m_CommandBuffer, 0);
     if (m_Name)
     {
+        // Reset tends to reset the name as well.
         SetName(*m_Name, *m_ExtensionFunctionMapping);
     }
     m_Status = CommandBufferStatus::Reset;

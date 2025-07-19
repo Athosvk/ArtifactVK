@@ -64,6 +64,8 @@ class CommandBuffer
     void HandleAcquire(DeviceBuffer &buffer);
     void Reset();
 
+    // Only used in case we Reset, which can clear a debug name previously
+    // set.
     std::optional<std::string> m_Name;
     std::optional<std::reference_wrapper<const ExtensionFunctionMapping>> m_ExtensionFunctionMapping;
     bool m_Moved = false;
