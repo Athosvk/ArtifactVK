@@ -418,6 +418,10 @@ CommandBufferPool::CommandBufferPool(CommandBufferPool &&other) :
 
 CommandBufferPool::~CommandBufferPool()
 {
+    for (auto& commandBuffer : m_CommandBuffers)
+    {
+        commandBuffer->WaitFence();
+    }
     vkDestroyCommandPool(m_Device, m_CommandBufferPool, nullptr);
 }
 
