@@ -443,8 +443,7 @@ std::vector<std::reference_wrapper<CommandBuffer>> CommandBufferPool::CreateComm
     std::vector<std::reference_wrapper<CommandBuffer>> commandBufferHandles;
     for (auto&& vkCommandBuffer : commandBuffers)
     {
-        auto& commandBuffer = commandBufferHandles.emplace_back(*m_CommandBuffers.emplace_back(std::make_unique<CommandBuffer>(std::move(vkCommandBuffer), m_Device, queue)));
-        commandBuffer.get().SetName("Hello, Name", m_Instance.GetExtensionFunctionMapping());
+        commandBufferHandles.emplace_back(*m_CommandBuffers.emplace_back(std::make_unique<CommandBuffer>(std::move(vkCommandBuffer), m_Device, queue)));
     }
 
     return commandBufferHandles;
