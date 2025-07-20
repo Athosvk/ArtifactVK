@@ -310,7 +310,7 @@ VulkanDevice::VulkanDevice(PhysicalDevice &physicalDevice, VkPhysicalDevice phys
     m_TransferCommandBufferPool = m_CommandBufferPools.emplace_back(std::make_unique<CommandBufferPool>(CreateTransferCommandBufferPool())).get();
     m_DescriptorPool = std::make_unique<DescriptorPool>(
         // Arbitrary size
-        m_Device, DescriptorPoolCreateInfo{64, {VkDescriptorType::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER}});
+        m_Device, DescriptorPoolCreateInfo{64, {VkDescriptorType::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VkDescriptorType::VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER}});
 }
 
 VulkanDevice::VulkanDevice(VulkanDevice &&other)

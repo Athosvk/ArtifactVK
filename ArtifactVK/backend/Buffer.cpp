@@ -99,6 +99,10 @@ void DeviceBuffer::Transfer(TransferOp transferOperation, const CommandBuffer& c
 
 std::optional<BufferMemoryBarrier> DeviceBuffer::TakePendingAcquire()
 {
+    if (m_PendingReleaseFence)
+    {
+        m_PendingReleaseFence->WaitAndReset();
+    }
     return std::move(m_PendingAcquireBarrier);
 }
 

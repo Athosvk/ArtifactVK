@@ -27,15 +27,7 @@ struct BufferMemoryBarrier {
     VkPipelineStageFlags DestinationStageMask;
 };
 
-struct BufferMemoryBarrierArray {
-    BufferMemoryBarrierArray(BufferMemoryBarrier&& barrier);
-
-    std::vector<BufferMemoryBarrierElement> Barriers;
-    VkPipelineStageFlags SourceStageMask;
-    VkPipelineStageFlags DestinationStageMask;
-};
-
-struct ImageMemoryBarrier
+struct ImageMemoryBarrierElement
 {
     std::reference_wrapper<Texture> Image;
     std::optional<QueueSpecifier> Queues;
@@ -43,6 +35,21 @@ struct ImageMemoryBarrier
     VkAccessFlags DestinationAccessMask;
     VkImageLayout SourceLayout;
     VkImageLayout DestinationLayout;
+};
+
+struct ImageMemoryBarrier
+{
+    ImageMemoryBarrierElement Barrier;
+    VkPipelineStageFlags SourceStageMask;
+    VkPipelineStageFlags DestinationStageMask;
+};
+
+struct MemoryBarrierArray {
+    MemoryBarrierArray(BufferMemoryBarrier&& barrier);
+    MemoryBarrierArray(ImageMemoryBarrier&& barrier);
+
+    std::vector<BufferMemoryBarrierElement> BufferBarriers;
+    std::vector<ImageMemoryBarrierElement> ImageBarriers;
     VkPipelineStageFlags SourceStageMask;
     VkPipelineStageFlags DestinationStageMask;
 };

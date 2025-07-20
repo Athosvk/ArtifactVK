@@ -87,7 +87,8 @@ Texture::Texture(Texture && other) :
     m_Image(std::exchange(other.m_Image, VK_NULL_HANDLE)), m_Memory(std::exchange(other.m_Memory, VK_NULL_HANDLE)),
     m_Width(other.m_Width), m_Height(other.m_Height), 
     m_PendingAcquireBarrier(std::move(other.m_PendingAcquireBarrier)), 
-    m_PendingTransferFence(other.m_PendingTransferFence), m_ImageView(other.m_ImageView)
+    m_PendingTransferFence(other.m_PendingTransferFence), m_ImageView(std::exchange(other.m_ImageView, VK_NULL_HANDLE)), 
+    m_Sampler(std::exchange(other.m_Sampler, VK_NULL_HANDLE))
 {  
 }
 
@@ -137,6 +138,9 @@ VkDescriptorImageInfo Texture::GetDescriptorInfo()
 
 std::optional<ImageMemoryBarrier> Texture::TakePendingAcquire()
 {
+    // If the transfer hasn't completed, we'll be giving a barrier that may be set
+    // prior to the transfer (and its subsequent release barrier)
+    WaitTransfer();
     return std::move(m_PendingAcquireBarrier);
 }
 
@@ -195,20 +199,20 @@ void Texture::TransitionLayout(VkImageLayout from, VkImageLayout to, CommandBuff
         0, 0, from, to, 0, 0};
     if (from == VkImageLayout::VK_IMAGE_LAYOUT_UNDEFINED && to == VkImageLayout::VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
     {
-        barrier.SourceAccessMask = 0;   
-        barrier.DestinationAccessMask = VkAccessFlagBits::VK_ACCESS_TRANSFER_WRITE_BIT;
+        barrier.Barrier.SourceAccessMask = 0;   
+        barrier.Barrier.DestinationAccessMask = VkAccessFlagBits::VK_ACCESS_TRANSFER_WRITE_BIT;
         barrier.SourceStageMask = VkPipelineStageFlagBits::VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
         barrier.DestinationStageMask = VkPipelineStageFlagBits::VK_PIPELINE_STAGE_TRANSFER_BIT;
     }
     else if (from == VkImageLayout::VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL &&
              to == VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
     {
-        barrier.SourceAccessMask = VkAccessFlagBits::VK_ACCESS_TRANSFER_WRITE_BIT;
+        barrier.Barrier.SourceAccessMask = VkAccessFlagBits::VK_ACCESS_TRANSFER_WRITE_BIT;
         // We'll split the barrier if we transfer (and VK_ACCESS_SHADER_READ_BIT
         // won't mean anything when performed on a dedicated transfer queue).
         // Same for the pipeline stage.
         // TODO: Allow for more granularity than general shader read?
-        barrier.DestinationAccessMask = shouldTransfer ? 0 : VkAccessFlagBits::VK_ACCESS_SHADER_READ_BIT;
+        barrier.Barrier.DestinationAccessMask = shouldTransfer ? 0 : VkAccessFlagBits::VK_ACCESS_SHADER_READ_BIT;
         barrier.SourceStageMask = VkPipelineStageFlagBits::VK_PIPELINE_STAGE_TRANSFER_BIT;
         // TODO: Be more general or allow specifying it?
         barrier.DestinationStageMask = shouldTransfer ? VkPipelineStageFlagBits::VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT : 
@@ -249,7 +253,7 @@ void Texture::WaitTransfer()
     if (m_PendingTransferFence)
     {
         m_PendingTransferFence->WaitAndReset();   
-		m_PendingTransferFence.reset();
+		m_PendingTransferFence = nullptr;
 	}
 }
 

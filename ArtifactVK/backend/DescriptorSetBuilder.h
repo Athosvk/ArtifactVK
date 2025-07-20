@@ -24,22 +24,20 @@ class BindSet
 
   public:
     BindSet(const DescriptorSet& descriptorSet, VkDevice device);
-    BindSet(const BindSet &) = delete;
-    BindSet(BindSet&& other);
-    ~BindSet();
 
-    BindSet &operator=(const BindSet &) = delete;
-    BindSet &operator=(BindSet && other);
-
-    BindSet &BindTexture(const Texture& texture);
-    BindSet &BindUniformBuffer(const UniformBuffer& buffer);
+    BindSet& BindTexture(Texture& texture) &;
+    BindSet& BindUniformBuffer(const UniformBuffer& buffer) &;
+    [[nodiscard]] BindSet&& BindTexture(Texture& texture) &&;
+    [[nodiscard]] BindSet&& BindUniformBuffer(const UniformBuffer& buffer) &&;
     void Finish();
 
   private:
-    std::reference_wrapper<const DescriptorSet> m_DescriptorSet;
+    void BindTextureInternal(Texture &texture);
+    void BindUniformBufferInternal(const UniformBuffer &buffer);
+
+    const DescriptorSet& m_DescriptorSet;
     std::vector<BindEntry> m_Entries;
     VkDevice m_Device;
-    bool m_FinishedOrMoved = false;
 };
 
 class DescriptorSetLayout
@@ -64,8 +62,8 @@ class DescriptorSet
   public:
     DescriptorSet(const DescriptorSetLayout& layout, VkDevice device, VkDescriptorSet set);
 
-    BindSet BindTexture(Texture& texture);
-    BindSet BindUniformBuffer(const UniformBuffer& buffer);
+    [[nodiscard]] BindSet BindTexture(Texture& texture);
+    [[nodiscard]] BindSet BindUniformBuffer(const UniformBuffer& buffer);
     VkDescriptorSet Get() const;
     const DescriptorSetLayout& GetLayout() const;
     void SetName(const std::string &name, const ExtensionFunctionMapping& mapping);

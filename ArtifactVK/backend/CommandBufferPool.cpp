@@ -234,6 +234,7 @@ void CommandBuffer::BindIndexBuffer(IndexBuffer &indexBuffer)
     VkBuffer indexBuffers = {buffer.Get()};
     VkDeviceSize offsets[] = {0};
     vkCmdBindIndexBuffer(m_CommandBuffer, indexBuffers, 0, VkIndexType::VK_INDEX_TYPE_UINT16);
+
     HandleAcquire(buffer);
 }
 
@@ -251,17 +252,38 @@ void CommandBuffer::HandleAcquire(DeviceBuffer &buffer)
     if (pendingAcquire.has_value())
     {
         auto array = std::find_if(m_PendingBarriers.begin(), m_PendingBarriers.end(),
-                     [&pendingAcquire](const BufferMemoryBarrierArray &array) {
+                     [&pendingAcquire](const MemoryBarrierArray &array) {
                          return array.DestinationStageMask == pendingAcquire->DestinationStageMask &&
                                 array.SourceStageMask == pendingAcquire->SourceStageMask;
                      });
         if (array != m_PendingBarriers.end())
         {
-            array->Barriers.emplace_back(std::move(pendingAcquire->Barrier));
+            array->BufferBarriers.emplace_back(std::move(pendingAcquire->Barrier));
         }
         else
         {
-            m_PendingBarriers.emplace_back(BufferMemoryBarrierArray(std::move(*pendingAcquire)));
+            m_PendingBarriers.emplace_back(MemoryBarrierArray(std::move(*pendingAcquire)));
+        }
+    }
+}
+
+void CommandBuffer::HandleAcquire(Texture &texture)
+{
+    auto pendingAcquire = texture.TakePendingAcquire();
+    if (pendingAcquire.has_value())
+    {
+        auto array = std::find_if(m_PendingBarriers.begin(), m_PendingBarriers.end(),
+                     [&pendingAcquire](const MemoryBarrierArray &array) {
+                         return array.DestinationStageMask == pendingAcquire->DestinationStageMask &&
+                                array.SourceStageMask == pendingAcquire->SourceStageMask;
+                     });
+        if (array != m_PendingBarriers.end())
+        {
+            array->ImageBarriers.emplace_back(std::move(pendingAcquire->Barrier));
+        }
+        else
+        {
+            m_PendingBarriers.emplace_back(MemoryBarrierArray(std::move(*pendingAcquire)));
         }
     }
 }
@@ -322,38 +344,42 @@ void CommandBuffer::InsertBarrier(const ImageMemoryBarrier &barrier) const
 {
     VkImageMemoryBarrier memoryBarrier{};
     memoryBarrier.sType = VkStructureType::VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    memoryBarrier.oldLayout = barrier.SourceLayout;
-    memoryBarrier.newLayout = barrier.DestinationLayout;
-    if (barrier.Queues.has_value())
+    memoryBarrier.oldLayout = barrier.Barrier.SourceLayout;
+    memoryBarrier.newLayout = barrier.Barrier.DestinationLayout;
+    if (barrier.Barrier.Queues.has_value())
     {
-		memoryBarrier.srcQueueFamilyIndex = barrier.Queues->SourceQueue.GetFamilyIndex();
-		memoryBarrier.dstQueueFamilyIndex = barrier.Queues->DestionationQueue.GetFamilyIndex();
+		memoryBarrier.srcQueueFamilyIndex = barrier.Barrier.Queues->SourceQueue.GetFamilyIndex();
+		memoryBarrier.dstQueueFamilyIndex = barrier.Barrier.Queues->DestionationQueue.GetFamilyIndex();
     }
     else
     {
 		memoryBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 		memoryBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     }
-    memoryBarrier.image = barrier.Image.get().Get();
+    memoryBarrier.image = barrier.Barrier.Image.get().Get();
 
+    // TODO: This doesn't work for anything but regular images.
+    // Get usage from texture
     memoryBarrier.subresourceRange.aspectMask = VkImageAspectFlagBits::VK_IMAGE_ASPECT_COLOR_BIT;
     memoryBarrier.subresourceRange.baseMipLevel = 0;
+
+    // TODO: Get num mips from texture to correctly specify this
     memoryBarrier.subresourceRange.levelCount = 1;
     memoryBarrier.subresourceRange.baseArrayLayer = 0;
     memoryBarrier.subresourceRange.layerCount = 1;
 
-    memoryBarrier.srcAccessMask = barrier.SourceAccessMask;
-    memoryBarrier.dstAccessMask = barrier.DestinationAccessMask;
-    vkCmdPipelineBarrier(m_CommandBuffer, barrier.SourceStageMask, barrier.DestinationAccessMask, 0, 0, nullptr, 0,
+    memoryBarrier.srcAccessMask = barrier.Barrier.SourceAccessMask;
+    memoryBarrier.dstAccessMask = barrier.Barrier.DestinationAccessMask;
+    vkCmdPipelineBarrier(m_CommandBuffer, barrier.SourceStageMask, barrier.DestinationStageMask, 0, 0, nullptr, 0,
                          nullptr, 1, &memoryBarrier);
 }
 
-void CommandBuffer::InsertBarriers(const BufferMemoryBarrierArray &barriers) const
+void CommandBuffer::InsertBarriers(const MemoryBarrierArray &barriers) const
 {
-    std::vector<VkBufferMemoryBarrier> vkBarriers{};
-    vkBarriers.reserve(barriers.Barriers.size());
+    std::vector<VkBufferMemoryBarrier> bufferBarriers{};
+    bufferBarriers.reserve(barriers.BufferBarriers.size());
 
-    for (auto &barrier : barriers.Barriers)
+    for (auto &barrier : barriers.BufferBarriers)
     {
 		VkBufferMemoryBarrier vkBarrier{};
 		vkBarrier.sType = VkStructureType::VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
@@ -372,11 +398,43 @@ void CommandBuffer::InsertBarriers(const BufferMemoryBarrierArray &barriers) con
         }
 		vkBarrier.offset = 0;
 		vkBarrier.size = VK_WHOLE_SIZE;
-		vkBarriers.push_back(vkBarrier);
+		bufferBarriers.push_back(vkBarrier);
     }
 
-    vkCmdPipelineBarrier(m_CommandBuffer, barriers.SourceStageMask, barriers.DestinationStageMask, 0, 0, nullptr, static_cast<uint32_t>(vkBarriers.size()),
-                         vkBarriers.data(), 0, nullptr);
+    std::vector<VkImageMemoryBarrier> imageBarriers{};
+    imageBarriers.reserve(barriers.BufferBarriers.size());
+    for (auto &barrier : barriers.ImageBarriers)
+    {
+		VkImageMemoryBarrier vkBarrier{};
+		vkBarrier.sType = VkStructureType::VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+		vkBarrier.image = barrier.Image.get().Get();
+		vkBarrier.srcAccessMask = barrier.SourceAccessMask;
+		vkBarrier.dstAccessMask = barrier.DestinationAccessMask;
+        if (barrier.Queues.has_value())
+        {
+            vkBarrier.srcQueueFamilyIndex = barrier.Queues->SourceQueue.GetFamilyIndex();
+            vkBarrier.dstQueueFamilyIndex = barrier.Queues->DestionationQueue.GetFamilyIndex();
+        }
+        else
+        {
+            vkBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            vkBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        }
+        vkBarrier.subresourceRange = VkImageSubresourceRange{
+            // TODO: This doesn't work for anything but regular images. 
+            // Get usage from texture
+            .aspectMask = VkImageAspectFlagBits::VK_IMAGE_ASPECT_COLOR_BIT,
+            .baseMipLevel = 0,
+            // TODO: Get num mips from texture to correctly specify this
+            .levelCount = 1,
+            .baseArrayLayer = 0,
+            .layerCount = 1,
+        };
+		imageBarriers.push_back(vkBarrier);
+    }
+
+    vkCmdPipelineBarrier(m_CommandBuffer, barriers.SourceStageMask, barriers.DestinationStageMask, 0, 0, nullptr, static_cast<uint32_t>(bufferBarriers.size()),
+                         bufferBarriers.data(), 0, nullptr);
 }
 
 Queue CommandBuffer::GetQueue() const

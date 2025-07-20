@@ -42,7 +42,7 @@ ShaderModule ShaderModule::LoadFromDisk(const VkDevice &vkDevice, const std::fil
     file.seekg(0);
     file.read(fileContents.data(), fileSize);
     file.close();
-    std::cout << "Read file contents of " << filename << " with size " << fileSize;
+    std::cout << "Read file contents of " << filename << " with size " << fileSize << "\n";
 
     return ShaderModule(vkDevice, fileContents);
 }

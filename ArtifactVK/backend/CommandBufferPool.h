@@ -55,13 +55,14 @@ class CommandBuffer
     void CopyBufferToImage(const DeviceBuffer& source, Texture& texture);
     void InsertBarrier(const BufferMemoryBarrier &barrier) const;
     void InsertBarrier(const ImageMemoryBarrier &barrier) const;
-    void InsertBarriers(const BufferMemoryBarrierArray &barriers) const;
+    void InsertBarriers(const MemoryBarrierArray &barriers) const;
     Queue GetQueue() const;
   private:
     void BindVertexBuffer(VertexBuffer &vertexBuffer);
     void BindIndexBuffer(IndexBuffer &indexBuffer);
     void BindDescriptorSet(const DescriptorSet &uniformBuffer, const RasterPipeline& pipeline);
     void HandleAcquire(DeviceBuffer &buffer);
+    void HandleAcquire(Texture &texture);
     void Reset();
 
     // Only used in case we Reset, which can clear a debug name previously
@@ -82,7 +83,7 @@ class CommandBuffer
     std::unique_ptr<Fence> m_InFlight;
     CommandBufferStatus m_Status = CommandBufferStatus::Reset;
     Queue m_Queue;
-    std::vector<BufferMemoryBarrierArray> m_PendingBarriers;
+    std::vector<MemoryBarrierArray> m_PendingBarriers;
 };
 
 // TODO: Template with per-type command buffer, so that they only have the matching

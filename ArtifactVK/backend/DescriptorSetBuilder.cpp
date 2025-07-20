@@ -11,34 +11,36 @@ BindSet::BindSet(const DescriptorSet &descriptorSet, VkDevice device) :
 {
 }
 
-BindSet::BindSet(BindSet &&other)
-    : m_DescriptorSet(other.m_DescriptorSet),
-      m_Entries(std::move(other.m_Entries)), m_Device(other.m_Device),
-      m_FinishedOrMoved(false)
+BindSet& BindSet::BindTexture(Texture &texture) &
 {
-    other.m_FinishedOrMoved = true;
-}
-
-BindSet::~BindSet()
-{
-    assert(m_FinishedOrMoved && "Did not call Finish on a bindset. Any bind actions were discarded");
-}
-
-BindSet &BindSet::operator=(BindSet && other)
-{
-    m_DescriptorSet = other.m_DescriptorSet;
-    m_Entries = std::move(other.m_Entries);
-    m_Device = other.m_Device;
-    m_FinishedOrMoved = false;
+    BindTextureInternal(texture);
     return *this;
 }
 
-BindSet &BindSet::BindTexture(Texture &texture)
+BindSet& BindSet::BindUniformBuffer(const UniformBuffer& buffer) &
+{
+    BindUniformBufferInternal(buffer);
+    return *this;
+}
+
+BindSet&& BindSet::BindTexture(Texture &texture) &&
+{
+    BindTextureInternal(texture);
+    return std::move(*this);
+}
+
+BindSet&& BindSet::BindUniformBuffer(const UniformBuffer& buffer) &&
+{
+    BindUniformBufferInternal(buffer);
+    return std::move(*this);
+}
+
+void BindSet::BindTextureInternal(Texture &texture)
 {
 	// TODO: Verify which slot this goes into with original layout
 	VkWriteDescriptorSet descriptorWriteInfo{};
 	descriptorWriteInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	descriptorWriteInfo.dstSet = m_DescriptorSet.get().Get();
+	descriptorWriteInfo.dstSet = m_DescriptorSet.Get();
 	descriptorWriteInfo.dstBinding = static_cast<uint32_t>(m_Entries.size());
 
 	descriptorWriteInfo.descriptorType = VkDescriptorType::VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
@@ -47,17 +49,16 @@ BindSet &BindSet::BindTexture(Texture &texture)
 	descriptorWriteInfo.descriptorCount = 1;
 
     // We fill this in once we combine all the writes into one invocation!
-	descriptorWriteInfo.pBufferInfo = nullptr;
+	descriptorWriteInfo.pImageInfo = nullptr;
     m_Entries.emplace_back(BindEntry{descriptorWriteInfo, {.ImageInfo = texture.GetDescriptorInfo()}});
-    return *this;
 }
 
-BindSet &BindSet::BindUniformBuffer(const UniformBuffer& buffer)
+void BindSet::BindUniformBufferInternal(const UniformBuffer &buffer)
 {
 	// TODO: Verify which slot this goes into with original layout
 	VkWriteDescriptorSet descriptorWriteInfo{};
 	descriptorWriteInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	descriptorWriteInfo.dstSet = m_DescriptorSet.get().Get();
+	descriptorWriteInfo.dstSet = m_DescriptorSet.Get();
 	descriptorWriteInfo.dstBinding = static_cast<uint32_t>(m_Entries.size());
 
 	descriptorWriteInfo.descriptorType = VkDescriptorType::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -68,14 +69,12 @@ BindSet &BindSet::BindUniformBuffer(const UniformBuffer& buffer)
     // We fill this in once we combine all the writes into one invocation!
 	descriptorWriteInfo.pBufferInfo = nullptr;
     m_Entries.emplace_back(BindEntry{descriptorWriteInfo, {.BufferInfo = buffer.GetDescriptorInfo()}});
-    return *this;
 }
+
 
 void BindSet::Finish()
 {
-    m_FinishedOrMoved = true;
-
-    // TODO: Splti the vectors so that we don't have to copy
+    // TODO: Split the vectors so that we don't have to copy
     // into this vecotr at the point of submission.
     std::vector<VkWriteDescriptorSet> writes;
     writes.reserve(m_Entries.size());
@@ -91,6 +90,7 @@ void BindSet::Finish()
             break;
         case VkDescriptorType::VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
             entry.StagingDescriptorWrite.pImageInfo = &entry.DataInfo.ImageInfo;
+            entry.StagingDescriptorWrite.pBufferInfo = reinterpret_cast<VkDescriptorBufferInfo*>(&entry.DataInfo.ImageInfo);
             break;
         default:
             assert(false && "Unhandled descriptor type");
@@ -121,7 +121,7 @@ DescriptorSet::DescriptorSet(const DescriptorSetLayout &layout, VkDevice device,
 {
 }
 
-BindSet DescriptorSet::BindTexture(const Texture &texture)
+BindSet DescriptorSet::BindTexture(Texture &texture)
 {
     auto bindset = BindSet(*this, m_Device);
     bindset.BindTexture(texture);
@@ -134,7 +134,6 @@ BindSet DescriptorSet::BindUniformBuffer(const UniformBuffer& buffer)
     bindset.BindUniformBuffer(buffer);
     return bindset;
 }
-
 
 VkDescriptorSetLayout DescriptorSetLayout::Get() const
 {
