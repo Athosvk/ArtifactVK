@@ -3,6 +3,8 @@
 #include <stdexcept>
 #include <iostream>
 
+#include "DebugMarker.h"
+
 Fence::Fence(VkDevice device) : Fence(device, false)
 {
 }
@@ -96,4 +98,9 @@ FenceStatus Fence::QueryStatus()
 bool Fence::WasReset() const
 {
     return m_Status == FenceStatus::Reset;
+}
+
+void Fence::SetName(const std::string& name, const ExtensionFunctionMapping& functionMapping) const
+{
+    DebugMarker::SetName(m_Device, functionMapping, m_Fence, name);
 }
