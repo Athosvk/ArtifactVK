@@ -8,11 +8,13 @@
 class DebugMarker
 {
   public:
-    static void SetName(VkDevice vkDevice, const ExtensionFunctionMapping &extensionMapper, VkCommandBuffer handle, 
+    static void SetName(VkDevice device, const ExtensionFunctionMapping &extensionMapper, VkCommandBuffer handle, 
         const std::string& name);
-    static void SetName(VkDevice vkDevice, const ExtensionFunctionMapping &extensionMapper, VkDescriptorSet handle, 
+    static void SetName(VkDevice device, const ExtensionFunctionMapping &extensionMapper, VkDescriptorSet handle, 
         const std::string& name);
-    static void SetName(VkDevice vkDevice, const ExtensionFunctionMapping &extensionMapper, VkCommandPool handle, 
+    static void SetName(VkDevice device, const ExtensionFunctionMapping &extensionMapper, VkCommandPool handle, 
+        const std::string& name);
+    static void SetName(VkDevice device, const ExtensionFunctionMapping &extensionMapper, VkFence handle, 
         const std::string& name);
 
   private:

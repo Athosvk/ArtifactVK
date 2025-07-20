@@ -51,6 +51,7 @@ void CommandBuffer::SetName(const std::string& name, const ExtensionFunctionMapp
     m_Name = name;
     m_ExtensionFunctionMapping = functionMapping;
     DebugMarker::SetName(m_Device, functionMapping, m_CommandBuffer, name);
+    m_InFlight->SetName(name + " in flight", functionMapping);
 }
 
 void CommandBuffer::WaitFence()
