@@ -23,6 +23,12 @@ void DebugMarker::SetName(VkDevice device, const ExtensionFunctionMapping &exten
     SetNameInternal(name, extensionMapper, device, reinterpret_cast<uint64_t>(handle), VkObjectType::VK_OBJECT_TYPE_COMMAND_POOL);
 }
 
+void DebugMarker::SetName(VkDevice device, const ExtensionFunctionMapping &extensionMapper, VkFence handle,
+                          const std::string &name)
+{
+    SetNameInternal(name, extensionMapper, device, reinterpret_cast<uint64_t>(handle), VkObjectType::VK_OBJECT_TYPE_FENCE);
+}
+
 void DebugMarker::SetNameInternal(const std::string& name, const ExtensionFunctionMapping& mapping, VkDevice device,
     uint64_t handle, VkObjectType handleType)
 {
