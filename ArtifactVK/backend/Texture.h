@@ -51,7 +51,7 @@ public:
     uint32_t m_Height;
 
     std::optional<ImageMemoryBarrier> m_PendingAcquireBarrier;
-    std::shared_ptr<Fence> m_PendingTransferFence;
+    Fence* m_PendingTransferFence;
     VkImageView m_ImageView;
     VkSampler m_Sampler;
 };

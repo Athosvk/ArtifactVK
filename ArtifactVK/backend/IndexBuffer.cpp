@@ -27,18 +27,18 @@ IndexBuffer::IndexBuffer(CreateIndexBufferInfo bufferInfo, VkDevice device, cons
 	}
 	
 	// TODO: Use semaphore instead, allow fetching the semaphore
-	m_TransferFence = transferCommandBuffer.End({}, {});
+	m_TransferFence = &transferCommandBuffer.End({}, {});
 }
 
 DeviceBuffer& IndexBuffer::GetBuffer()
 {
-    if (m_TransferFence)
+    if (m_TransferFence != nullptr)
     {
-		// TODO: Allow doing this explciitly instead, as we can't read
+		// TODO: Allow doing this explicitly instead, as we can't read
 		// the intent behind calling `Get` this can lead to 
 		// unexpected results
-        m_TransferFence->WaitAndReset();   
-		m_TransferFence.reset();
+        m_TransferFence->WaitAndReset();
+		m_TransferFence = nullptr;
 	}
     return m_IndexBuffer;
 }

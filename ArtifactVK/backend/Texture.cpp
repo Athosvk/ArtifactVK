@@ -62,7 +62,7 @@ Texture::Texture(VkDevice device, const PhysicalDevice &physicalDevice, const Te
 
     TransitionLayout(VkImageLayout::VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                      VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, transferCommandBuffer, destinationQueue);
-    m_PendingTransferFence = transferCommandBuffer.End();
+    m_PendingTransferFence = &transferCommandBuffer.End();
 
     VkImageViewCreateInfo viewInfo{};
     viewInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;

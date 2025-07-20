@@ -79,7 +79,10 @@ DeviceBuffer &VulkanDevice::CreateBuffer(const CreateBufferInfo &createInfo)
 
 Texture &VulkanDevice::CreateTexture(const TextureCreateInfo &createInfo)
 {
-    return *m_Textures.emplace_back(std::make_unique<Texture>(m_Device, m_PhysicalDevice, createInfo, GetTransferCommandBuffer(), 
+    auto &commandBuffer = GetTransferCommandBuffer();
+    // TODO: Embed texture name
+    commandBuffer.SetName("Transfer Texture Command Buffer", GetExtensionFunctionMapping());
+    return *m_Textures.emplace_back(std::make_unique<Texture>(m_Device, m_PhysicalDevice, createInfo, commandBuffer, 
         // TODO: Should also allow transferring to compute
         *m_GraphicsQueue));
 }
@@ -476,11 +479,19 @@ void VulkanDevice::HandleResizeEvent(const WindowResizeEvent & resizeEvent)
     m_LastUnhandledResize = VkExtent2D{resizeEvent.NewWidth, resizeEvent.NewHeight};
 }
 
+ExtensionFunctionMapping VulkanDevice::GetExtensionFunctionMapping() const
+{
+    return m_Instance.GetExtensionFunctionMapping();
+}
+
 IndexBuffer &VulkanDevice::CreateIndexBuffer(std::vector<uint16_t> data)
 {
     assert(m_GraphicsQueue.has_value() && "Need a graphics queue");
     CreateIndexBufferInfo info = CreateIndexBufferInfo(data, VkSharingMode::VK_SHARING_MODE_EXCLUSIVE, m_GraphicsQueue);
-    return *m_IndexBuffers.emplace_back(std::make_unique<IndexBuffer>(IndexBuffer(info, m_Device, m_PhysicalDevice, GetTransferCommandBuffer())));
+
+    auto &commandBuffer = GetTransferCommandBuffer();
+    commandBuffer.SetName("Index Buffer Transfer Command Buffer", m_Instance.GetExtensionFunctionMapping());
+    return *m_IndexBuffers.emplace_back(std::make_unique<IndexBuffer>(IndexBuffer(info, m_Device, m_PhysicalDevice, commandBuffer)));
 }
 
 std::vector<VkDeviceQueueCreateInfo> VulkanDevice::GetQueueCreateInfos(const PhysicalDevice &physicalDevice)
