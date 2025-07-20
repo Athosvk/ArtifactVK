@@ -1,6 +1,10 @@
 #pragma once
 #include <vulkan/vulkan.h>
 
+#include <string>
+
+class ExtensionFunctionMapping;
+
 enum class FenceStatus
 {
     // Without knowing the function to pass it into, we don't know if the fence is ever entering an unsignaled state
@@ -33,6 +37,7 @@ class Fence
     VkFence Get() const;
     FenceStatus QueryStatus();
     bool WasReset() const;
+    void SetName(const std::string& name, const ExtensionFunctionMapping& functionMapping) const;
   private:
     VkFence m_Fence;
     VkDevice m_Device;
