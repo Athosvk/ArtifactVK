@@ -33,7 +33,7 @@ BindSet &BindSet::operator=(BindSet && other)
     return *this;
 }
 
-BindSet &BindSet::BindTexture(const Texture &texture)
+BindSet &BindSet::BindTexture(Texture &texture)
 {
 	// TODO: Verify which slot this goes into with original layout
 	VkWriteDescriptorSet descriptorWriteInfo{};

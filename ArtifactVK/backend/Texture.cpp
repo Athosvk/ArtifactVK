@@ -104,14 +104,10 @@ Texture::~Texture()
 
 VkImage Texture::Get()
 {
-    if (m_PendingTransferFence)
-    {
-		// TODO: Allow doing this explicitly instead, as we can't read
-		// the intent behind calling `Get` this can lead to 
-		// unexpected results
-        m_PendingTransferFence->WaitAndReset();   
-		m_PendingTransferFence.reset();
-	}
+    // TODO: Allow doing this explicitly instead, as we can't read
+    // the intent behind calling `Get` this can lead to
+    // unexpected results
+    WaitTransfer();
     return m_Image;
 }
 
@@ -125,8 +121,12 @@ uint32_t Texture::GetHeight() const
     return m_Height;
 }
 
-VkDescriptorImageInfo Texture::GetDescriptorInfo() const
+VkDescriptorImageInfo Texture::GetDescriptorInfo()
 {
+    // TODO: Allow doing this explicitly instead, as we can't read
+    // the intent behind calling `Get` this can lead to
+    // unexpected results
+    WaitTransfer();
     return VkDescriptorImageInfo 
     {
         .sampler = m_Sampler,
@@ -242,5 +242,14 @@ void Texture::TransitionLayout(VkImageLayout from, VkImageLayout to, CommandBuff
 		};
 		m_PendingAcquireBarrier.emplace(acquireBarrier);
     }
+}
+
+void Texture::WaitTransfer()
+{
+    if (m_PendingTransferFence)
+    {
+        m_PendingTransferFence->WaitAndReset();   
+		m_PendingTransferFence.reset();
+	}
 }
 

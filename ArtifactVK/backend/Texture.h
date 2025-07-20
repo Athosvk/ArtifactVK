@@ -36,11 +36,12 @@ public:
     /// Takes the transfer acquire barrier, if there is any, for a previously enqueued release barrier used for uploading data
     /// </summary>
     std::optional<ImageMemoryBarrier> TakePendingAcquire();
-    VkDescriptorImageInfo GetDescriptorInfo() const;
+    VkDescriptorImageInfo GetDescriptorInfo();
   private:
     void CreateTextureSampler(VkDevice device, const PhysicalDevice& physicalDevice);
     DeviceBuffer CreateStagingBuffer(size_t size, const PhysicalDevice &physicalDevice, VkDevice device) const;
     void TransitionLayout(VkImageLayout from, VkImageLayout to, CommandBuffer &commandBuffer, std::optional<Queue> destinationQueue);
+    void WaitTransfer();
 
     VkDevice m_Device;
     DeviceBuffer m_StagingBuffer;

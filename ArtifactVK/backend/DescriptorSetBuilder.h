@@ -64,7 +64,7 @@ class DescriptorSet
   public:
     DescriptorSet(const DescriptorSetLayout& layout, VkDevice device, VkDescriptorSet set);
 
-    BindSet BindTexture(const Texture& texture);
+    BindSet BindTexture(Texture& texture);
     BindSet BindUniformBuffer(const UniformBuffer& buffer);
     VkDescriptorSet Get() const;
     const DescriptorSetLayout& GetLayout() const;
