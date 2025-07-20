@@ -10,6 +10,7 @@
 #include <typeinfo>
 
 #include "DeviceExtensionMapping.h"
+#include "ExtensionFunctionMapping.h"
 #include "VulkanSurface.h"
 #include "Swapchain.h"
 #include "Pipeline.h"
@@ -57,12 +58,16 @@ class VulkanDevice
     void AcquireNext(const Semaphore& toSignal);
     void Present(std::span<Semaphore> waitSemaphores);
     void HandleResizeEvent(const WindowResizeEvent &resizeEvent);
+    ExtensionFunctionMapping GetExtensionFunctionMapping() const;
+
     template<typename T> 
     VertexBuffer &CreateVertexBuffer(std::vector<T> initialData)
     {
         assert(m_GraphicsQueue.has_value() && "Need a graphics queue");
         auto bufferCreateInfo = CreateVertexBufferInfo{initialData, VkSharingMode::VK_SHARING_MODE_EXCLUSIVE, *m_GraphicsQueue };
-        return *m_VertexBuffers.emplace_back(std::make_unique<VertexBuffer>(bufferCreateInfo, m_Device, m_PhysicalDevice, GetTransferCommandBuffer()));
+        auto &commandBuffer = GetTransferCommandBuffer();
+        commandBuffer.SetName("Vertex Buffer Transfer Command Buffer", GetExtensionFunctionMapping());
+        return *m_VertexBuffers.emplace_back(std::make_unique<VertexBuffer>(bufferCreateInfo, m_Device, m_PhysicalDevice, commandBuffer));
     }
 
     IndexBuffer &CreateIndexBuffer(std::vector<uint16_t> data);

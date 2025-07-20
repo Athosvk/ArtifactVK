@@ -49,8 +49,8 @@ class CommandBuffer
     void BeginSingleTake();
     void Draw(const Framebuffer& frameBuffer, const RenderPass& renderPass, const RasterPipeline& pipeline, VertexBuffer& vertexBuffer, const DescriptorSet& descriptorSet);
     void DrawIndexed(const Framebuffer& frameBuffer, const RenderPass& renderPass, const RasterPipeline& pipeline, VertexBuffer& vertexBuffer, IndexBuffer& indexBuffer, const DescriptorSet& descriptorSet);
-    std::shared_ptr<Fence> End(std::span<Semaphore> waitSemaphores, std::span<Semaphore> signalSemaphores);
-    std::shared_ptr<Fence> End();
+    Fence& End(std::span<Semaphore> waitSemaphores, std::span<Semaphore> signalSemaphores);
+    Fence& End();
     void Copy(const DeviceBuffer &source, const DeviceBuffer &destination);
     void CopyBufferToImage(const DeviceBuffer& source, Texture& texture);
     void InsertBarrier(const BufferMemoryBarrier &barrier) const;
@@ -78,7 +78,8 @@ class CommandBuffer
     // better so that End consumes into an executed command buffer,
     // possibly with a recyclable command buffer handle if it wasn't single
     // take
-    std::shared_ptr<Fence> m_InFlight;
+    // Needs to outlive the CommandBuffer in case it's moved
+    std::unique_ptr<Fence> m_InFlight;
     CommandBufferStatus m_Status = CommandBufferStatus::Reset;
     Queue m_Queue;
     std::vector<BufferMemoryBarrierArray> m_PendingBarriers;

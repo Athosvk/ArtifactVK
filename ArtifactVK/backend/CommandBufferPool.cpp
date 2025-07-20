@@ -21,7 +21,7 @@
 CommandBuffer::CommandBuffer(VkCommandBuffer &&commandBuffer, VkDevice device, Queue queue) : 
     m_CommandBuffer(commandBuffer), 
     // Start the Fence signaled so that we can query for correct usage prior to beginning the command buffer (again)
-    m_InFlight(std::make_shared<Fence>(device)), m_Queue(queue),
+    m_InFlight(std::make_unique<Fence>(device)), m_Queue(queue),
     m_Device(device)
 {
 }
@@ -163,7 +163,7 @@ void CommandBuffer::DrawIndexed(const Framebuffer& frameBuffer, const RenderPass
 }
 
 // TODO: Bind command buffer to a queue at creation time
-std::shared_ptr<Fence> CommandBuffer::End(std::span<Semaphore> waitSemaphores, std::span<Semaphore> signalSemaphores)
+Fence& CommandBuffer::End(std::span<Semaphore> waitSemaphores, std::span<Semaphore> signalSemaphores)
 {
     if (vkEndCommandBuffer(m_CommandBuffer) != VK_SUCCESS)
     {
@@ -210,10 +210,10 @@ std::shared_ptr<Fence> CommandBuffer::End(std::span<Semaphore> waitSemaphores, s
         throw std::runtime_error("Faied to submit cmd buffer to queue");
     }
     m_Status = CommandBufferStatus::Submitted;
-    return m_InFlight;
+    return *m_InFlight;
 }
 
-std::shared_ptr<Fence> CommandBuffer::End()
+Fence& CommandBuffer::End()
 {
     return End(std::span<Semaphore>(), std::span<Semaphore>());
 }
@@ -418,6 +418,10 @@ CommandBufferPool::CommandBufferPool(CommandBufferPool &&other) :
 
 CommandBufferPool::~CommandBufferPool()
 {
+    for (auto& commandBuffer : m_CommandBuffers)
+    {
+        commandBuffer->WaitFence();
+    }
     vkDestroyCommandPool(m_Device, m_CommandBufferPool, nullptr);
 }
 
@@ -439,8 +443,7 @@ std::vector<std::reference_wrapper<CommandBuffer>> CommandBufferPool::CreateComm
     std::vector<std::reference_wrapper<CommandBuffer>> commandBufferHandles;
     for (auto&& vkCommandBuffer : commandBuffers)
     {
-        auto& commandBuffer = commandBufferHandles.emplace_back(*m_CommandBuffers.emplace_back(std::make_unique<CommandBuffer>(std::move(vkCommandBuffer), m_Device, queue)));
-        commandBuffer.get().SetName("Hello, Name", m_Instance.GetExtensionFunctionMapping());
+        commandBufferHandles.emplace_back(*m_CommandBuffers.emplace_back(std::make_unique<CommandBuffer>(std::move(vkCommandBuffer), m_Device, queue)));
     }
 
     return commandBufferHandles;
