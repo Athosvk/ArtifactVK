@@ -15,7 +15,7 @@ DeviceBuffer& VertexBuffer::GetBuffer()
 		// the intent behind calling `Get` this can lead to 
 		// unexpected results
         m_TransferFence->WaitAndReset();   
-		m_TransferFence.reset();
+		m_TransferFence = nullptr;
 	}
     return m_VertexBuffer;
 }

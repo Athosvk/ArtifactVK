@@ -48,7 +48,7 @@ class VertexBuffer
                 transferCommandBuffer);
         }
         // TODO: Use semaphore instead, allow fetching the semaphore
-        m_TransferFence = transferCommandBuffer.End({}, {});
+        m_TransferFence = &transferCommandBuffer.End({}, {});
     }
 
     size_t VertexCount() const;
@@ -61,5 +61,5 @@ class VertexBuffer
     DeviceBuffer m_StagingBuffer;
     DeviceBuffer m_VertexBuffer;
     size_t m_VertexCount;
-    std::shared_ptr<Fence> m_TransferFence;
+    Fence* m_TransferFence;
 };

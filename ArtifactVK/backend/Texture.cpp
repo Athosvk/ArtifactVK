@@ -62,7 +62,7 @@ Texture::Texture(VkDevice device, const PhysicalDevice &physicalDevice, const Te
 
     TransitionLayout(VkImageLayout::VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                      VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, transferCommandBuffer, destinationQueue);
-    m_PendingTransferFence = transferCommandBuffer.End();
+    m_PendingTransferFence = &transferCommandBuffer.End();
 
     VkImageViewCreateInfo viewInfo{};
     viewInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -110,7 +110,7 @@ VkImage Texture::Get()
 		// the intent behind calling `Get` this can lead to 
 		// unexpected results
         m_PendingTransferFence->WaitAndReset();   
-		m_PendingTransferFence.reset();
+		m_PendingTransferFence = nullptr;
 	}
     return m_Image;
 }
@@ -124,7 +124,6 @@ uint32_t Texture::GetHeight() const
 {
     return m_Height;
 }
-
 
 std::optional<ImageMemoryBarrier> Texture::TakePendingAcquire()
 {

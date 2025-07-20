@@ -34,5 +34,5 @@ class IndexBuffer
     DeviceBuffer m_IndexBuffer;
     size_t m_IndexCount;
 
-    std::shared_ptr<Fence> m_TransferFence;
+    Fence* m_TransferFence = nullptr;
 };
