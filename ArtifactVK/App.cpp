@@ -157,10 +157,10 @@ std::vector<PerFrameState> App::CreatePerFrameState(VulkanDevice &vulkanDevice)
 
 constexpr std::vector<Vertex> App::GetVertices()
 {
-    return {{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
-            {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
-            {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
-            {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}};
+    return {{{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
+            {{0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
+            {{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
+            {{-0.5f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}};
 }
 
 constexpr std::vector<uint16_t> App::GetIndices()
@@ -189,7 +189,7 @@ constexpr std::array<VkVertexInputAttributeDescription, 3> Vertex::GetAttributeD
     VkVertexInputAttributeDescription positionAttribute;
     positionAttribute.binding = 0;
     positionAttribute.location = 0;
-    positionAttribute.format = VkFormat::VK_FORMAT_R32G32_SFLOAT;
+    positionAttribute.format = VkFormat::VK_FORMAT_R32G32B32_SFLOAT;
     positionAttribute.offset = offsetof(Vertex, Position);
 
     VkVertexInputAttributeDescription colorAttribute;
