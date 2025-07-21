@@ -29,9 +29,13 @@ unsigned char *Image::GetPixels() const
 
 TextureCreateInfo Image::GetTextureCreateDesc() const
 {
+    // TODO: Make this use the num channels that we actually retrieved and adjust
+    // texture format if needed.
+    // Standard texture format is expecting RGBA
+    constexpr unsigned NumChannels = 4;
     return TextureCreateInfo{
         static_cast<uint32_t>(m_Width),
         static_cast<uint32_t>(m_Height), 
-        std::span<const unsigned char>(m_Data.get(), m_Width * m_Height)
+        std::span<const unsigned char>(m_Data.get(), m_Width * m_Height * NumChannels)
     };
 }
