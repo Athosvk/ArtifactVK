@@ -35,6 +35,7 @@ struct ImageMemoryBarrierElement
     VkAccessFlags DestinationAccessMask;
     VkImageLayout SourceLayout;
     VkImageLayout DestinationLayout;
+    VkImageSubresourceRange SubResource;
 };
 
 struct ImageMemoryBarrier

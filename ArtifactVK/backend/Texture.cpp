@@ -4,15 +4,69 @@
 
 #include "PhysicalDevice.h"
 
+constexpr std::array<VkFormat, 3> g_DepthFormats = {VkFormat::VK_FORMAT_D32_SFLOAT, VkFormat::VK_FORMAT_D32_SFLOAT_S8_UINT,
+                                                 VkFormat::VK_FORMAT_D24_UNORM_S8_UINT};
 
-VkDeviceSize TextureCreateInfo::BufferSize() const
+
+bool HasStencilComponent(VkFormat format)
+{
+    return format == VkFormat::VK_FORMAT_D32_SFLOAT_S8_UINT ||
+        format == VkFormat::VK_FORMAT_D24_UNORM_S8_UINT;
+}
+
+VkImageAspectFlags GetMatchingAspectFlags(VkFormat format)
+{
+    if (format == VkFormat::VK_FORMAT_R8G8B8A8_SRGB)
+    {
+        return VkImageAspectFlagBits::VK_IMAGE_ASPECT_COLOR_BIT;
+    }
+    else if (std::find(g_DepthFormats.begin(), g_DepthFormats.end(), format) != g_DepthFormats.end())
+    {
+        if (HasStencilComponent(format))
+        {
+            return VkImageAspectFlagBits::VK_IMAGE_ASPECT_DEPTH_BIT | VkImageAspectFlagBits::VK_IMAGE_ASPECT_STENCIL_BIT;
+        }
+        else
+        {
+            return VkImageAspectFlagBits::VK_IMAGE_ASPECT_DEPTH_BIT;
+        }
+    }
+    throw std::runtime_error("Unsupported format");
+}
+
+VkImageUsageFlags GetMatchingUsageFlags(VkFormat format)
+{
+    if (format == VkFormat::VK_FORMAT_R8G8B8A8_SRGB)
+    {
+        // TODO: Don't let this decide that the usage is transfer
+        return VkImageUsageFlagBits::VK_IMAGE_USAGE_TRANSFER_DST_BIT | VkImageUsageFlagBits::VK_IMAGE_USAGE_SAMPLED_BIT;
+    }
+    else if (std::find(g_DepthFormats.begin(), g_DepthFormats.end(), format) != g_DepthFormats.end())
+    {
+        return VkImageUsageFlagBits::VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+    }
+    throw std::runtime_error("Unsupported format");
+}
+
+VkImageSubresourceRange GetSubResourceRange(VkFormat format)
+{
+    return VkImageSubresourceRange{
+        .aspectMask = GetMatchingAspectFlags(format),
+        .baseMipLevel = 0,
+        .levelCount = 1,
+        .baseArrayLayer = 0,
+        .layerCount = 1,
+    };
+}
+
+VkDeviceSize Texture2DCreateInfo::BufferSize() const
 {
 	// TODO: Fix size for varying channels
     return Width * Height * 4;
 }
 
-Texture::Texture(VkDevice device, const PhysicalDevice& physicalDevice, const ImageCreateInfo &createInfo) : 
-    m_Device(device), m_Width(createInfo.Width), m_Height(createInfo.Height)
+Texture::Texture(VkDevice device, const PhysicalDevice& physicalDevice, const TextureCreateInfo &createInfo) : 
+    m_Device(device), m_Width(createInfo.Width), m_Height(createInfo.Height), m_Format(createInfo.Format)
 {
     VkImageCreateInfo vkCreateInfo{};
     vkCreateInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -21,11 +75,10 @@ Texture::Texture(VkDevice device, const PhysicalDevice& physicalDevice, const Im
     vkCreateInfo.mipLevels = 1;
     vkCreateInfo.arrayLayers = 1;
 
-    vkCreateInfo.format = VkFormat::VK_FORMAT_R8G8B8A8_SRGB;
+    vkCreateInfo.format = createInfo.Format;
     vkCreateInfo.tiling = VkImageTiling::VK_IMAGE_TILING_OPTIMAL;
     vkCreateInfo.initialLayout = VkImageLayout::VK_IMAGE_LAYOUT_UNDEFINED;
-    vkCreateInfo.usage =
-        VkImageUsageFlagBits::VK_IMAGE_USAGE_TRANSFER_DST_BIT | VkImageUsageFlagBits::VK_IMAGE_USAGE_SAMPLED_BIT;
+    vkCreateInfo.usage = GetMatchingUsageFlags(createInfo.Format);
     vkCreateInfo.sharingMode = VkSharingMode::VK_SHARING_MODE_EXCLUSIVE;
     vkCreateInfo.samples = VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT;
 
@@ -53,12 +106,8 @@ Texture::Texture(VkDevice device, const PhysicalDevice& physicalDevice, const Im
     viewInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     viewInfo.image = m_Image;
     viewInfo.viewType = VkImageViewType::VK_IMAGE_VIEW_TYPE_2D;
-    viewInfo.format = VkFormat::VK_FORMAT_R8G8B8A8_SRGB;
-    viewInfo.subresourceRange.aspectMask = VkImageAspectFlagBits::VK_IMAGE_ASPECT_COLOR_BIT;
-    viewInfo.subresourceRange.baseMipLevel = 0;
-    viewInfo.subresourceRange.levelCount = 1;
-    viewInfo.subresourceRange.baseArrayLayer = 0;
-    viewInfo.subresourceRange.layerCount = 1;
+    viewInfo.format = createInfo.Format;
+    viewInfo.subresourceRange = GetSubResourceRange(createInfo.Format);
 
     if (vkCreateImageView(device, &viewInfo, nullptr, &m_ImageView) != VkResult::VK_SUCCESS)
     {
@@ -66,11 +115,20 @@ Texture::Texture(VkDevice device, const PhysicalDevice& physicalDevice, const Im
     }
 }
 
-Texture::Texture(Texture &&other) : m_Device(other.m_Device), 
-    m_Image(std::exchange(other.m_Image, VK_NULL_HANDLE)), m_Memory(std::exchange(other.m_Memory, VK_NULL_HANDLE)), 
-    m_ImageView(std::exchange(other.m_ImageView, VK_NULL_HANDLE)), m_Width(other.m_Width), m_Height(other.m_Height)
+Texture::Texture(Texture &&other)
 {
+    *this = std::move(other);
+}
 
+Texture &Texture::operator=(Texture &&other)
+{
+    m_Image = std::exchange(other.m_Image, VK_NULL_HANDLE);
+    m_Memory = std::exchange(other.m_Memory, VK_NULL_HANDLE);
+    m_ImageView = std::exchange(other.m_ImageView, VK_NULL_HANDLE);
+    m_Width = other.m_Width;
+    m_Height = other.m_Height;
+    m_Format = other.m_Format;
+    return *this;
 }
 
 Texture::~Texture()
@@ -121,6 +179,16 @@ std::optional<ImageMemoryBarrier> Texture::TransitionLayout(VkImageLayout from, 
         barrier.SourceStageMask = VkPipelineStageFlagBits::VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
         barrier.DestinationStageMask = VkPipelineStageFlagBits::VK_PIPELINE_STAGE_TRANSFER_BIT;
     }
+
+    else if (from == VkImageLayout::VK_IMAGE_LAYOUT_UNDEFINED && to == VkImageLayout::VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
+    {
+        barrier.Barrier.SourceAccessMask = 0;
+        barrier.Barrier.DestinationAccessMask = VkAccessFlagBits::VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT |
+                                                VkAccessFlagBits::VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+
+        barrier.SourceStageMask = VkPipelineStageFlagBits::VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+        barrier.DestinationStageMask = VkPipelineStageFlagBits::VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+    }
     else if (from == VkImageLayout::VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL &&
              to == VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
     {
@@ -155,7 +223,8 @@ std::optional<ImageMemoryBarrier> Texture::TransitionLayout(VkImageLayout from, 
             // layout transition parameters here, even though the transition
             // already occurred during the release
             from,
-            to,
+            to, 
+            GetSubResourceRange(m_Format),
 			VkPipelineStageFlagBits::VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
             // TODO: Allow reads in vertex/other shader stages?
 			VkPipelineStageFlagBits::VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT |
@@ -167,6 +236,11 @@ std::optional<ImageMemoryBarrier> Texture::TransitionLayout(VkImageLayout from, 
     {
         return std::nullopt;
     }
+}
+
+VkFormat Texture::GetFormat() const
+{
+    return m_Format;
 }
 
 void Texture::BindMemory()
@@ -185,11 +259,34 @@ VkDescriptorImageInfo Texture::GetDescriptorInfo() const
     };
 }
 
-Texture2D::Texture2D(VkDevice device, const PhysicalDevice &physicalDevice, const TextureCreateInfo &textureCreateInfo, CommandBuffer& transferCommandBuffer,
+DepthAttachment::DepthAttachment(VkDevice device, const PhysicalDevice &physicalDevice,
+                                 const DepthAttachmentCreateInfo &createInfo, CommandBuffer &graphicsCommandBuffer)
+    : m_Texture(device, physicalDevice,
+                TextureCreateInfo{createInfo.Width, createInfo.Height, DetermineDepthFormat(physicalDevice)})
+{
+    graphicsCommandBuffer.BeginSingleTake();
+    
+    m_Texture.TransitionLayout(VkImageLayout::VK_IMAGE_LAYOUT_UNDEFINED, VkImageLayout::VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, graphicsCommandBuffer,
+                               {});
+
+}
+
+VkFormat DepthAttachment::DetermineDepthFormat(const PhysicalDevice &physicalDevice)
+{
+    VkFormat format = physicalDevice.FindFirstSupportedFormat(
+        {VkFormat::VK_FORMAT_D32_SFLOAT, VkFormat::VK_FORMAT_D32_SFLOAT_S8_UINT, VkFormat::VK_FORMAT_D24_UNORM_S8_UINT},
+        VkImageTiling::VK_IMAGE_TILING_OPTIMAL,
+        VkFormatFeatureFlagBits::VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT
+    );
+    return format;
+}
+
+
+Texture2D::Texture2D(VkDevice device, const PhysicalDevice &physicalDevice, const Texture2DCreateInfo &textureCreateInfo, CommandBuffer& transferCommandBuffer,
     Queue destinationQueue) : 
     m_Device(device),
     m_StagingBuffer(CreateStagingBuffer(textureCreateInfo.BufferSize(), physicalDevice, device)),
-    m_Texture(Texture(device, physicalDevice, ImageCreateInfo{ textureCreateInfo.Width, textureCreateInfo.Height }))
+    m_Texture(Texture(device, physicalDevice, TextureCreateInfo{ textureCreateInfo.Width, textureCreateInfo.Height, VkFormat::VK_FORMAT_R8G8B8A8_SRGB }))
 {
     m_StagingBuffer.UploadData(textureCreateInfo.Data);
 
@@ -260,7 +357,7 @@ std::optional<ImageMemoryBarrier> Texture2D::TakePendingAcquire()
     return std::move(m_PendingAcquireBarrier);
 }
 
-void Texture2D::CreateTextureSampler(VkDevice device, const PhysicalDevice& physicalDevice)
+void Texture2D::CreateTextureSampler(VkDevice device, const PhysicalDevice &physicalDevice)
 {
     VkSamplerCreateInfo samplerInfo{};
     samplerInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
@@ -289,11 +386,10 @@ void Texture2D::CreateTextureSampler(VkDevice device, const PhysicalDevice& phys
 
 DeviceBuffer Texture2D::CreateStagingBuffer(size_t size, const PhysicalDevice &physicalDevice, VkDevice device) const
 {
-	auto createStagingBufferInfo =
-		CreateBufferInfo{size, VkBufferUsageFlagBits::VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-						 VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-							 VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-						false};
+    auto createStagingBufferInfo = CreateBufferInfo{size, VkBufferUsageFlagBits::VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                                                    VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                                                        VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                                                    false};
     return DeviceBuffer(device, physicalDevice, createStagingBufferInfo);
 }
 
@@ -305,4 +401,3 @@ void Texture2D::WaitTransfer()
 		m_PendingTransferFence = nullptr;
 	}
 }
-

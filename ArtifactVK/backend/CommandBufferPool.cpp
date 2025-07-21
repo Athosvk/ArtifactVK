@@ -362,13 +362,7 @@ void CommandBuffer::InsertBarrier(const ImageMemoryBarrier &barrier) const
 
     // TODO: This doesn't work for anything but regular images.
     // Get usage from texture
-    memoryBarrier.subresourceRange.aspectMask = VkImageAspectFlagBits::VK_IMAGE_ASPECT_COLOR_BIT;
-    memoryBarrier.subresourceRange.baseMipLevel = 0;
-
-    // TODO: Get num mips from texture to correctly specify this
-    memoryBarrier.subresourceRange.levelCount = 1;
-    memoryBarrier.subresourceRange.baseArrayLayer = 0;
-    memoryBarrier.subresourceRange.layerCount = 1;
+    memoryBarrier.subresourceRange = barrier.Barrier.SubResource;
 
     memoryBarrier.srcAccessMask = barrier.Barrier.SourceAccessMask;
     memoryBarrier.dstAccessMask = barrier.Barrier.DestinationAccessMask;
@@ -422,17 +416,8 @@ void CommandBuffer::InsertBarriers(const BarrierArray &barriers) const
             vkBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
             vkBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
         }
-        vkBarrier.subresourceRange = VkImageSubresourceRange{
-            // TODO: This doesn't work for anything but regular images. 
-            // Get usage from texture
-            .aspectMask = VkImageAspectFlagBits::VK_IMAGE_ASPECT_COLOR_BIT,
-            .baseMipLevel = 0,
-            // TODO: Get num mips from texture to correctly specify this
-            .levelCount = 1,
-            .baseArrayLayer = 0,
-            .layerCount = 1,
-        };
-		imageBarriers.push_back(vkBarrier);
+        vkBarrier.subresourceRange = barrier.SubResource;
+        imageBarriers.push_back(vkBarrier);
     }
 
     vkCmdPipelineBarrier(m_CommandBuffer, barriers.SourceStageMask, barriers.DestinationStageMask, 0, 0, nullptr, static_cast<uint32_t>(bufferBarriers.size()),

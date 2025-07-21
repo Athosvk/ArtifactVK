@@ -77,7 +77,7 @@ DeviceBuffer &VulkanDevice::CreateBuffer(const CreateBufferInfo &createInfo)
     return *m_Buffers.emplace_back(std::make_unique<DeviceBuffer>(m_Device, m_PhysicalDevice, createInfo));
 }
 
-Texture2D &VulkanDevice::CreateTexture(const TextureCreateInfo &createInfo)
+Texture2D &VulkanDevice::CreateTexture(const Texture2DCreateInfo &createInfo)
 {
     auto &commandBuffer = GetTransferCommandBuffer();
     // TODO: Embed texture name
