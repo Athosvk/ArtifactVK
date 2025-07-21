@@ -26,14 +26,14 @@ App::App()
       m_VulkanInstance(m_Window.CreateVulkanInstance(DefaultCreateInfo())),
       m_MainPass(m_VulkanInstance.GetActiveDevice().CreateRenderPass()),
       m_SwapchainFramebuffers(m_VulkanInstance.GetActiveDevice().CreateSwapchainFramebuffers(m_MainPass)),
-      m_DescriptorSetLayout(BuildDescriptorSet(m_VulkanInstance.GetActiveDevice())),
+      m_DescriptorSetLayout(BuildDescriptorSetLayout(m_VulkanInstance.GetActiveDevice())),
       m_PerFrameState(CreatePerFrameState(m_VulkanInstance.GetActiveDevice())),
       m_RenderFullscreen(LoadShaderPipeline(m_VulkanInstance.GetActiveDevice(), m_MainPass)),
       m_Swapchain(m_VulkanInstance.GetActiveDevice().GetSwapchain()),
       m_VertexBuffer(m_VulkanInstance.GetActiveDevice().CreateVertexBuffer(GetVertices())),
-      m_IndexBuffer(m_VulkanInstance.GetActiveDevice().CreateIndexBuffer(GetIndices()))
+      m_IndexBuffer(m_VulkanInstance.GetActiveDevice().CreateIndexBuffer(GetIndices())), 
+      m_Texture(LoadImage())
 {
-    LoadImage();
 }
 
 App::~App()
@@ -51,7 +51,6 @@ void App::RunRenderLoop()
     {
         if (!m_Window.IsMinimized())
         {
-            //std::cout << "\nRendering frame " << m_CurrentFrameIndex << "\n";
             auto resizeEvent = m_Window.PollEvents();
             if (resizeEvent.has_value() && !m_Window.IsMinimized())
             {
@@ -72,10 +71,10 @@ void App::RunRenderLoop()
     }
 }
 
-void App::LoadImage()
+Texture& App::LoadImage()
 {
     Image image("textures/texture.jpg");
-    m_VulkanInstance.GetActiveDevice().CreateTexture(image.GetTextureCreateDesc());
+    return m_VulkanInstance.GetActiveDevice().CreateTexture(image.GetTextureCreateDesc());
 }
 
 UniformConstants App::GetUniforms()
@@ -114,9 +113,9 @@ void App::RecordFrame(PerFrameState& state)
     state.CommandBuffer.Begin();
     auto uniforms = GetUniforms();
     state.UniformBuffer.UploadData(GetUniforms());
-    state.DescriptorSet.BindUniformBuffer(state.UniformBuffer).Finish();
+    auto bindSet = state.DescriptorSet.BindUniformBuffer(state.UniformBuffer).BindTexture(m_Texture);
     state.CommandBuffer.DrawIndexed(m_SwapchainFramebuffers.GetCurrent(), m_MainPass, m_RenderFullscreen, m_VertexBuffer, m_IndexBuffer, 
-        state.DescriptorSet);
+        std::move(bindSet));
     state.CommandBuffer.End(std::span{ &state.ImageAvailable, 1 }, std::span{ &state.RenderFinished, 1 });
     
     m_VulkanInstance.GetActiveDevice().Present(std::span{&state.RenderFinished, 1});
@@ -158,13 +157,10 @@ std::vector<PerFrameState> App::CreatePerFrameState(VulkanDevice &vulkanDevice)
 
 constexpr std::vector<Vertex> App::GetVertices()
 {
-    return
-    {
-	    {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-		{{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
-		{{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
-		{{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}
-    };
+    return {{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
+            {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
+            {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
+            {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}};
 }
 
 constexpr std::vector<uint16_t> App::GetIndices()
@@ -174,9 +170,9 @@ constexpr std::vector<uint16_t> App::GetIndices()
     };
 }
 
-const DescriptorSetLayout& App::BuildDescriptorSet(VulkanDevice &vulkanDevice) const
+const DescriptorSetLayout& App::BuildDescriptorSetLayout(VulkanDevice &vulkanDevice) const
 {
-    return vulkanDevice.CreateDescriptorSetLayout(DescriptorSetBuilder().AddUniformBuffer());
+    return vulkanDevice.CreateDescriptorSetLayout(DescriptorSetBuilder().AddUniformBuffer().AddTexture());
 }
 
 constexpr VkVertexInputBindingDescription Vertex::GetBindingDescription()
@@ -188,7 +184,7 @@ constexpr VkVertexInputBindingDescription Vertex::GetBindingDescription()
     return bindingDescription;
 }
 
-constexpr std::array<VkVertexInputAttributeDescription,2> Vertex::GetAttributeDescriptions()
+constexpr std::array<VkVertexInputAttributeDescription, 3> Vertex::GetAttributeDescriptions()
 {
     VkVertexInputAttributeDescription positionAttribute;
     positionAttribute.binding = 0;
@@ -202,9 +198,12 @@ constexpr std::array<VkVertexInputAttributeDescription,2> Vertex::GetAttributeDe
     colorAttribute.format = VkFormat::VK_FORMAT_R32G32B32_SFLOAT;
     colorAttribute.offset = offsetof(Vertex, Color);
 
-    return {
-        positionAttribute, colorAttribute
-    };
+    VkVertexInputAttributeDescription uvAttribute;
+    uvAttribute.binding = 0;
+    uvAttribute.location = 2;
+    uvAttribute.format = VkFormat::VK_FORMAT_R32G32B32_SFLOAT;
+    uvAttribute.offset = offsetof(Vertex, UV);
+    return {positionAttribute, colorAttribute, uvAttribute};
 }
 
 constexpr VertexBindingDescription Vertex::GetVertexBindingDescription()

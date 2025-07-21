@@ -4,6 +4,8 @@
 
 #include <vulkan/vulkan.hpp>
 
+#include "Barrier.h"
+
 class UniformBuffer;
 class Texture;
 class DescriptorPool;
@@ -12,25 +14,41 @@ class ExtensionFunctionMapping;
 
 class BindSet
 {
+  private:
+    struct BindEntry
+    {
+        VkWriteDescriptorSet StagingDescriptorWrite;
+        union {
+            VkDescriptorBufferInfo BufferInfo;
+            VkDescriptorImageInfo ImageInfo;
+        } DataInfo;
+    };
+
   public:
     BindSet(const DescriptorSet& descriptorSet, VkDevice device);
-    BindSet(const BindSet &) = delete;
-    BindSet(BindSet&& other);
-    ~BindSet();
 
-    BindSet &operator=(const BindSet &) = delete;
-    BindSet &operator=(BindSet && other);
-
-    BindSet &BindTexture(const Texture& texture);
-    BindSet &BindUniformBuffer(const UniformBuffer& buffer);
-    void Finish();
-
+    BindSet& BindTexture(Texture& texture) &;
+    BindSet& BindUniformBuffer(const UniformBuffer& buffer) &;
+    [[nodiscard]] BindSet&& BindTexture(Texture& texture) &&;
+    [[nodiscard]] BindSet&& BindUniformBuffer(const UniformBuffer& buffer) &&;
+    void FlushWrites();
+    std::vector<ImageMemoryBarrier> TakePendingAcquires();
+    const DescriptorSet &GetDescriptorSet() const;
   private:
-    std::reference_wrapper<const DescriptorSet> m_DescriptorSet;
-    std::vector<VkWriteDescriptorSet> m_StagingDescriptorSetWrites;
-    std::vector<std::unique_ptr<VkDescriptorBufferInfo>> m_BufferInfos;
+    void BindTextureInternal(Texture &texture);
+    void BindUniformBufferInternal(const UniformBuffer &buffer);
+
+    const DescriptorSet& m_DescriptorSet;
+    std::vector<BindEntry> m_Entries;
+
+	// Unfortunately, as we're taking pending acquires here,
+	// this assumes that the first call to Bind for a specifc resource
+	// assumes that that person won't bind _and_ submit the same resource
+	// in a different BindSet prior to submitting this `BindSet`.
+	// TODO: Use references to the resources instead, so that we can
+	// fetch the pending acqquires at the time of invoking the call to bind.
+    std::vector<ImageMemoryBarrier> m_PendingAcquires;
     VkDevice m_Device;
-    bool m_FinishedOrMoved = false;
 };
 
 class DescriptorSetLayout
@@ -55,8 +73,8 @@ class DescriptorSet
   public:
     DescriptorSet(const DescriptorSetLayout& layout, VkDevice device, VkDescriptorSet set);
 
-    BindSet BindTexture(const Texture& texture);
-    BindSet BindUniformBuffer(const UniformBuffer& buffer);
+    [[nodiscard]] BindSet BindTexture(Texture& texture);
+    [[nodiscard]] BindSet BindUniformBuffer(const UniformBuffer& buffer);
     VkDescriptorSet Get() const;
     const DescriptorSetLayout& GetLayout() const;
     void SetName(const std::string &name, const ExtensionFunctionMapping& mapping);

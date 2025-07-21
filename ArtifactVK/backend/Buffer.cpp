@@ -42,7 +42,6 @@ DeviceBuffer::DeviceBuffer(VkDevice device, const PhysicalDevice &physicalDevice
         void *mappedBuffer;
         vkMapMemory(m_Device, m_Memory, 0, bufferInfo.Size, 0, &mappedBuffer);
         m_MappedBuffer.emplace(mappedBuffer);
-        std::cout << "Mapped at " << mappedBuffer << "\n";
 	}
 }
 
@@ -99,6 +98,10 @@ void DeviceBuffer::Transfer(TransferOp transferOperation, const CommandBuffer& c
 
 std::optional<BufferMemoryBarrier> DeviceBuffer::TakePendingAcquire()
 {
+    if (m_PendingReleaseFence)
+    {
+        m_PendingReleaseFence->WaitAndReset();
+    }
     return std::move(m_PendingAcquireBarrier);
 }
 

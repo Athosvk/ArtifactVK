@@ -43,6 +43,7 @@ class VulkanDevice
     VulkanDevice(VulkanDevice &&other);
     ~VulkanDevice();
 
+
     void WaitForIdle() const;
     Swapchain& CreateSwapchain(GLFWwindow& window, const VulkanSurface& surface);
     Swapchain &GetSwapchain();

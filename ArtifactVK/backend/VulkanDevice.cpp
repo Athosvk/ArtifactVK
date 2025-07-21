@@ -217,7 +217,7 @@ RasterPipeline VulkanDevice::CreateRasterPipeline(RasterPipelineBuilder &&pipeli
     colorBlendAttachmentState.colorWriteMask =
         VkColorComponentFlagBits::VK_COLOR_COMPONENT_R_BIT | VkColorComponentFlagBits::VK_COLOR_COMPONENT_G_BIT |
         VkColorComponentFlagBits::VK_COLOR_COMPONENT_B_BIT | VkColorComponentFlagBits::VK_COLOR_COMPONENT_A_BIT;
-    colorBlendAttachmentState.blendEnable = VK_FALSE;
+    colorBlendAttachmentState.blendEnable = VK_TRUE;
 	colorBlendAttachmentState.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
 	colorBlendAttachmentState.dstColorBlendFactor = VK_BLEND_FACTOR_ZERO;
 	colorBlendAttachmentState.colorBlendOp = VK_BLEND_OP_ADD;
@@ -310,7 +310,7 @@ VulkanDevice::VulkanDevice(PhysicalDevice &physicalDevice, VkPhysicalDevice phys
     m_TransferCommandBufferPool = m_CommandBufferPools.emplace_back(std::make_unique<CommandBufferPool>(CreateTransferCommandBufferPool())).get();
     m_DescriptorPool = std::make_unique<DescriptorPool>(
         // Arbitrary size
-        m_Device, DescriptorPoolCreateInfo{64, {VkDescriptorType::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER}});
+        m_Device, DescriptorPoolCreateInfo{64, {VkDescriptorType::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VkDescriptorType::VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER}});
 }
 
 VulkanDevice::VulkanDevice(VulkanDevice &&other)

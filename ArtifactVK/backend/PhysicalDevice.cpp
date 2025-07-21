@@ -106,8 +106,8 @@ VkPhysicalDeviceMemoryProperties PhysicalDevice::QueryMemoryProperties() const
 
 bool PhysicalDevice::Validate(std::span<const EDeviceExtension> requiredExtensions) const
 {
-    return (m_Properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU ||
-            m_Properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU) &&
+    return (m_Properties.deviceType == VkPhysicalDeviceType::VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU ||
+            m_Properties.deviceType == VkPhysicalDeviceType::VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU) &&
            m_Features.geometryShader && m_QueueFamilies.GraphicsFamilyIndex.has_value() &&
            m_QueueFamilies.PresentFamilyIndex.has_value() && !m_SurfaceProperties.Formats.empty() &&
            !m_SurfaceProperties.PresentModes.empty() && AllExtensionsAvailable(requiredExtensions) &&

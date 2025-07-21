@@ -37,9 +37,10 @@ struct Vertex
 {
     glm::vec2 Position;
     glm::vec3 Color;
+    glm::vec2 UV;
 
     constexpr static VkVertexInputBindingDescription GetBindingDescription();
-    constexpr static std::array<VkVertexInputAttributeDescription, 2> GetAttributeDescriptions(); 
+    constexpr static std::array<VkVertexInputAttributeDescription, 3> GetAttributeDescriptions(); 
     constexpr static VertexBindingDescription GetVertexBindingDescription();
 };
 
@@ -58,7 +59,7 @@ class App
     void RunRenderLoop();
 
   private:
-    void LoadImage();
+    Texture& LoadImage();
     UniformConstants GetUniforms();
     RasterPipeline LoadShaderPipeline(VulkanDevice &vulkanDevice, const RenderPass& renderPass) const;
     void RecordFrame(PerFrameState& state);
@@ -66,7 +67,7 @@ class App
     std::vector<PerFrameState> CreatePerFrameState(VulkanDevice &vulkanDevice);
     constexpr static std::vector<Vertex> GetVertices();
     constexpr static std::vector<uint16_t> GetIndices();
-    const DescriptorSetLayout& BuildDescriptorSet(VulkanDevice &vulkanDevice) const;
+    const DescriptorSetLayout& BuildDescriptorSetLayout(VulkanDevice &vulkanDevice) const;
 
     Window m_Window;
     VulkanInstance m_VulkanInstance;
@@ -79,4 +80,5 @@ class App
     Swapchain &m_Swapchain;
     VertexBuffer &m_VertexBuffer;
     IndexBuffer &m_IndexBuffer;
+    Texture& m_Texture;
 };

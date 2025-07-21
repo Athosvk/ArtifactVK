@@ -21,6 +21,7 @@ class IndexBuffer;
 class DescriptorSet;
 class ExtensionFunctionMapping;
 class VulkanInstance;
+class BindSet;
 
 struct CommandBufferPoolCreateInfo
 {
@@ -47,22 +48,24 @@ class CommandBuffer
     void WaitFence();
     void Begin();
     void BeginSingleTake();
-    void Draw(const Framebuffer& frameBuffer, const RenderPass& renderPass, const RasterPipeline& pipeline, VertexBuffer& vertexBuffer, const DescriptorSet& descriptorSet);
-    void DrawIndexed(const Framebuffer& frameBuffer, const RenderPass& renderPass, const RasterPipeline& pipeline, VertexBuffer& vertexBuffer, IndexBuffer& indexBuffer, const DescriptorSet& descriptorSet);
+    void Draw(const Framebuffer& frameBuffer, const RenderPass& renderPass, const RasterPipeline& pipeline, VertexBuffer& vertexBuffer, BindSet&& bindSet);
+    void DrawIndexed(const Framebuffer& frameBuffer, const RenderPass& renderPass, const RasterPipeline& pipeline, VertexBuffer& vertexBuffer, IndexBuffer& indexBuffer, BindSet&& bindSet);
     Fence& End(std::span<Semaphore> waitSemaphores, std::span<Semaphore> signalSemaphores);
     Fence& End();
     void Copy(const DeviceBuffer &source, const DeviceBuffer &destination);
     void CopyBufferToImage(const DeviceBuffer& source, Texture& texture);
     void InsertBarrier(const BufferMemoryBarrier &barrier) const;
     void InsertBarrier(const ImageMemoryBarrier &barrier) const;
-    void InsertBarriers(const BufferMemoryBarrierArray &barriers) const;
+    void InsertBarriers(const BarrierArray &barriers) const;
     Queue GetQueue() const;
   private:
     void BindVertexBuffer(VertexBuffer &vertexBuffer);
     void BindIndexBuffer(IndexBuffer &indexBuffer);
-    void BindDescriptorSet(const DescriptorSet &uniformBuffer, const RasterPipeline& pipeline);
-    void HandleAcquire(DeviceBuffer &buffer);
+    void BindDescriptorSet(BindSet &bindset, const RasterPipeline &pipeline);
+    void HandleAcquire(std::optional<BufferMemoryBarrier> pendingAcquire);
+    void HandleAcquire(std::optional<ImageMemoryBarrier> pendingAcquire);
     void Reset();
+    void FlushPendingBarriers();
 
     // Only used in case we Reset, which can clear a debug name previously
     // set.
@@ -78,11 +81,11 @@ class CommandBuffer
     // better so that End consumes into an executed command buffer,
     // possibly with a recyclable command buffer handle if it wasn't single
     // take
-    // Needs to outlive the CommandBuffer in case it's moved
+    // In unique_ptr to outlive the CommandBuffer in case it's moved
     std::unique_ptr<Fence> m_InFlight;
     CommandBufferStatus m_Status = CommandBufferStatus::Reset;
     Queue m_Queue;
-    std::vector<BufferMemoryBarrierArray> m_PendingBarriers;
+    std::vector<BarrierArray> m_PendingBarriers;
 };
 
 // TODO: Template with per-type command buffer, so that they only have the matching

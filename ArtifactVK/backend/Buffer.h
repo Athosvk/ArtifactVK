@@ -8,6 +8,7 @@
 #include "Barrier.h"
 
 class PhysicalDevice;
+class Fence;
 class CommandBuffer;
 
 struct CreateBufferInfo
@@ -75,4 +76,5 @@ private:
     CreateBufferInfo m_CreateInfo;
     std::optional<void *> m_MappedBuffer;
     std::optional<BufferMemoryBarrier> m_PendingAcquireBarrier;
+    Fence *m_PendingReleaseFence;
 };
