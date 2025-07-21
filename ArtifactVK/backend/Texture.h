@@ -80,12 +80,13 @@ public:
                     CommandBuffer &graphicsCommandBuffer);
 
     VkAttachmentDescription GetAttachmentDescription() const;
-    VkImageView GetView() const;
+    VkImageView GetView();
 
   private:
     VkFormat DetermineDepthFormat(const PhysicalDevice &physicalDevice);
 
     Texture m_Texture;
+    Fence* m_PendingTransferFence = nullptr;
 };
 
 class Texture2D

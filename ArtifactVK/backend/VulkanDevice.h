@@ -48,7 +48,7 @@ class VulkanDevice
     Swapchain& CreateSwapchain(GLFWwindow& window, const VulkanSurface& surface);
     Swapchain &GetSwapchain();
     RasterPipeline CreateRasterPipeline(RasterPipelineBuilder &&pipelineBuilder, const RenderPass& renderPass);
-    RenderPass CreateRenderPass(const DepthAttachment& depthAttachment);
+    RenderPass CreateRenderPass(DepthAttachment& depthAttachment);
     const SwapchainFramebuffer& CreateSwapchainFramebuffers(const RenderPass &renderpass, const DepthAttachment& depthAttachment);
     // TODO: Make a getter, just construct it in the constructor 
     CommandBufferPool CreateGraphicsCommandBufferPool();

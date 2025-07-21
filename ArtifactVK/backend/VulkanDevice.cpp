@@ -419,7 +419,7 @@ VulkanDevice::~VulkanDevice()
     vkDestroyDevice(m_Device, nullptr);
 }
 
-RenderPass VulkanDevice::CreateRenderPass(const DepthAttachment& depthAttachment)
+RenderPass VulkanDevice::CreateRenderPass(DepthAttachment& depthAttachment)
 {
     assert(m_Swapchain.has_value());
     auto attachmentDescription = m_Swapchain->AttachmentDescription();
