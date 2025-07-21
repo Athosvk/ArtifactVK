@@ -80,7 +80,7 @@ class VulkanDevice
     }
 
     DeviceBuffer &CreateBuffer(const CreateBufferInfo& createBufferInfo);
-    Texture &CreateTexture(const TextureCreateInfo& createDesc);
+    Texture2D &CreateTexture(const TextureCreateInfo& createDesc);
     // TODO: Store for re-use
     DescriptorSet CreateDescriptorSet(const DescriptorSetLayout& layout);
     const DescriptorSetLayout& CreateDescriptorSetLayout(DescriptorSetBuilder builder);
@@ -112,7 +112,7 @@ class VulkanDevice
     std::vector<std::unique_ptr<VertexBuffer>> m_VertexBuffers;
     std::vector<std::unique_ptr<IndexBuffer>> m_IndexBuffers;
     std::vector<std::unique_ptr<UniformBuffer>> m_UniformBuffers;
-    std::vector<std::unique_ptr<Texture>> m_Textures;
+    std::vector<std::unique_ptr<Texture2D>> m_Textures;
     std::vector<std::unique_ptr<DeviceBuffer>> m_Buffers; 
     std::optional<VkExtent2D> m_LastUnhandledResize;
     std::vector<std::unique_ptr<DescriptorSetLayout>> m_DescriptorSetLayouts;

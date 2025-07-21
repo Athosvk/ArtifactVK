@@ -59,7 +59,7 @@ class App
     void RunRenderLoop();
 
   private:
-    Texture& LoadImage();
+    Texture2D& LoadImage();
     UniformConstants GetUniforms();
     RasterPipeline LoadShaderPipeline(VulkanDevice &vulkanDevice, const RenderPass& renderPass) const;
     void RecordFrame(PerFrameState& state);
@@ -80,5 +80,5 @@ class App
     Swapchain &m_Swapchain;
     VertexBuffer &m_VertexBuffer;
     IndexBuffer &m_IndexBuffer;
-    Texture& m_Texture;
+    Texture2D& m_Texture;
 };

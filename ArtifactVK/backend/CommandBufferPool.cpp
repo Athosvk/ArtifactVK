@@ -299,7 +299,7 @@ void CommandBuffer::Copy(const DeviceBuffer &source, const DeviceBuffer &destina
     vkCmdCopyBuffer(m_CommandBuffer, source.Get(), destination.Get(), 1, &bufferCopy);
 }
 
-void CommandBuffer::CopyBufferToImage(const DeviceBuffer &source, Texture &texture)
+void CommandBuffer::CopyBufferToImage(const DeviceBuffer &source, Texture2D &texture)
 {
     VkBufferImageCopy bufferImageCopy{};
     bufferImageCopy.bufferOffset = 0;
@@ -358,7 +358,7 @@ void CommandBuffer::InsertBarrier(const ImageMemoryBarrier &barrier) const
 		memoryBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 		memoryBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     }
-    memoryBarrier.image = barrier.Barrier.Image.get().Get();
+    memoryBarrier.image = barrier.Barrier.Texture.get().Get();
 
     // TODO: This doesn't work for anything but regular images.
     // Get usage from texture
@@ -409,7 +409,7 @@ void CommandBuffer::InsertBarriers(const BarrierArray &barriers) const
     {
 		VkImageMemoryBarrier vkBarrier{};
 		vkBarrier.sType = VkStructureType::VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
-		vkBarrier.image = barrier.Image.get().Get();
+		vkBarrier.image = barrier.Texture.get().Get();
 		vkBarrier.srcAccessMask = barrier.SourceAccessMask;
 		vkBarrier.dstAccessMask = barrier.DestinationAccessMask;
         if (barrier.Queues.has_value())

@@ -77,12 +77,12 @@ DeviceBuffer &VulkanDevice::CreateBuffer(const CreateBufferInfo &createInfo)
     return *m_Buffers.emplace_back(std::make_unique<DeviceBuffer>(m_Device, m_PhysicalDevice, createInfo));
 }
 
-Texture &VulkanDevice::CreateTexture(const TextureCreateInfo &createInfo)
+Texture2D &VulkanDevice::CreateTexture(const TextureCreateInfo &createInfo)
 {
     auto &commandBuffer = GetTransferCommandBuffer();
     // TODO: Embed texture name
     commandBuffer.SetName("Transfer Texture Command Buffer", GetExtensionFunctionMapping());
-    return *m_Textures.emplace_back(std::make_unique<Texture>(m_Device, m_PhysicalDevice, createInfo, commandBuffer, 
+    return *m_Textures.emplace_back(std::make_unique<Texture2D>(m_Device, m_PhysicalDevice, createInfo, commandBuffer, 
         // TODO: Should also allow transferring to compute
         *m_GraphicsQueue));
 }

@@ -18,14 +18,67 @@ struct TextureCreateInfo
     VkDeviceSize BufferSize() const;
 };
 
+struct ImageCreateInfo
+{
+    uint32_t Width;
+    uint32_t Height;
+};
+
+
 class Texture
 {
-public:
-    Texture(VkDevice device, const PhysicalDevice &physicalDevice, const TextureCreateInfo &textureCreateInfo, CommandBuffer& transferCommandBuffer,
-        Queue destinationQueue);
+  public:
+    Texture(VkDevice device, const PhysicalDevice& physicalDevice, const ImageCreateInfo& createInfo);
     Texture(const Texture &) = delete;
-    Texture(Texture && other);
+    Texture(Texture &&other);
+
+    Texture &operator=(const Texture &) = delete;
+    Texture &operator=(Texture &&other) = delete;
     ~Texture();
+
+
+    VkImage Get() const;
+
+    uint32_t GetWidth() const;
+    uint32_t GetHeight() const;
+    VkDescriptorImageInfo GetDescriptorInfo() const;
+    /// <summary>
+    /// Perform a transition layout and optionally perform a QFOT-release, returning the acquire.
+    /// </summary>
+    /// <param name="from">Source layout</param>
+    /// <param name="to">Target layout</param>
+    /// <param name="commandBuffer">Command buffer to perform the transition on</param>
+    /// <param name="destinationQueue">The queue to transfer the image to, if desired</param>
+    /// <returns>The matching acquire operation for the QFOT release, if it was needed for the target queue</returns>
+    std::optional<ImageMemoryBarrier> TransitionLayout(VkImageLayout from, VkImageLayout to, CommandBuffer &commandBuffer, std::optional<Queue> destinationQueue);
+  private:
+    void BindMemory();
+
+    VkDevice m_Device;
+    VkImage m_Image;
+    VkDeviceMemory m_Memory;
+    VkImageView m_ImageView;
+
+    uint32_t m_Width;
+    uint32_t m_Height;
+};
+
+class DepthBuffer
+{
+    DepthBuffer(VkDevice device, ImageCreateInfo createInfo);
+
+private:
+    Texture m_Texture;
+};
+
+class Texture2D
+{
+public:
+    Texture2D(VkDevice device, const PhysicalDevice &physicalDevice, const TextureCreateInfo &textureCreateInfo, CommandBuffer& transferCommandBuffer,
+        Queue destinationQueue);
+    Texture2D(const Texture2D &) = delete;
+    Texture2D(Texture2D && other);
+    ~Texture2D();
 
     VkImage Get();
 
@@ -40,18 +93,13 @@ public:
   private:
     void CreateTextureSampler(VkDevice device, const PhysicalDevice& physicalDevice);
     DeviceBuffer CreateStagingBuffer(size_t size, const PhysicalDevice &physicalDevice, VkDevice device) const;
-    void TransitionLayout(VkImageLayout from, VkImageLayout to, CommandBuffer &commandBuffer, std::optional<Queue> destinationQueue);
     void WaitTransfer();
 
     VkDevice m_Device;
     DeviceBuffer m_StagingBuffer;
-    VkImage m_Image;
-    VkDeviceMemory m_Memory;
-    uint32_t m_Width;
-    uint32_t m_Height;
+    Texture m_Texture;
 
     std::optional<ImageMemoryBarrier> m_PendingAcquireBarrier;
     Fence* m_PendingTransferFence;
-    VkImageView m_ImageView;
     VkSampler m_Sampler;
 };

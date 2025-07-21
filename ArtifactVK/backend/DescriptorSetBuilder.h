@@ -7,7 +7,7 @@
 #include "Barrier.h"
 
 class UniformBuffer;
-class Texture;
+class Texture2D;
 class DescriptorPool;
 class DescriptorSet;
 class ExtensionFunctionMapping;
@@ -27,15 +27,15 @@ class BindSet
   public:
     BindSet(const DescriptorSet& descriptorSet, VkDevice device);
 
-    BindSet& BindTexture(Texture& texture) &;
+    BindSet& BindTexture(Texture2D& texture) &;
     BindSet& BindUniformBuffer(const UniformBuffer& buffer) &;
-    [[nodiscard]] BindSet&& BindTexture(Texture& texture) &&;
+    [[nodiscard]] BindSet&& BindTexture(Texture2D& texture) &&;
     [[nodiscard]] BindSet&& BindUniformBuffer(const UniformBuffer& buffer) &&;
     void FlushWrites();
     std::vector<ImageMemoryBarrier> TakePendingAcquires();
     const DescriptorSet &GetDescriptorSet() const;
   private:
-    void BindTextureInternal(Texture &texture);
+    void BindTextureInternal(Texture2D &texture);
     void BindUniformBufferInternal(const UniformBuffer &buffer);
 
     const DescriptorSet& m_DescriptorSet;
@@ -73,7 +73,7 @@ class DescriptorSet
   public:
     DescriptorSet(const DescriptorSetLayout& layout, VkDevice device, VkDescriptorSet set);
 
-    [[nodiscard]] BindSet BindTexture(Texture& texture);
+    [[nodiscard]] BindSet BindTexture(Texture2D& texture);
     [[nodiscard]] BindSet BindUniformBuffer(const UniformBuffer& buffer);
     VkDescriptorSet Get() const;
     const DescriptorSetLayout& GetLayout() const;

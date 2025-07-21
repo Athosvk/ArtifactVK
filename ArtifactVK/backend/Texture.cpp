@@ -4,24 +4,20 @@
 
 #include "PhysicalDevice.h"
 
+
 VkDeviceSize TextureCreateInfo::BufferSize() const
 {
 	// TODO: Fix size for varying channels
     return Width * Height * 4;
 }
 
-Texture::Texture(VkDevice device, const PhysicalDevice &physicalDevice, const TextureCreateInfo &textureCreateInfo, CommandBuffer& transferCommandBuffer,
-    Queue destinationQueue) : 
-    m_Device(device),
-    m_StagingBuffer(CreateStagingBuffer(textureCreateInfo.BufferSize(), physicalDevice, device)),
-    m_Width(textureCreateInfo.Width),
-    m_Height(textureCreateInfo.Height)
+Texture::Texture(VkDevice device, const PhysicalDevice& physicalDevice, const ImageCreateInfo &createInfo) : 
+    m_Device(device), m_Width(createInfo.Width), m_Height(createInfo.Height)
 {
-    m_StagingBuffer.UploadData(textureCreateInfo.Data);
     VkImageCreateInfo vkCreateInfo{};
     vkCreateInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
     vkCreateInfo.imageType = VkImageType::VK_IMAGE_TYPE_2D;
-    vkCreateInfo.extent = {textureCreateInfo.Width, textureCreateInfo.Height, 1};
+    vkCreateInfo.extent = {createInfo.Width, createInfo.Height, 1};
     vkCreateInfo.mipLevels = 1;
     vkCreateInfo.arrayLayers = 1;
 
@@ -51,18 +47,7 @@ Texture::Texture(VkDevice device, const PhysicalDevice &physicalDevice, const Te
     {
         throw std::runtime_error("Could not allocate texture memory");
     }
-
-    vkBindImageMemory(device, m_Image, m_Memory, 0);
-
-    transferCommandBuffer.BeginSingleTake();
-    TransitionLayout(VkImageLayout::VK_IMAGE_LAYOUT_UNDEFINED, VkImageLayout::VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                     transferCommandBuffer,
-                     std::nullopt);
-    transferCommandBuffer.CopyBufferToImage(m_StagingBuffer, *this);
-
-    TransitionLayout(VkImageLayout::VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                     VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, transferCommandBuffer, destinationQueue);
-    m_PendingTransferFence = &transferCommandBuffer.End();
+    BindMemory();
 
     VkImageViewCreateInfo viewInfo{};
     viewInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -79,17 +64,13 @@ Texture::Texture(VkDevice device, const PhysicalDevice &physicalDevice, const Te
     {
         throw std::runtime_error("Failed to create texture image view");
     }
-    CreateTextureSampler(device, physicalDevice);
 }
 
-Texture::Texture(Texture && other) : 
-    m_Device(other.m_Device), m_StagingBuffer(std::move(other.m_StagingBuffer)), 
-    m_Image(std::exchange(other.m_Image, VK_NULL_HANDLE)), m_Memory(std::exchange(other.m_Memory, VK_NULL_HANDLE)),
-    m_Width(other.m_Width), m_Height(other.m_Height), 
-    m_PendingAcquireBarrier(std::move(other.m_PendingAcquireBarrier)), 
-    m_PendingTransferFence(other.m_PendingTransferFence), m_ImageView(std::exchange(other.m_ImageView, VK_NULL_HANDLE)), 
-    m_Sampler(std::exchange(other.m_Sampler, VK_NULL_HANDLE))
-{  
+Texture::Texture(Texture &&other) : m_Device(other.m_Device), 
+    m_Image(std::exchange(other.m_Image, VK_NULL_HANDLE)), m_Memory(std::exchange(other.m_Memory, VK_NULL_HANDLE)), 
+    m_ImageView(std::exchange(other.m_ImageView, VK_NULL_HANDLE)), m_Width(other.m_Width), m_Height(other.m_Height)
+{
+
 }
 
 Texture::~Texture()
@@ -98,17 +79,12 @@ Texture::~Texture()
     {
         vkDestroyImageView(m_Device, m_ImageView, nullptr);
         vkDestroyImage(m_Device, m_Image, nullptr);
-        vkDestroySampler(m_Device, m_Sampler, nullptr);
         vkFreeMemory(m_Device, m_Memory, nullptr);
     }
 }
 
-VkImage Texture::Get()
+VkImage Texture::Get() const
 {
-    // TODO: Allow doing this explicitly instead, as we can't read
-    // the intent behind calling `Get` this can lead to
-    // unexpected results
-    WaitTransfer();
     return m_Image;
 }
 
@@ -122,66 +98,7 @@ uint32_t Texture::GetHeight() const
     return m_Height;
 }
 
-VkDescriptorImageInfo Texture::GetDescriptorInfo()
-{
-    // TODO: Allow doing this explicitly instead, as we can't read
-    // the intent behind calling `Get` this can lead to
-    // unexpected results
-    WaitTransfer();
-    return VkDescriptorImageInfo 
-    {
-        .sampler = m_Sampler,
-        .imageView = m_ImageView,
-        .imageLayout = VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-    };
-}
-
-std::optional<ImageMemoryBarrier> Texture::TakePendingAcquire()
-{
-    // If the transfer hasn't completed, we'll be giving a barrier that may be set
-    // prior to the transfer (and its subsequent release barrier)
-    WaitTransfer();
-    return std::move(m_PendingAcquireBarrier);
-}
-
-void Texture::CreateTextureSampler(VkDevice device, const PhysicalDevice& physicalDevice)
-{
-    VkSamplerCreateInfo samplerInfo{};
-    samplerInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-    samplerInfo.magFilter = VkFilter::VK_FILTER_LINEAR;
-    samplerInfo.minFilter = VkFilter::VK_FILTER_LINEAR;
-
-    samplerInfo.addressModeU = VkSamplerAddressMode::VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    samplerInfo.addressModeV = VkSamplerAddressMode::VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    samplerInfo.addressModeW = VkSamplerAddressMode::VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    samplerInfo.anisotropyEnable = VK_TRUE;
-    samplerInfo.maxAnisotropy = physicalDevice.GetProperties().limits.maxSamplerAnisotropy;
-    samplerInfo.borderColor = VkBorderColor::VK_BORDER_COLOR_INT_OPAQUE_BLACK;
-    samplerInfo.unnormalizedCoordinates = VK_FALSE;
-    samplerInfo.compareEnable = VK_FALSE;
-    samplerInfo.compareOp = VkCompareOp::VK_COMPARE_OP_ALWAYS;
-    samplerInfo.mipmapMode = VkSamplerMipmapMode::VK_SAMPLER_MIPMAP_MODE_LINEAR;
-    samplerInfo.mipLodBias = 0.0f;
-    samplerInfo.minLod = 0.0f;
-    samplerInfo.maxLod = 0.0f;
-
-    if (vkCreateSampler(device, &samplerInfo, nullptr, &m_Sampler) != VkResult::VK_SUCCESS)
-    {
-        throw std::runtime_error("Could not create sampler for texture");
-    }
-}
-
-DeviceBuffer Texture::CreateStagingBuffer(size_t size, const PhysicalDevice &physicalDevice, VkDevice device) const
-{
-	auto createStagingBufferInfo =
-		CreateBufferInfo{size, VkBufferUsageFlagBits::VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-						 VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-							 VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-						false};
-    return DeviceBuffer(device, physicalDevice, createStagingBufferInfo);
-}
-
-void Texture::TransitionLayout(VkImageLayout from, VkImageLayout to, CommandBuffer &commandBuffer, std::optional<Queue> destinationQueue)
+std::optional<ImageMemoryBarrier> Texture::TransitionLayout(VkImageLayout from, VkImageLayout to, CommandBuffer& commandBuffer, std::optional<Queue> destinationQueue)
 {
     // Only handle transfer requests for post-upload QOT requests
     // TODO: Properly handle other QOTs as well?
@@ -244,11 +161,143 @@ void Texture::TransitionLayout(VkImageLayout from, VkImageLayout to, CommandBuff
 			VkPipelineStageFlagBits::VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT |
                                        VkPipelineStageFlagBits::VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT
 		};
-		m_PendingAcquireBarrier.emplace(acquireBarrier);
+		return acquireBarrier;
+    }
+    else
+    {
+        return std::nullopt;
     }
 }
 
-void Texture::WaitTransfer()
+void Texture::BindMemory()
+{
+    vkBindImageMemory(m_Device, m_Image, m_Memory, 0);
+}
+
+VkDescriptorImageInfo Texture::GetDescriptorInfo() const
+{
+    return VkDescriptorImageInfo 
+    {
+        // Overriden by the caller side if they have a sampler
+        .sampler = VK_NULL_HANDLE,
+        .imageView = m_ImageView,
+        .imageLayout = VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+    };
+}
+
+Texture2D::Texture2D(VkDevice device, const PhysicalDevice &physicalDevice, const TextureCreateInfo &textureCreateInfo, CommandBuffer& transferCommandBuffer,
+    Queue destinationQueue) : 
+    m_Device(device),
+    m_StagingBuffer(CreateStagingBuffer(textureCreateInfo.BufferSize(), physicalDevice, device)),
+    m_Texture(Texture(device, physicalDevice, ImageCreateInfo{ textureCreateInfo.Width, textureCreateInfo.Height }))
+{
+    m_StagingBuffer.UploadData(textureCreateInfo.Data);
+
+    transferCommandBuffer.BeginSingleTake();
+    m_Texture.TransitionLayout(VkImageLayout::VK_IMAGE_LAYOUT_UNDEFINED, VkImageLayout::VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                     transferCommandBuffer,
+                     std::nullopt);
+    transferCommandBuffer.CopyBufferToImage(m_StagingBuffer, *this);
+
+    m_PendingAcquireBarrier = m_Texture.TransitionLayout(VkImageLayout::VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                     VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, transferCommandBuffer, destinationQueue);
+    m_PendingTransferFence = &transferCommandBuffer.End();
+    CreateTextureSampler(device, physicalDevice);
+}
+
+Texture2D::Texture2D(Texture2D && other) : 
+    m_Device(other.m_Device), m_StagingBuffer(std::move(other.m_StagingBuffer)), 
+    m_Texture(std::move(other.m_Texture)),
+    m_PendingAcquireBarrier(std::move(other.m_PendingAcquireBarrier)), 
+    m_PendingTransferFence(other.m_PendingTransferFence), 
+    m_Sampler(std::exchange(other.m_Sampler, VK_NULL_HANDLE))
+{  
+}
+
+Texture2D::~Texture2D()
+{
+    if (m_Sampler != VK_NULL_HANDLE)
+    {
+        vkDestroySampler(m_Device, m_Sampler, nullptr);
+    }
+}
+
+VkImage Texture2D::Get()
+{
+    // TODO: Allow doing this explicitly instead, as we can't read
+    // the intent behind calling `Get` this can lead to
+    // unexpected results
+    WaitTransfer();
+    return m_Texture.Get();
+}
+
+uint32_t Texture2D::GetWidth() const
+{
+    return m_Texture.GetWidth();
+}
+
+uint32_t Texture2D::GetHeight() const
+{
+    return m_Texture.GetHeight();
+}
+
+VkDescriptorImageInfo Texture2D::GetDescriptorInfo()
+{
+    // TODO: Allow doing this explicitly instead, as we can't read
+    // the intent behind calling `Get` this can lead to
+    // unexpected results
+    WaitTransfer();
+    auto descriptorInfo = m_Texture.GetDescriptorInfo();
+    descriptorInfo.sampler = m_Sampler;
+    return descriptorInfo;
+}
+
+std::optional<ImageMemoryBarrier> Texture2D::TakePendingAcquire()
+{
+    // If the transfer hasn't completed, we'll be giving a barrier that may be set
+    // prior to the transfer (and its subsequent release barrier)
+    WaitTransfer();
+    return std::move(m_PendingAcquireBarrier);
+}
+
+void Texture2D::CreateTextureSampler(VkDevice device, const PhysicalDevice& physicalDevice)
+{
+    VkSamplerCreateInfo samplerInfo{};
+    samplerInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    samplerInfo.magFilter = VkFilter::VK_FILTER_LINEAR;
+    samplerInfo.minFilter = VkFilter::VK_FILTER_LINEAR;
+
+    samplerInfo.addressModeU = VkSamplerAddressMode::VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    samplerInfo.addressModeV = VkSamplerAddressMode::VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    samplerInfo.addressModeW = VkSamplerAddressMode::VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    samplerInfo.anisotropyEnable = VK_TRUE;
+    samplerInfo.maxAnisotropy = physicalDevice.GetProperties().limits.maxSamplerAnisotropy;
+    samplerInfo.borderColor = VkBorderColor::VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+    samplerInfo.unnormalizedCoordinates = VK_FALSE;
+    samplerInfo.compareEnable = VK_FALSE;
+    samplerInfo.compareOp = VkCompareOp::VK_COMPARE_OP_ALWAYS;
+    samplerInfo.mipmapMode = VkSamplerMipmapMode::VK_SAMPLER_MIPMAP_MODE_LINEAR;
+    samplerInfo.mipLodBias = 0.0f;
+    samplerInfo.minLod = 0.0f;
+    samplerInfo.maxLod = 0.0f;
+
+    if (vkCreateSampler(device, &samplerInfo, nullptr, &m_Sampler) != VkResult::VK_SUCCESS)
+    {
+        throw std::runtime_error("Could not create sampler for texture");
+    }
+}
+
+DeviceBuffer Texture2D::CreateStagingBuffer(size_t size, const PhysicalDevice &physicalDevice, VkDevice device) const
+{
+	auto createStagingBufferInfo =
+		CreateBufferInfo{size, VkBufferUsageFlagBits::VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+						 VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+							 VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+						false};
+    return DeviceBuffer(device, physicalDevice, createStagingBufferInfo);
+}
+
+void Texture2D::WaitTransfer()
 {
     if (m_PendingTransferFence)
     {

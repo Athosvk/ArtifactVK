@@ -71,7 +71,7 @@ void App::RunRenderLoop()
     }
 }
 
-Texture& App::LoadImage()
+Texture2D& App::LoadImage()
 {
     Image image("textures/texture.jpg");
     return m_VulkanInstance.GetActiveDevice().CreateTexture(image.GetTextureCreateDesc());

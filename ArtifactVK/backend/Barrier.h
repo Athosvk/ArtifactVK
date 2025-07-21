@@ -29,7 +29,7 @@ struct BufferMemoryBarrier {
 
 struct ImageMemoryBarrierElement
 {
-    std::reference_wrapper<Texture> Image;
+    std::reference_wrapper<Texture> Texture;
     std::optional<QueueSpecifier> Queues;
     VkAccessFlags SourceAccessMask;
     VkAccessFlags DestinationAccessMask;
