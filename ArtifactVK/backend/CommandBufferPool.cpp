@@ -140,9 +140,12 @@ void CommandBuffer::DrawIndexed(const Framebuffer& frameBuffer, const RenderPass
     // Should only be rendering to the scissor area, not the entire viewport
     renderPassBeginInfo.renderArea = viewport.Scissor;
 
-    VkClearValue clearColor = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
-    renderPassBeginInfo.clearValueCount = 1;
-    renderPassBeginInfo.pClearValues = &clearColor;
+    std::array<VkClearValue, 2> clearValues{};
+    
+    clearValues[0].color = {0.0f, 0.0f, 0.0f, 1.0f};
+    clearValues[1].depthStencil = { 1.0f, 0 };
+    renderPassBeginInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
+    renderPassBeginInfo.pClearValues = clearValues.data();
     
     vkCmdBeginRenderPass(m_CommandBuffer, &renderPassBeginInfo, VkSubpassContents::VK_SUBPASS_CONTENTS_INLINE);
 
