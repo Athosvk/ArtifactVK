@@ -38,6 +38,7 @@ class Texture
     ~Texture();
 
     VkImage Get() const;
+    VkImageView GetView() const;
 
     uint32_t GetWidth() const;
     uint32_t GetHeight() const;
@@ -54,9 +55,10 @@ class Texture
     VkFormat GetFormat() const;
   private:
     void BindMemory();
+    void Destroy();
 
     VkDevice m_Device;
-    VkImage m_Image;
+    VkImage m_Image = VK_NULL_HANDLE;
     VkDeviceMemory m_Memory;
     VkImageView m_ImageView;
 
@@ -73,11 +75,15 @@ struct DepthAttachmentCreateInfo
 
 class DepthAttachment
 {
+public:
     DepthAttachment(VkDevice device, const PhysicalDevice &physicalDevice, const DepthAttachmentCreateInfo &createInfo,
                     CommandBuffer &graphicsCommandBuffer);
 
-private:
-    VkFormat DetermineDepthFormat(const PhysicalDevice& physicalDevice);
+    VkAttachmentDescription GetAttachmentDescription() const;
+    VkImageView GetView() const;
+
+  private:
+    VkFormat DetermineDepthFormat(const PhysicalDevice &physicalDevice);
 
     Texture m_Texture;
 };

@@ -12,6 +12,7 @@ class PhysicalDevice;
 class RenderPass;
 class Semaphore;
 class Swapchain;
+class DepthAttachment;
 
 struct SwapchainCreateInfo
 {
@@ -24,19 +25,22 @@ struct SwapchainCreateInfo
 class SwapchainFramebuffer
 {
   public:
-    SwapchainFramebuffer(const Swapchain& swapchain, std::vector<Framebuffer>&& m_SwapchainFramebuffers, const RenderPass& renderPass);
+    SwapchainFramebuffer(const Swapchain& swapchain, std::vector<Framebuffer>&& m_SwapchainFramebuffers, 
+        const RenderPass& renderPass, const DepthAttachment& depthAttachment);
     SwapchainFramebuffer(const SwapchainFramebuffer&) = delete;
     SwapchainFramebuffer(SwapchainFramebuffer&&) = default;
 
     SwapchainFramebuffer &operator=(SwapchainFramebuffer &&other) = default;
 
-    const Framebuffer& GetCurrent() const;
+    const Framebuffer &GetCurrent() const;
     const RenderPass &GetRenderPass() const;
+    const DepthAttachment &GetDepthAttachment() const;
   private:
     // TODO: Make this a weak ptr for validation reasons?
     std::reference_wrapper<const Swapchain> m_Swapchain;
     std::vector<Framebuffer> m_Framebuffers;
     std::reference_wrapper<const RenderPass> m_Renderpass;
+    std::reference_wrapper<const DepthAttachment> m_DepthAttachment;
 };
 
 enum class SwapchainState
@@ -56,7 +60,7 @@ class Swapchain
 
     Viewport GetViewportDescription() const;
     VkAttachmentDescription AttachmentDescription() const;
-    SwapchainFramebuffer CreateFramebuffersFor(const RenderPass &renderPass) const;
+    SwapchainFramebuffer CreateFramebuffersFor(const RenderPass &renderPass, const DepthAttachment& depthAttachment) const;
     uint32_t CurrentIndex() const;
     
     // Callers should check that the SwapchainState != SwapchainState::OutOfDate

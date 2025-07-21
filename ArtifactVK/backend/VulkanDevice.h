@@ -48,11 +48,12 @@ class VulkanDevice
     Swapchain& CreateSwapchain(GLFWwindow& window, const VulkanSurface& surface);
     Swapchain &GetSwapchain();
     RasterPipeline CreateRasterPipeline(RasterPipelineBuilder &&pipelineBuilder, const RenderPass& renderPass);
-    RenderPass CreateRenderPass();
-    const SwapchainFramebuffer& CreateSwapchainFramebuffers(const RenderPass &renderpass);
+    RenderPass CreateRenderPass(const DepthAttachment& depthAttachment);
+    const SwapchainFramebuffer& CreateSwapchainFramebuffers(const RenderPass &renderpass, const DepthAttachment& depthAttachment);
     // TODO: Make a getter, just construct it in the constructor 
-    CommandBufferPool &CreateGraphicsCommandBufferPool();
+    CommandBufferPool CreateGraphicsCommandBufferPool();
     CommandBuffer &GetTransferCommandBuffer();
+    CommandBufferPool &GetGraphicsCommandBufferPool();
     Semaphore &CreateDeviceSemaphore();
     Queue GetGraphicsQueue() const;
     Queue GetTransferQueue() const;
@@ -81,6 +82,7 @@ class VulkanDevice
 
     DeviceBuffer &CreateBuffer(const CreateBufferInfo& createBufferInfo);
     Texture2D &CreateTexture(const Texture2DCreateInfo& createDesc);
+    DepthAttachment &CreateDepthAttachment();
     // TODO: Store for re-use
     DescriptorSet CreateDescriptorSet(const DescriptorSetLayout& layout);
     const DescriptorSetLayout& CreateDescriptorSetLayout(DescriptorSetBuilder builder);
@@ -101,8 +103,8 @@ class VulkanDevice
     std::optional<Queue> m_PresentQueue;
     std::optional<Queue> m_TransferQueue;
     std::optional<Swapchain> m_Swapchain = std::nullopt;
-    std::vector<std::unique_ptr<CommandBufferPool>> m_CommandBufferPools;
-    CommandBufferPool* m_TransferCommandBufferPool = nullptr;
+    std::unique_ptr<CommandBufferPool> m_GraphicsCommandBufferPool;
+    std::unique_ptr<CommandBufferPool> m_TransferCommandBufferPool = nullptr;
     // TODO: Don't hold the semaphores here (unless for pooling).
     // Let objects logically decide if they need to provide one.
     std::vector<std::unique_ptr<Semaphore>> m_Semaphores;
@@ -113,6 +115,7 @@ class VulkanDevice
     std::vector<std::unique_ptr<IndexBuffer>> m_IndexBuffers;
     std::vector<std::unique_ptr<UniformBuffer>> m_UniformBuffers;
     std::vector<std::unique_ptr<Texture2D>> m_Textures;
+    std::vector<std::unique_ptr<DepthAttachment>> m_DepthAttachments;
     std::vector<std::unique_ptr<DeviceBuffer>> m_Buffers; 
     std::optional<VkExtent2D> m_LastUnhandledResize;
     std::vector<std::unique_ptr<DescriptorSetLayout>> m_DescriptorSetLayouts;

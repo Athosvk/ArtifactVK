@@ -52,7 +52,7 @@ void BindSet::BindTextureInternal(Texture2D &texture)
 	descriptorWriteInfo.pImageInfo = nullptr;
     m_Entries.emplace_back(BindEntry{descriptorWriteInfo, {.ImageInfo = texture.GetDescriptorInfo()}});
     auto pendingAcquire = texture.TakePendingAcquire();
-    if (pendingAcquire)
+    if (pendingAcquire.has_value())
     {
         m_PendingAcquires.emplace_back(*pendingAcquire);
     }

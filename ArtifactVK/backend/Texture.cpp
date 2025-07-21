@@ -122,6 +122,12 @@ Texture::Texture(Texture &&other)
 
 Texture &Texture::operator=(Texture &&other)
 {
+    if (other.m_Image == m_Image)
+    {
+        return *this;
+    }
+    
+    Destroy();
     m_Image = std::exchange(other.m_Image, VK_NULL_HANDLE);
     m_Memory = std::exchange(other.m_Memory, VK_NULL_HANDLE);
     m_ImageView = std::exchange(other.m_ImageView, VK_NULL_HANDLE);
@@ -132,6 +138,11 @@ Texture &Texture::operator=(Texture &&other)
 }
 
 Texture::~Texture()
+{
+    Destroy();
+}
+
+void Texture::Destroy()
 {
     if (m_Image != VK_NULL_HANDLE)
     {
@@ -154,6 +165,11 @@ uint32_t Texture::GetWidth() const
 uint32_t Texture::GetHeight() const
 {
     return m_Height;
+}
+
+VkImageView Texture::GetView() const
+{
+    return m_ImageView;
 }
 
 std::optional<ImageMemoryBarrier> Texture::TransitionLayout(VkImageLayout from, VkImageLayout to, CommandBuffer& commandBuffer, std::optional<Queue> destinationQueue)
@@ -269,6 +285,25 @@ DepthAttachment::DepthAttachment(VkDevice device, const PhysicalDevice &physical
     m_Texture.TransitionLayout(VkImageLayout::VK_IMAGE_LAYOUT_UNDEFINED, VkImageLayout::VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, graphicsCommandBuffer,
                                {});
 
+}
+
+VkAttachmentDescription DepthAttachment::GetAttachmentDescription() const
+{
+	VkAttachmentDescription depthAttachment{};
+	depthAttachment.format = m_Texture.GetFormat();
+	depthAttachment.samples = VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT;
+	depthAttachment.loadOp = VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_CLEAR;
+	depthAttachment.storeOp = VkAttachmentStoreOp::VK_ATTACHMENT_STORE_OP_DONT_CARE;
+	depthAttachment.stencilLoadOp = VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+	depthAttachment.stencilStoreOp = VkAttachmentStoreOp::VK_ATTACHMENT_STORE_OP_DONT_CARE;
+	depthAttachment.initialLayout = VkImageLayout::VK_IMAGE_LAYOUT_UNDEFINED;
+	depthAttachment.finalLayout = VkImageLayout::VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    return depthAttachment;
+}
+
+VkImageView DepthAttachment::GetView() const
+{
+    return m_Texture.GetView();
 }
 
 VkFormat DepthAttachment::DetermineDepthFormat(const PhysicalDevice &physicalDevice)

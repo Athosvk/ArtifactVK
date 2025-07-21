@@ -1,10 +1,15 @@
 #pragma once
 #include <vulkan/vulkan.h>
 
+#include <functional>
+
+class DepthAttachment;
+
 struct RenderPassCreateInfo
 {
-    // Abstract to attachment, encode with width/height
-    VkAttachmentDescription swapchainAttachmentDescription;
+    // TODO: Abstract to attachment, encode with width/height
+    VkAttachmentDescription SwapchainAttachmentDescription;
+    const DepthAttachment& DepthAttachment;
 };
 
 class RenderPass
@@ -16,7 +21,9 @@ class RenderPass
     RenderPass(RenderPass && other);
 
     VkRenderPass Get() const;
+    VkImageView GetDepthAttachmentView() const;
   private:
     VkDevice m_Device;
     VkRenderPass m_RenderPass;
+    std::reference_wrapper<const DepthAttachment> m_DepthAttachment;
 };

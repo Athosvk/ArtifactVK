@@ -24,8 +24,9 @@ const InstanceCreateInfo DefaultCreateInfo()
 App::App()
     : m_Window(WindowCreateInfo{800, 600, "ArtifactVK"}),
       m_VulkanInstance(m_Window.CreateVulkanInstance(DefaultCreateInfo())),
-      m_MainPass(m_VulkanInstance.GetActiveDevice().CreateRenderPass()),
-      m_SwapchainFramebuffers(m_VulkanInstance.GetActiveDevice().CreateSwapchainFramebuffers(m_MainPass)),
+      m_DepthAttachment(m_VulkanInstance.GetActiveDevice().CreateDepthAttachment()),
+      m_MainPass(m_VulkanInstance.GetActiveDevice().CreateRenderPass(m_DepthAttachment)),
+      m_SwapchainFramebuffers(m_VulkanInstance.GetActiveDevice().CreateSwapchainFramebuffers(m_MainPass, m_DepthAttachment)),
       m_DescriptorSetLayout(BuildDescriptorSetLayout(m_VulkanInstance.GetActiveDevice())),
       m_PerFrameState(CreatePerFrameState(m_VulkanInstance.GetActiveDevice())),
       m_RenderFullscreen(LoadShaderPipeline(m_VulkanInstance.GetActiveDevice(), m_MainPass)),
@@ -75,6 +76,11 @@ Texture2D& App::LoadImage()
 {
     Image image("textures/texture.jpg");
     return m_VulkanInstance.GetActiveDevice().CreateTexture(image.GetTextureCreateDesc());
+}
+
+DepthAttachment &App::CreateDepthAttachment()
+{
+    return m_VulkanInstance.GetActiveDevice().CreateDepthAttachment();
 }
 
 UniformConstants App::GetUniforms()
@@ -134,7 +140,8 @@ std::vector<std::reference_wrapper<Semaphore>> App::CreateSemaphorePerInFlightFr
 std::vector<PerFrameState> App::CreatePerFrameState(VulkanDevice &vulkanDevice)
 {
     std::vector<PerFrameState> perFrameState;
-    auto commandBuffers = vulkanDevice.CreateGraphicsCommandBufferPool().CreateCommandBuffers(MAX_FRAMES_IN_FLIGHT, m_VulkanInstance.GetActiveDevice().GetGraphicsQueue());
+    auto commandBuffers = vulkanDevice.GetGraphicsCommandBufferPool().CreateCommandBuffers(
+        MAX_FRAMES_IN_FLIGHT, m_VulkanInstance.GetActiveDevice().GetGraphicsQueue());
 
     perFrameState.reserve(MAX_FRAMES_IN_FLIGHT);
     
