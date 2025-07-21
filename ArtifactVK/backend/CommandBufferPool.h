@@ -22,6 +22,7 @@ class DescriptorSet;
 class ExtensionFunctionMapping;
 class VulkanInstance;
 class BindSet;
+class Texture2D;
 
 struct CommandBufferPoolCreateInfo
 {
@@ -53,7 +54,7 @@ class CommandBuffer
     Fence& End(std::span<Semaphore> waitSemaphores, std::span<Semaphore> signalSemaphores);
     Fence& End();
     void Copy(const DeviceBuffer &source, const DeviceBuffer &destination);
-    void CopyBufferToImage(const DeviceBuffer& source, Texture& texture);
+    void CopyBufferToImage(const DeviceBuffer& source, Texture2D& texture);
     void InsertBarrier(const BufferMemoryBarrier &barrier) const;
     void InsertBarrier(const ImageMemoryBarrier &barrier) const;
     void InsertBarriers(const BarrierArray &barriers) const;

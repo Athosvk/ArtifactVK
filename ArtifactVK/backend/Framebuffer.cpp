@@ -6,11 +6,11 @@
 Framebuffer::Framebuffer(VkDevice device, const FramebufferCreateInfo &createInfo)
     : m_Device(device), m_OriginalCreateInfo(createInfo)
 {
-	VkImageView swapchainColorAttachment[] = {createInfo.ImageView};
+	VkImageView swapchainColorAttachment[] = {createInfo.ColorOutputView, createInfo.DepthAttachmentView};
 	VkFramebufferCreateInfo framebufferCreateInfo{}; 
 	framebufferCreateInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
 	framebufferCreateInfo.renderPass = createInfo.RenderPass.Get();
-	framebufferCreateInfo.attachmentCount = 1;
+	framebufferCreateInfo.attachmentCount = 2;
 	framebufferCreateInfo.pAttachments = swapchainColorAttachment;
 	framebufferCreateInfo.width = static_cast<uint32_t>(createInfo.Viewport.Viewport.width);
 	framebufferCreateInfo.height = static_cast<uint32_t>(createInfo.Viewport.Viewport.height);

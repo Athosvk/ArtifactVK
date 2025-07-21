@@ -11,7 +11,7 @@ BindSet::BindSet(const DescriptorSet &descriptorSet, VkDevice device) :
 {
 }
 
-BindSet& BindSet::BindTexture(Texture &texture) &
+BindSet& BindSet::BindTexture(Texture2D &texture) &
 {
     BindTextureInternal(texture);
     return *this;
@@ -23,7 +23,7 @@ BindSet& BindSet::BindUniformBuffer(const UniformBuffer& buffer) &
     return *this;
 }
 
-BindSet&& BindSet::BindTexture(Texture &texture) &&
+BindSet&& BindSet::BindTexture(Texture2D &texture) &&
 {
     BindTextureInternal(texture);
     return std::move(*this);
@@ -35,7 +35,7 @@ BindSet&& BindSet::BindUniformBuffer(const UniformBuffer& buffer) &&
     return std::move(*this);
 }
 
-void BindSet::BindTextureInternal(Texture &texture)
+void BindSet::BindTextureInternal(Texture2D &texture)
 {
 	// TODO: Verify which slot this goes into with original layout
 	VkWriteDescriptorSet descriptorWriteInfo{};
@@ -52,7 +52,7 @@ void BindSet::BindTextureInternal(Texture &texture)
 	descriptorWriteInfo.pImageInfo = nullptr;
     m_Entries.emplace_back(BindEntry{descriptorWriteInfo, {.ImageInfo = texture.GetDescriptorInfo()}});
     auto pendingAcquire = texture.TakePendingAcquire();
-    if (pendingAcquire)
+    if (pendingAcquire.has_value())
     {
         m_PendingAcquires.emplace_back(*pendingAcquire);
     }
@@ -139,7 +139,7 @@ DescriptorSet::DescriptorSet(const DescriptorSetLayout &layout, VkDevice device,
 {
 }
 
-BindSet DescriptorSet::BindTexture(Texture &texture)
+BindSet DescriptorSet::BindTexture(Texture2D &texture)
 {
     auto bindset = BindSet(*this, m_Device);
     bindset.BindTexture(texture);

@@ -42,6 +42,8 @@ class PhysicalDevice
     VkPhysicalDeviceMemoryProperties MemoryProperties() const;
 
     uint32_t FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags propertyFlags) const;
+    VkFormat FindFirstSupportedFormat(const std::vector<VkFormat> &formats, VkImageTiling tiling,
+                                VkFormatFeatureFlags features) const;
   private:
     VkPhysicalDeviceMemoryProperties QueryMemoryProperties() const;
     bool Validate(std::span<const EDeviceExtension> requiredExtensions) const;

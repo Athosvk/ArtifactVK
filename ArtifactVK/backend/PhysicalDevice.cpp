@@ -205,3 +205,19 @@ uint32_t PhysicalDevice::FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFla
 	}
 	throw std::runtime_error("Could not find suitable memory type for type filter: " + std::to_string(typeFilter));
 }
+
+VkFormat PhysicalDevice::FindFirstSupportedFormat(const std::vector<VkFormat> &formats, VkImageTiling tiling,
+                                            VkFormatFeatureFlags features) const
+{
+    for (VkFormat format : formats)
+    {
+        VkFormatProperties properties;
+        vkGetPhysicalDeviceFormatProperties(m_PhysicalDevice, format, &properties);
+		if (tiling == VK_IMAGE_TILING_LINEAR && (properties.linearTilingFeatures & features) == features) {
+			return format;
+		} else if (tiling == VK_IMAGE_TILING_OPTIMAL && (properties.optimalTilingFeatures & features) == features) {
+			return format;
+		}
+    }
+    throw std::runtime_error("Device has no suitable image format");
+}
