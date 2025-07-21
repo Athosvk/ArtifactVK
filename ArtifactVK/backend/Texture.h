@@ -13,7 +13,7 @@ struct TextureCreateInfo
 {
     uint32_t Width;
     uint32_t Height;
-    std::span<const unsigned char> Pixels;
+    std::span<const unsigned char> Data;
 
     VkDeviceSize BufferSize() const;
 };

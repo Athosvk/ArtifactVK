@@ -17,7 +17,7 @@ Texture::Texture(VkDevice device, const PhysicalDevice &physicalDevice, const Te
     m_Width(textureCreateInfo.Width),
     m_Height(textureCreateInfo.Height)
 {
-    m_StagingBuffer.UploadData(textureCreateInfo.Pixels);
+    m_StagingBuffer.UploadData(textureCreateInfo.Data);
     VkImageCreateInfo vkCreateInfo{};
     vkCreateInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
     vkCreateInfo.imageType = VkImageType::VK_IMAGE_TYPE_2D;
