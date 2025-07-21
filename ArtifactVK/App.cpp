@@ -155,18 +155,28 @@ std::vector<PerFrameState> App::CreatePerFrameState(VulkanDevice &vulkanDevice)
     return perFrameState;
 }
 
-constexpr std::vector<Vertex> App::GetVertices()
-{
-    return {{{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
+constexpr std::vector<Vertex> App::GetVertices() {
+
+    return {// Quad 1
+            {{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
             {{0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
             {{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
-            {{-0.5f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}};
+            {{-0.5f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}},
+            // Quad 2
+            {{-0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
+            {{0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
+            {{0.5f, 0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
+            {{-0.5f, 0.5f, -0.5f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}};
 }
 
 constexpr std::vector<uint16_t> App::GetIndices()
 {
     return {
-        0, 1, 2, 2, 3, 0
+        // Quad 1
+        0, 1, 2, 2, 3, 0,
+
+        // Quad 2
+        4, 5, 6, 6, 7, 4
     };
 }
 
