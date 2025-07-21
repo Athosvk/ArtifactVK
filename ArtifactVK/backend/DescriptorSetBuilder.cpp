@@ -51,6 +51,11 @@ void BindSet::BindTextureInternal(Texture &texture)
     // We fill this in once we combine all the writes into one invocation!
 	descriptorWriteInfo.pImageInfo = nullptr;
     m_Entries.emplace_back(BindEntry{descriptorWriteInfo, {.ImageInfo = texture.GetDescriptorInfo()}});
+    auto pendingAcquire = texture.TakePendingAcquire();
+    if (pendingAcquire)
+    {
+        m_PendingAcquires.emplace_back(*pendingAcquire);
+    }
 }
 
 void BindSet::BindUniformBufferInternal(const UniformBuffer &buffer)
@@ -72,7 +77,7 @@ void BindSet::BindUniformBufferInternal(const UniformBuffer &buffer)
 }
 
 
-void BindSet::Finish()
+void BindSet::FlushWrites()
 {
     // TODO: Split the vectors so that we don't have to copy
     // into this vecotr at the point of submission.
@@ -97,8 +102,21 @@ void BindSet::Finish()
         }
         writes.emplace_back(entry.StagingDescriptorWrite);
     }
+    // Note that we don't have to flush any pending acquires here, since
+    // vkUpdateDescriptorSets doesn't actually access the memory. As long
+    // as we flush them before we bind the descriptor sets, this is fine.
     vkUpdateDescriptorSets(m_Device, static_cast<uint32_t>(writes.size()),
 		writes.data(), 0, nullptr);
+}
+
+std::vector<ImageMemoryBarrier> BindSet::TakePendingAcquires()
+{
+    return std::move(m_PendingAcquires);
+}
+
+const DescriptorSet &BindSet::GetDescriptorSet() const
+{
+    return m_DescriptorSet;
 }
 
 VkDescriptorSet DescriptorSet::Get() const

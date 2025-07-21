@@ -99,7 +99,7 @@ void CommandBuffer::BeginSingleTake()
 }
 
 void CommandBuffer::Draw(const Framebuffer& frameBuffer, const RenderPass& renderPass, const RasterPipeline& pipeline, 
-    VertexBuffer& vertexBuffer, const DescriptorSet& descriptorSet)
+    VertexBuffer& vertexBuffer, BindSet&& bindSet)
 {
     assert(m_Status == CommandBufferStatus::Recording && "Calling draw before starting recording of command buffer");
     VkRenderPassBeginInfo renderPassBeginInfo{};
@@ -116,22 +116,19 @@ void CommandBuffer::Draw(const Framebuffer& frameBuffer, const RenderPass& rende
     renderPassBeginInfo.pClearValues = &clearColor;
     
     vkCmdBeginRenderPass(m_CommandBuffer, &renderPassBeginInfo, VkSubpassContents::VK_SUBPASS_CONTENTS_INLINE);
+    FlushPendingBarriers();
+
     pipeline.Bind(m_CommandBuffer, viewport);
     BindVertexBuffer(vertexBuffer);
-    BindDescriptorSet(descriptorSet, pipeline);
+    BindDescriptorSet(bindSet, pipeline);
     // TODO: Give user control over what to draw
 
-    for (const auto &barrierArray : m_PendingBarriers)
-    {
-        InsertBarriers(barrierArray);
-    }
-    m_PendingBarriers.clear();
     vkCmdDraw(m_CommandBuffer, static_cast<uint32_t>(vertexBuffer.VertexCount()), 1, 0, 0);
     vkCmdEndRenderPass(m_CommandBuffer);
 }
 
 void CommandBuffer::DrawIndexed(const Framebuffer& frameBuffer, const RenderPass& renderPass, const RasterPipeline& pipeline,
-    VertexBuffer& vertexBuffer, IndexBuffer& indexBuffer, const DescriptorSet& descriptorSet)
+    VertexBuffer& vertexBuffer, IndexBuffer& indexBuffer, BindSet&& bindSet)
 {
     assert(m_Status == CommandBufferStatus::Recording && "Calling draw before starting recording of command buffer");
     VkRenderPassBeginInfo renderPassBeginInfo{};
@@ -148,16 +145,17 @@ void CommandBuffer::DrawIndexed(const Framebuffer& frameBuffer, const RenderPass
     renderPassBeginInfo.pClearValues = &clearColor;
     
     vkCmdBeginRenderPass(m_CommandBuffer, &renderPassBeginInfo, VkSubpassContents::VK_SUBPASS_CONTENTS_INLINE);
-    pipeline.Bind(m_CommandBuffer, viewport);
-    BindVertexBuffer(vertexBuffer);
-    BindIndexBuffer(indexBuffer);
-    BindDescriptorSet(descriptorSet, pipeline);
 
     for (const auto &barrierArray : m_PendingBarriers)
     {
         InsertBarriers(barrierArray);
     }
     m_PendingBarriers.clear();
+    pipeline.Bind(m_CommandBuffer, viewport);
+    BindVertexBuffer(vertexBuffer);
+    BindIndexBuffer(indexBuffer);
+    BindDescriptorSet(bindSet, pipeline);
+
     // TODO: Give user control over what to draw
     vkCmdDrawIndexed(m_CommandBuffer, static_cast<uint32_t>(indexBuffer.GetIndexCount()), 1, 0, 0, 0);
     vkCmdEndRenderPass(m_CommandBuffer);
@@ -224,9 +222,9 @@ void CommandBuffer::BindVertexBuffer(VertexBuffer &vertexBuffer)
     auto& buffer = vertexBuffer.GetBuffer();
     VkBuffer vertexBuffers = {buffer.Get()};
     VkDeviceSize offsets[] = {0};
+    HandleAcquire(buffer.TakePendingAcquire());
+    FlushPendingBarriers();
     vkCmdBindVertexBuffers(m_CommandBuffer, 0, 1, &vertexBuffers, offsets);
-
-    HandleAcquire(buffer);
 }
 
 void CommandBuffer::BindIndexBuffer(IndexBuffer &indexBuffer)
@@ -234,26 +232,30 @@ void CommandBuffer::BindIndexBuffer(IndexBuffer &indexBuffer)
     auto& buffer = indexBuffer.GetBuffer();
     VkBuffer indexBuffers = {buffer.Get()};
     VkDeviceSize offsets[] = {0};
+    HandleAcquire(buffer.TakePendingAcquire());
+    FlushPendingBarriers();
     vkCmdBindIndexBuffer(m_CommandBuffer, indexBuffers, 0, VkIndexType::VK_INDEX_TYPE_UINT16);
-
-    HandleAcquire(buffer);
 }
 
-void CommandBuffer::BindDescriptorSet(const DescriptorSet &descriptorSet, const RasterPipeline& pipeline)
+void CommandBuffer::BindDescriptorSet(BindSet &bindSet, const RasterPipeline& pipeline)
 {
-    auto pipelineLayout = pipeline.GetPipelineLayout();
-    auto descriptorSetHandle = descriptorSet.Get();
+    bindSet.FlushWrites();
+    for (auto barrier : bindSet.TakePendingAcquires())
+    {
+        HandleAcquire(std::move(barrier));
+    }
+    FlushPendingBarriers();
+    auto descriptorSetHandle = bindSet.GetDescriptorSet().Get();
     vkCmdBindDescriptorSets(m_CommandBuffer, VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_GRAPHICS,
                             pipeline.GetPipelineLayout(), 0, 1, &descriptorSetHandle, 0, nullptr);
 }
 
-void CommandBuffer::HandleAcquire(DeviceBuffer &buffer)
+void CommandBuffer::HandleAcquire(std::optional<BufferMemoryBarrier> pendingAcquire)
 {
-    auto pendingAcquire = buffer.TakePendingAcquire();
     if (pendingAcquire.has_value())
     {
         auto array = std::find_if(m_PendingBarriers.begin(), m_PendingBarriers.end(),
-                     [&pendingAcquire](const MemoryBarrierArray &array) {
+                     [&pendingAcquire](const BarrierArray &array) {
                          return array.DestinationStageMask == pendingAcquire->DestinationStageMask &&
                                 array.SourceStageMask == pendingAcquire->SourceStageMask;
                      });
@@ -263,18 +265,17 @@ void CommandBuffer::HandleAcquire(DeviceBuffer &buffer)
         }
         else
         {
-            m_PendingBarriers.emplace_back(MemoryBarrierArray(std::move(*pendingAcquire)));
+            m_PendingBarriers.emplace_back(BarrierArray(std::move(*pendingAcquire)));
         }
     }
 }
 
-void CommandBuffer::HandleAcquire(Texture &texture)
+void CommandBuffer::HandleAcquire(std::optional<ImageMemoryBarrier> pendingAcquire)
 {
-    auto pendingAcquire = texture.TakePendingAcquire();
     if (pendingAcquire.has_value())
     {
         auto array = std::find_if(m_PendingBarriers.begin(), m_PendingBarriers.end(),
-                     [&pendingAcquire](const MemoryBarrierArray &array) {
+                     [&pendingAcquire](const BarrierArray &array) {
                          return array.DestinationStageMask == pendingAcquire->DestinationStageMask &&
                                 array.SourceStageMask == pendingAcquire->SourceStageMask;
                      });
@@ -284,7 +285,7 @@ void CommandBuffer::HandleAcquire(Texture &texture)
         }
         else
         {
-            m_PendingBarriers.emplace_back(MemoryBarrierArray(std::move(*pendingAcquire)));
+            m_PendingBarriers.emplace_back(BarrierArray(std::move(*pendingAcquire)));
         }
     }
 }
@@ -375,7 +376,7 @@ void CommandBuffer::InsertBarrier(const ImageMemoryBarrier &barrier) const
                          nullptr, 1, &memoryBarrier);
 }
 
-void CommandBuffer::InsertBarriers(const MemoryBarrierArray &barriers) const
+void CommandBuffer::InsertBarriers(const BarrierArray &barriers) const
 {
     std::vector<VkBufferMemoryBarrier> bufferBarriers{};
     bufferBarriers.reserve(barriers.BufferBarriers.size());
@@ -452,6 +453,15 @@ void CommandBuffer::Reset()
         SetName(*m_Name, *m_ExtensionFunctionMapping);
     }
     m_Status = CommandBufferStatus::Reset;
+}
+
+void CommandBuffer::FlushPendingBarriers()
+{
+    for (const auto &barrierArray : m_PendingBarriers)
+    {
+        InsertBarriers(barrierArray);
+    }
+    m_PendingBarriers.clear();
 }
 
 CommandBufferPool::CommandBufferPool(VkDevice device, CommandBufferPoolCreateInfo createInfo, const VulkanInstance& instance) : 

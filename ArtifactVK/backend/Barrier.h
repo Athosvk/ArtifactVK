@@ -44,9 +44,9 @@ struct ImageMemoryBarrier
     VkPipelineStageFlags DestinationStageMask;
 };
 
-struct MemoryBarrierArray {
-    MemoryBarrierArray(BufferMemoryBarrier&& barrier);
-    MemoryBarrierArray(ImageMemoryBarrier&& barrier);
+struct BarrierArray {
+    BarrierArray(BufferMemoryBarrier&& barrier);
+    BarrierArray(ImageMemoryBarrier&& barrier);
 
     std::vector<BufferMemoryBarrierElement> BufferBarriers;
     std::vector<ImageMemoryBarrierElement> ImageBarriers;

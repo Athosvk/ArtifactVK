@@ -4,6 +4,8 @@
 
 #include <vulkan/vulkan.hpp>
 
+#include "Barrier.h"
+
 class UniformBuffer;
 class Texture;
 class DescriptorPool;
@@ -29,14 +31,23 @@ class BindSet
     BindSet& BindUniformBuffer(const UniformBuffer& buffer) &;
     [[nodiscard]] BindSet&& BindTexture(Texture& texture) &&;
     [[nodiscard]] BindSet&& BindUniformBuffer(const UniformBuffer& buffer) &&;
-    void Finish();
-
+    void FlushWrites();
+    std::vector<ImageMemoryBarrier> TakePendingAcquires();
+    const DescriptorSet &GetDescriptorSet() const;
   private:
     void BindTextureInternal(Texture &texture);
     void BindUniformBufferInternal(const UniformBuffer &buffer);
 
     const DescriptorSet& m_DescriptorSet;
     std::vector<BindEntry> m_Entries;
+
+	// Unfortunately, as we're taking pending acquires here,
+	// this assumes that the first call to Bind for a specifc resource
+	// assumes that that person won't bind _and_ submit the same resource
+	// in a different BindSet prior to submitting this `BindSet`.
+	// TODO: Use references to the resources instead, so that we can
+	// fetch the pending acqquires at the time of invoking the call to bind.
+    std::vector<ImageMemoryBarrier> m_PendingAcquires;
     VkDevice m_Device;
 };
 

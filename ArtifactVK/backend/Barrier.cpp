@@ -1,12 +1,12 @@
 #include "Barrier.h"
 
-MemoryBarrierArray::MemoryBarrierArray(BufferMemoryBarrier &&barrier)
+BarrierArray::BarrierArray(BufferMemoryBarrier &&barrier)
     : SourceStageMask(barrier.SourceStageMask), DestinationStageMask(barrier.DestinationStageMask),
       BufferBarriers({barrier.Barrier})
 {
 }
 
-MemoryBarrierArray::MemoryBarrierArray(ImageMemoryBarrier &&barrier)
+BarrierArray::BarrierArray(ImageMemoryBarrier &&barrier)
     : SourceStageMask(barrier.SourceStageMask), DestinationStageMask(barrier.DestinationStageMask),
       ImageBarriers({barrier.Barrier})
 {
