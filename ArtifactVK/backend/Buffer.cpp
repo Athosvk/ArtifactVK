@@ -42,7 +42,6 @@ DeviceBuffer::DeviceBuffer(VkDevice device, const PhysicalDevice &physicalDevice
         void *mappedBuffer;
         vkMapMemory(m_Device, m_Memory, 0, bufferInfo.Size, 0, &mappedBuffer);
         m_MappedBuffer.emplace(mappedBuffer);
-        std::cout << "Mapped at " << mappedBuffer << "\n";
 	}
 }
 
