@@ -51,7 +51,6 @@ void App::RunRenderLoop()
     {
         if (!m_Window.IsMinimized())
         {
-            //std::cout << "\nRendering frame " << m_CurrentFrameIndex << "\n";
             auto resizeEvent = m_Window.PollEvents();
             if (resizeEvent.has_value() && !m_Window.IsMinimized())
             {
@@ -114,8 +113,9 @@ void App::RecordFrame(PerFrameState& state)
     state.CommandBuffer.Begin();
     auto uniforms = GetUniforms();
     state.UniformBuffer.UploadData(GetUniforms());
+    auto bindSet = state.DescriptorSet.BindUniformBuffer(state.UniformBuffer).BindTexture(m_Texture);
     state.CommandBuffer.DrawIndexed(m_SwapchainFramebuffers.GetCurrent(), m_MainPass, m_RenderFullscreen, m_VertexBuffer, m_IndexBuffer, 
-        state.DescriptorSet.BindUniformBuffer(state.UniformBuffer).BindTexture(m_Texture));
+        std::move(bindSet));
     state.CommandBuffer.End(std::span{ &state.ImageAvailable, 1 }, std::span{ &state.RenderFinished, 1 });
     
     m_VulkanInstance.GetActiveDevice().Present(std::span{&state.RenderFinished, 1});
