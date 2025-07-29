@@ -87,7 +87,7 @@ Texture2D &VulkanDevice::CreateTexture(const Texture2DCreateInfo &createInfo)
         *m_GraphicsQueue));
 }
 
-DepthAttachment &VulkanDevice::CreateDepthAttachment()
+DepthAttachment &VulkanDevice::CreateSapchainDepthAttachment()
 {
     assert(m_GraphicsQueue && "No suitable graphics queue");
 
@@ -142,7 +142,6 @@ void VulkanDevice::RecreateSwapchain(VkExtent2D newSize)
     // TODO: Remove this through proper syncing with old swapchain
     WaitForIdle();
 
-    m_Swapchain->Recreate(m_SwapchainFramebuffers, newSize);
     for (auto& depthAttachment : m_DepthAttachments)
     {
         DepthAttachmentCreateInfo createInfo{
@@ -153,6 +152,7 @@ void VulkanDevice::RecreateSwapchain(VkExtent2D newSize)
                                            // TODO: Don't just assume first is good here
                                            m_GraphicsCommandBufferPool->CreateCommandBuffer(*m_GraphicsQueue)};
     }
+    m_Swapchain->Recreate(m_SwapchainFramebuffers, newSize);
 }
 
 ShaderModule VulkanDevice::LoadShaderModule(const std::filesystem::path &filename)
@@ -421,13 +421,15 @@ VulkanDevice::~VulkanDevice()
 
 RenderPass VulkanDevice::CreateRenderPass(DepthAttachment& depthAttachment)
 {
+    // TODO: Don't always bind this to the swapchain
     assert(m_Swapchain.has_value());
     auto attachmentDescription = m_Swapchain->AttachmentDescription();
     
-    return RenderPass(m_Device, RenderPassCreateInfo{ attachmentDescription, depthAttachment });
+    return RenderPass(m_Device,
+                      RenderPassCreateInfo{attachmentDescription, depthAttachment.GetAttachmentDescription()});
 }
 
-const SwapchainFramebuffer& VulkanDevice::CreateSwapchainFramebuffers(const RenderPass &renderpass, const DepthAttachment &depthAttachment)
+const SwapchainFramebuffer& VulkanDevice::CreateSwapchainFramebuffers(const RenderPass &renderpass, DepthAttachment *depthAttachment)
 {
     assert(m_Swapchain.has_value() && "No swapchain to create framebuffers for");
     return *m_SwapchainFramebuffers.emplace_back(std::make_unique<SwapchainFramebuffer>(m_Swapchain->CreateFramebuffersFor(renderpass, depthAttachment)));

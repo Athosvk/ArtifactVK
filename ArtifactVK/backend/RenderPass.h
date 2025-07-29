@@ -9,7 +9,7 @@ struct RenderPassCreateInfo
 {
     // TODO: Abstract to attachment, encode with width/height
     VkAttachmentDescription SwapchainAttachmentDescription;
-    DepthAttachment& DepthAttachment;
+    VkAttachmentDescription DepthAttachment;
 };
 
 class RenderPass
@@ -21,9 +21,7 @@ class RenderPass
     RenderPass(RenderPass && other);
 
     VkRenderPass Get() const;
-    VkImageView GetDepthAttachmentView() const;
   private:
     VkDevice m_Device;
     VkRenderPass m_RenderPass;
-    std::reference_wrapper<DepthAttachment> m_DepthAttachment;
 };

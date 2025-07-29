@@ -78,14 +78,14 @@ VkAttachmentDescription Swapchain::AttachmentDescription() const
     return attachmentDescription;
 }
 
-SwapchainFramebuffer Swapchain::CreateFramebuffersFor(const RenderPass &renderPass, const DepthAttachment& depthAttachment) const
+SwapchainFramebuffer Swapchain::CreateFramebuffersFor(const RenderPass &renderPass, DepthAttachment* depthAttachment) const
 {
     std::vector<Framebuffer> framebuffers;
     framebuffers.reserve(m_ImageViews.size());
     for (const auto& imageView : m_ImageViews) 
     {
         framebuffers.emplace_back(
-            Framebuffer(m_Device, FramebufferCreateInfo{renderPass, imageView, renderPass.GetDepthAttachmentView(), 
+            Framebuffer(m_Device, FramebufferCreateInfo{renderPass, imageView, depthAttachment->GetView(), 
                 GetViewportDescription()}));
     }
     return SwapchainFramebuffer(*this, std::move(framebuffers), renderPass, depthAttachment);
@@ -144,13 +144,13 @@ void Swapchain::Recreate(std::vector<std::unique_ptr<SwapchainFramebuffer>>& old
     // All other render passes should blit to intermediate images.
     std::vector<const RenderPass *> renderPasses;
     // TODO: There should only be one depth attachment here
-    std::vector<std::reference_wrapper<const DepthAttachment>> depthAttachments;
+    std::vector<DepthAttachment*> depthAttachments;
     renderPasses.reserve(oldFramebuffers.size());
     depthAttachments.reserve(oldFramebuffers.size());
     for (const auto &framebuffer : oldFramebuffers)
     {
         renderPasses.emplace_back(&framebuffer->GetRenderPass());
-        depthAttachments.emplace_back(framebuffer->GetDepthAttachment());
+        depthAttachments.emplace_back(framebuffer->GeDepthAttachment());
     }
     Destroy();
     
@@ -274,10 +274,9 @@ SwapchainState Swapchain::MapResultToState(VkResult result) const
     }
 }
 
-SwapchainFramebuffer::SwapchainFramebuffer(const Swapchain& swapchain, 
-    std::vector<Framebuffer>&& swapchainFramebuffers, const RenderPass& renderPass,
-    const DepthAttachment& depthAttachment) : 
-    m_Swapchain(swapchain), m_Framebuffers(std::move(swapchainFramebuffers)), m_Renderpass(renderPass),
+SwapchainFramebuffer::SwapchainFramebuffer(const Swapchain &swapchain, std::vector<Framebuffer> &&swapchainFramebuffers,
+                                           const RenderPass &renderPass, DepthAttachment *depthAttachment)
+    : m_Swapchain(swapchain), m_Framebuffers(std::move(swapchainFramebuffers)), m_Renderpass(renderPass),
       m_DepthAttachment(depthAttachment)
 {
 }
@@ -292,7 +291,7 @@ const RenderPass &SwapchainFramebuffer::GetRenderPass() const
     return m_Renderpass;
 }
 
-const DepthAttachment &SwapchainFramebuffer::GetDepthAttachment() const
+DepthAttachment *SwapchainFramebuffer::GeDepthAttachment() const
 {
     return m_DepthAttachment;
 }

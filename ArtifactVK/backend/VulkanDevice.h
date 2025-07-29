@@ -49,7 +49,7 @@ class VulkanDevice
     Swapchain &GetSwapchain();
     RasterPipeline CreateRasterPipeline(RasterPipelineBuilder &&pipelineBuilder, const RenderPass& renderPass);
     RenderPass CreateRenderPass(DepthAttachment& depthAttachment);
-    const SwapchainFramebuffer& CreateSwapchainFramebuffers(const RenderPass &renderpass, const DepthAttachment& depthAttachment);
+    const SwapchainFramebuffer& CreateSwapchainFramebuffers(const RenderPass &renderpass, DepthAttachment* depthAttachment);
     // TODO: Make a getter, just construct it in the constructor 
     CommandBufferPool CreateGraphicsCommandBufferPool();
     CommandBuffer &GetTransferCommandBuffer();
@@ -82,7 +82,7 @@ class VulkanDevice
 
     DeviceBuffer &CreateBuffer(const CreateBufferInfo& createBufferInfo);
     Texture2D &CreateTexture(const Texture2DCreateInfo& createDesc);
-    DepthAttachment &CreateDepthAttachment();
+    DepthAttachment &CreateSapchainDepthAttachment();
     // TODO: Store for re-use
     DescriptorSet CreateDescriptorSet(const DescriptorSetLayout& layout);
     const DescriptorSetLayout& CreateDescriptorSetLayout(DescriptorSetBuilder builder);

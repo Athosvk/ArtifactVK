@@ -5,8 +5,7 @@
 
 #include "Texture.h"
 
-RenderPass::RenderPass(VkDevice device, RenderPassCreateInfo &&createInfo) : m_Device(device), 
-    m_DepthAttachment(createInfo.DepthAttachment)
+RenderPass::RenderPass(VkDevice device, RenderPassCreateInfo &&createInfo) : m_Device(device)
 {
     VkAttachmentReference swapchainAttachmentRef{};
     swapchainAttachmentRef.attachment = 0;
@@ -24,7 +23,7 @@ RenderPass::RenderPass(VkDevice device, RenderPassCreateInfo &&createInfo) : m_D
 
     VkRenderPassCreateInfo renderPassCreateInfo{};
     std::array<VkAttachmentDescription, 2> attachments = {createInfo.SwapchainAttachmentDescription,
-                                                          createInfo.DepthAttachment.GetAttachmentDescription()};
+                                                          createInfo.DepthAttachment};
     renderPassCreateInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
     renderPassCreateInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
     renderPassCreateInfo.pAttachments = attachments.data();
@@ -63,8 +62,7 @@ RenderPass::~RenderPass()
 }
 
 RenderPass::RenderPass(RenderPass &&other) : 
-    m_Device(other.m_Device), m_RenderPass(std::exchange(other.m_RenderPass, VK_NULL_HANDLE)), 
-    m_DepthAttachment(other.m_DepthAttachment)
+    m_Device(other.m_Device), m_RenderPass(std::exchange(other.m_RenderPass, VK_NULL_HANDLE))
 {
 }
 
@@ -73,7 +71,3 @@ VkRenderPass RenderPass::Get() const
     return m_RenderPass;
 }
 
-VkImageView RenderPass::GetDepthAttachmentView() const
-{
-    return m_DepthAttachment.get().GetView();
-}

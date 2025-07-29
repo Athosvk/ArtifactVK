@@ -24,9 +24,9 @@ const InstanceCreateInfo DefaultCreateInfo()
 App::App()
     : m_Window(WindowCreateInfo{800, 600, "ArtifactVK"}),
       m_VulkanInstance(m_Window.CreateVulkanInstance(DefaultCreateInfo())),
-      m_DepthAttachment(m_VulkanInstance.GetActiveDevice().CreateDepthAttachment()),
+      m_DepthAttachment(m_VulkanInstance.GetActiveDevice().CreateSapchainDepthAttachment()),
       m_MainPass(m_VulkanInstance.GetActiveDevice().CreateRenderPass(m_DepthAttachment)),
-      m_SwapchainFramebuffers(m_VulkanInstance.GetActiveDevice().CreateSwapchainFramebuffers(m_MainPass, m_DepthAttachment)),
+      m_SwapchainFramebuffers(m_VulkanInstance.GetActiveDevice().CreateSwapchainFramebuffers(m_MainPass, &m_DepthAttachment)),
       m_DescriptorSetLayout(BuildDescriptorSetLayout(m_VulkanInstance.GetActiveDevice())),
       m_PerFrameState(CreatePerFrameState(m_VulkanInstance.GetActiveDevice())),
       m_RenderFullscreen(LoadShaderPipeline(m_VulkanInstance.GetActiveDevice(), m_MainPass)),
@@ -78,9 +78,9 @@ Texture2D& App::LoadImage()
     return m_VulkanInstance.GetActiveDevice().CreateTexture(image.GetTextureCreateDesc());
 }
 
-DepthAttachment &App::CreateDepthAttachment()
+DepthAttachment &App::CreateSapchainDepthAttachment()
 {
-    return m_VulkanInstance.GetActiveDevice().CreateDepthAttachment();
+    return m_VulkanInstance.GetActiveDevice().CreateSapchainDepthAttachment();
 }
 
 UniformConstants App::GetUniforms()

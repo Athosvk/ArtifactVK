@@ -351,9 +351,20 @@ Texture2D::Texture2D(Texture2D && other) :
     m_Device(other.m_Device), m_StagingBuffer(std::move(other.m_StagingBuffer)), 
     m_Texture(std::move(other.m_Texture)),
     m_PendingAcquireBarrier(std::move(other.m_PendingAcquireBarrier)), 
-    m_PendingTransferFence(other.m_PendingTransferFence), 
+    m_PendingTransferFence(std::move(other.m_PendingTransferFence)), 
     m_Sampler(std::exchange(other.m_Sampler, VK_NULL_HANDLE))
 {  
+}
+
+Texture2D &Texture2D::operator=(Texture2D &&other)
+{
+    m_Device = other.m_Device;
+    m_StagingBuffer = std::move(other.m_StagingBuffer);
+    m_Texture = std::move(other.m_Texture);
+    m_PendingAcquireBarrier = std::move(other.m_PendingAcquireBarrier),
+    m_PendingTransferFence = std::move(other.m_PendingTransferFence); 
+    m_Sampler = std::exchange(other.m_Sampler, VK_NULL_HANDLE);
+    return *this;
 }
 
 Texture2D::~Texture2D()
