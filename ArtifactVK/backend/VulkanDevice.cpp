@@ -144,9 +144,7 @@ void VulkanDevice::RecreateSwapchain(VkExtent2D newSize)
 
     for (auto& depthAttachment : m_DepthAttachments)
     {
-        DepthAttachmentCreateInfo createInfo{
-            .Width = static_cast<uint32_t>(m_Swapchain->GetViewportDescription().Viewport.width),
-            .Height = static_cast<uint32_t>(m_Swapchain->GetViewportDescription().Viewport.height)};
+        DepthAttachmentCreateInfo createInfo{.Width = newSize.width, .Height = newSize.height};
 
         *depthAttachment = DepthAttachment{m_Device, m_PhysicalDevice, createInfo,
                                            // TODO: Don't just assume first is good here
@@ -550,7 +548,9 @@ std::vector<VkDeviceQueueCreateInfo> VulkanDevice::GetQueueCreateInfos(const Phy
         graphicsQueueCreateInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
         graphicsQueueCreateInfo.queueFamilyIndex = queueIndex;
         graphicsQueueCreateInfo.queueCount = 1;
-        float priority = 1.0f;
+        // TODO: Fix this as it's a temporary. Possibly just translate 
+        // queue create infos from own format
+        static float priority = 1.0f;
         graphicsQueueCreateInfo.pQueuePriorities = &priority;
         queueCreateInfos.emplace_back(graphicsQueueCreateInfo);
     }
