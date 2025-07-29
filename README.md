@@ -57,5 +57,7 @@ m_VulkanInstance.GetActiveDevice().Present(std::span{&state.RenderFinished, 1});
 ```
 
 
-## Sample
+## Samples
 ![image](content/textured_sample.gif)
+
+![image](content/cube.png =450x450)
