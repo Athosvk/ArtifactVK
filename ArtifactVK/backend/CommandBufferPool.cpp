@@ -140,9 +140,12 @@ void CommandBuffer::DrawIndexed(const Framebuffer& frameBuffer, const RenderPass
     // Should only be rendering to the scissor area, not the entire viewport
     renderPassBeginInfo.renderArea = viewport.Scissor;
 
-    VkClearValue clearColor = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
-    renderPassBeginInfo.clearValueCount = 1;
-    renderPassBeginInfo.pClearValues = &clearColor;
+    std::array<VkClearValue, 2> clearValues{};
+    
+    clearValues[0].color = {0.0f, 0.0f, 0.0f, 1.0f};
+    clearValues[1].depthStencil = { 1.0f, 0 };
+    renderPassBeginInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
+    renderPassBeginInfo.pClearValues = clearValues.data();
     
     vkCmdBeginRenderPass(m_CommandBuffer, &renderPassBeginInfo, VkSubpassContents::VK_SUBPASS_CONTENTS_INLINE);
 
@@ -299,7 +302,7 @@ void CommandBuffer::Copy(const DeviceBuffer &source, const DeviceBuffer &destina
     vkCmdCopyBuffer(m_CommandBuffer, source.Get(), destination.Get(), 1, &bufferCopy);
 }
 
-void CommandBuffer::CopyBufferToImage(const DeviceBuffer &source, Texture &texture)
+void CommandBuffer::CopyBufferToImage(const DeviceBuffer &source, Texture2D &texture)
 {
     VkBufferImageCopy bufferImageCopy{};
     bufferImageCopy.bufferOffset = 0;
@@ -358,17 +361,11 @@ void CommandBuffer::InsertBarrier(const ImageMemoryBarrier &barrier) const
 		memoryBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 		memoryBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     }
-    memoryBarrier.image = barrier.Barrier.Image.get().Get();
+    memoryBarrier.image = barrier.Barrier.Texture.get().Get();
 
     // TODO: This doesn't work for anything but regular images.
     // Get usage from texture
-    memoryBarrier.subresourceRange.aspectMask = VkImageAspectFlagBits::VK_IMAGE_ASPECT_COLOR_BIT;
-    memoryBarrier.subresourceRange.baseMipLevel = 0;
-
-    // TODO: Get num mips from texture to correctly specify this
-    memoryBarrier.subresourceRange.levelCount = 1;
-    memoryBarrier.subresourceRange.baseArrayLayer = 0;
-    memoryBarrier.subresourceRange.layerCount = 1;
+    memoryBarrier.subresourceRange = barrier.Barrier.SubResource;
 
     memoryBarrier.srcAccessMask = barrier.Barrier.SourceAccessMask;
     memoryBarrier.dstAccessMask = barrier.Barrier.DestinationAccessMask;
@@ -409,7 +406,7 @@ void CommandBuffer::InsertBarriers(const BarrierArray &barriers) const
     {
 		VkImageMemoryBarrier vkBarrier{};
 		vkBarrier.sType = VkStructureType::VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
-		vkBarrier.image = barrier.Image.get().Get();
+		vkBarrier.image = barrier.Texture.get().Get();
 		vkBarrier.srcAccessMask = barrier.SourceAccessMask;
 		vkBarrier.dstAccessMask = barrier.DestinationAccessMask;
         if (barrier.Queues.has_value())
@@ -422,17 +419,8 @@ void CommandBuffer::InsertBarriers(const BarrierArray &barriers) const
             vkBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
             vkBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
         }
-        vkBarrier.subresourceRange = VkImageSubresourceRange{
-            // TODO: This doesn't work for anything but regular images. 
-            // Get usage from texture
-            .aspectMask = VkImageAspectFlagBits::VK_IMAGE_ASPECT_COLOR_BIT,
-            .baseMipLevel = 0,
-            // TODO: Get num mips from texture to correctly specify this
-            .levelCount = 1,
-            .baseArrayLayer = 0,
-            .layerCount = 1,
-        };
-		imageBarriers.push_back(vkBarrier);
+        vkBarrier.subresourceRange = barrier.SubResource;
+        imageBarriers.push_back(vkBarrier);
     }
 
     vkCmdPipelineBarrier(m_CommandBuffer, barriers.SourceStageMask, barriers.DestinationStageMask, 0, 0, nullptr, static_cast<uint32_t>(bufferBarriers.size()),

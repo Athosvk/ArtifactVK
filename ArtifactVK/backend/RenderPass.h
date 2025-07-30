@@ -1,10 +1,15 @@
 #pragma once
 #include <vulkan/vulkan.h>
 
+#include <functional>
+
+class DepthAttachment;
+
 struct RenderPassCreateInfo
 {
-    // Abstract to attachment, encode with width/height
-    VkAttachmentDescription swapchainAttachmentDescription;
+    // TODO: Abstract to attachment, encode with width/height
+    VkAttachmentDescription SwapchainAttachmentDescription;
+    VkAttachmentDescription DepthAttachment;
 };
 
 class RenderPass

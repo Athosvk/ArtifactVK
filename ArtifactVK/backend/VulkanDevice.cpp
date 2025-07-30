@@ -77,14 +77,26 @@ DeviceBuffer &VulkanDevice::CreateBuffer(const CreateBufferInfo &createInfo)
     return *m_Buffers.emplace_back(std::make_unique<DeviceBuffer>(m_Device, m_PhysicalDevice, createInfo));
 }
 
-Texture &VulkanDevice::CreateTexture(const TextureCreateInfo &createInfo)
+Texture2D &VulkanDevice::CreateTexture(const Texture2DCreateInfo &createInfo)
 {
     auto &commandBuffer = GetTransferCommandBuffer();
     // TODO: Embed texture name
     commandBuffer.SetName("Transfer Texture Command Buffer", GetExtensionFunctionMapping());
-    return *m_Textures.emplace_back(std::make_unique<Texture>(m_Device, m_PhysicalDevice, createInfo, commandBuffer, 
+    return *m_Textures.emplace_back(std::make_unique<Texture2D>(m_Device, m_PhysicalDevice, createInfo, commandBuffer, 
         // TODO: Should also allow transferring to compute
         *m_GraphicsQueue));
+}
+
+DepthAttachment &VulkanDevice::CreateSapchainDepthAttachment()
+{
+    assert(m_GraphicsQueue && "No suitable graphics queue");
+
+    DepthAttachmentCreateInfo createInfo{.Width = static_cast<uint32_t>(m_Swapchain->GetViewportDescription().Viewport.width),
+                                         .Height = static_cast<uint32_t>(m_Swapchain->GetViewportDescription().Viewport.height)};
+    return *m_DepthAttachments.emplace_back(
+        std::make_unique<DepthAttachment>(m_Device, m_PhysicalDevice, createInfo, 
+            // TODO: Don't just assume first is good here
+            m_GraphicsCommandBufferPool->CreateCommandBuffer(*m_GraphicsQueue)));
 }
 
 DescriptorSet VulkanDevice::CreateDescriptorSet(const DescriptorSetLayout& layout)
@@ -130,6 +142,14 @@ void VulkanDevice::RecreateSwapchain(VkExtent2D newSize)
     // TODO: Remove this through proper syncing with old swapchain
     WaitForIdle();
 
+    for (auto& depthAttachment : m_DepthAttachments)
+    {
+        DepthAttachmentCreateInfo createInfo{.Width = newSize.width, .Height = newSize.height};
+
+        *depthAttachment = DepthAttachment{m_Device, m_PhysicalDevice, createInfo,
+                                           // TODO: Don't just assume first is good here
+                                           m_GraphicsCommandBufferPool->CreateCommandBuffer(*m_GraphicsQueue)};
+    }
     m_Swapchain->Recreate(m_SwapchainFramebuffers, newSize);
 }
 
@@ -236,6 +256,18 @@ RasterPipeline VulkanDevice::CreateRasterPipeline(RasterPipelineBuilder &&pipeli
         colorBlendState.blendConstants[i] = 0.0f;
     }
 
+    VkPipelineDepthStencilStateCreateInfo depthStencilState{};
+    depthStencilState.sType = VkStructureType::VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+    depthStencilState.depthTestEnable = VK_TRUE;
+    depthStencilState.depthWriteEnable = VK_TRUE;
+    depthStencilState.depthCompareOp = VkCompareOp::VK_COMPARE_OP_LESS;
+    depthStencilState.depthBoundsTestEnable = VK_FALSE;
+    depthStencilState.minDepthBounds = 0.0f;
+    depthStencilState.maxDepthBounds = 1.0f;
+    depthStencilState.stencilTestEnable = VK_FALSE;
+    depthStencilState.front = {};
+    depthStencilState.back = {};
+
     VkGraphicsPipelineCreateInfo pipelineInfo{};
     pipelineInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
     pipelineInfo.stageCount = 2;
@@ -245,7 +277,7 @@ RasterPipeline VulkanDevice::CreateRasterPipeline(RasterPipelineBuilder &&pipeli
     pipelineInfo.pViewportState = &viewportState;
     pipelineInfo.pRasterizationState = &rasterizationState;
     pipelineInfo.pMultisampleState = &multiSampleState;
-    pipelineInfo.pDepthStencilState = nullptr;
+    pipelineInfo.pDepthStencilState = &depthStencilState;
 
     pipelineInfo.pColorBlendState = &colorBlendState;
     pipelineInfo.pDynamicState = &dynamicState;
@@ -307,7 +339,8 @@ VulkanDevice::VulkanDevice(PhysicalDevice &physicalDevice, VkPhysicalDevice phys
     // Possibly redundant creation if it's shared with the graphics queue
     m_TransferQueue = Queue(m_Device, physicalDevice.GetQueueFamilies().TransferFamilyIndex.value());
     
-    m_TransferCommandBufferPool = m_CommandBufferPools.emplace_back(std::make_unique<CommandBufferPool>(CreateTransferCommandBufferPool())).get();
+    m_GraphicsCommandBufferPool = std::make_unique<CommandBufferPool>(CreateGraphicsCommandBufferPool());
+    m_TransferCommandBufferPool = std::make_unique<CommandBufferPool>(CreateTransferCommandBufferPool());
     m_DescriptorPool = std::make_unique<DescriptorPool>(
         // Arbitrary size
         m_Device, DescriptorPoolCreateInfo{64, {VkDescriptorType::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VkDescriptorType::VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER}});
@@ -318,10 +351,11 @@ VulkanDevice::VulkanDevice(VulkanDevice &&other)
       m_GraphicsQueue(other.m_GraphicsQueue), m_PresentQueue(other.m_PresentQueue),
       m_TransferQueue(other.m_TransferQueue),
       m_Swapchain(std::move(other.m_Swapchain)), 
-      m_CommandBufferPools(std::move(other.m_CommandBufferPools)),
+      m_GraphicsCommandBufferPool(std::move(other.m_GraphicsCommandBufferPool)),
+      m_TransferCommandBufferPool(std::move(other.m_TransferCommandBufferPool)),
       m_Semaphores(std::move(other.m_Semaphores)),
       m_SwapchainFramebuffers(std::move(other.m_SwapchainFramebuffers)), m_Window(other.m_Window),
-      m_TransferCommandBufferPool(other.m_TransferCommandBufferPool), m_DescriptorPool(std::move(other.m_DescriptorPool)),
+      m_DescriptorPool(std::move(other.m_DescriptorPool)),
       m_Instance(other.m_Instance)
 {
 }
@@ -353,7 +387,8 @@ VulkanDevice::~VulkanDevice()
     m_SwapchainFramebuffers.clear();
 
     m_Swapchain.reset();
-    m_CommandBufferPools.clear();
+    m_GraphicsCommandBufferPool.reset();
+    m_TransferCommandBufferPool.reset();
     m_Semaphores.clear();
     m_VertexBuffers.clear();
     m_IndexBuffers.clear();
@@ -382,21 +417,23 @@ VulkanDevice::~VulkanDevice()
     vkDestroyDevice(m_Device, nullptr);
 }
 
-RenderPass VulkanDevice::CreateRenderPass()
+RenderPass VulkanDevice::CreateRenderPass(DepthAttachment& depthAttachment)
 {
+    // TODO: Don't always bind this to the swapchain
     assert(m_Swapchain.has_value());
     auto attachmentDescription = m_Swapchain->AttachmentDescription();
     
-    return RenderPass(m_Device, RenderPassCreateInfo{ attachmentDescription });
+    return RenderPass(m_Device,
+                      RenderPassCreateInfo{attachmentDescription, depthAttachment.GetAttachmentDescription()});
 }
 
-const SwapchainFramebuffer& VulkanDevice::CreateSwapchainFramebuffers(const RenderPass &renderpass)
+const SwapchainFramebuffer& VulkanDevice::CreateSwapchainFramebuffers(const RenderPass &renderpass, DepthAttachment *depthAttachment)
 {
     assert(m_Swapchain.has_value() && "No swapchain to create framebuffers for");
-    return *m_SwapchainFramebuffers.emplace_back(std::make_unique<SwapchainFramebuffer>(m_Swapchain->CreateFramebuffersFor(renderpass)));
+    return *m_SwapchainFramebuffers.emplace_back(std::make_unique<SwapchainFramebuffer>(m_Swapchain->CreateFramebuffersFor(renderpass, depthAttachment)));
 }
 
-CommandBufferPool &VulkanDevice::CreateGraphicsCommandBufferPool()
+CommandBufferPool VulkanDevice::CreateGraphicsCommandBufferPool()
 {
     auto familyIndices = m_PhysicalDevice.GetQueueFamilies();
     assert(familyIndices.GraphicsFamilyIndex.has_value() &&
@@ -404,7 +441,7 @@ CommandBufferPool &VulkanDevice::CreateGraphicsCommandBufferPool()
 
     CommandBufferPoolCreateInfo createInfo{VkCommandPoolCreateFlagBits::VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
                                            familyIndices.GraphicsFamilyIndex.value()};
-    auto& commandBufferPool = *m_CommandBufferPools.emplace_back(std::make_unique<CommandBufferPool>(m_Device, createInfo, m_Instance));
+    auto commandBufferPool = CommandBufferPool{m_Device, createInfo, m_Instance};
     commandBufferPool.SetName("Graphics CMD Buffer Pool", m_Instance.GetExtensionFunctionMapping());
     return commandBufferPool;
 }
@@ -427,6 +464,11 @@ CommandBuffer &VulkanDevice::GetTransferCommandBuffer()
 {
     // TODO: Cache most recent?
     return m_TransferCommandBufferPool->CreateCommandBuffer(*m_TransferQueue);
+}
+
+CommandBufferPool &VulkanDevice::GetGraphicsCommandBufferPool()
+{
+    return *m_GraphicsCommandBufferPool;
 }
 
 Semaphore &VulkanDevice::CreateDeviceSemaphore()
@@ -506,7 +548,9 @@ std::vector<VkDeviceQueueCreateInfo> VulkanDevice::GetQueueCreateInfos(const Phy
         graphicsQueueCreateInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
         graphicsQueueCreateInfo.queueFamilyIndex = queueIndex;
         graphicsQueueCreateInfo.queueCount = 1;
-        float priority = 1.0f;
+        // TODO: Fix this as it's a temporary. Possibly just translate 
+        // queue create infos from own format
+        static float priority = 1.0f;
         graphicsQueueCreateInfo.pQueuePriorities = &priority;
         queueCreateInfos.emplace_back(graphicsQueueCreateInfo);
     }

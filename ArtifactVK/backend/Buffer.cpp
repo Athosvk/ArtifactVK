@@ -45,11 +45,21 @@ DeviceBuffer::DeviceBuffer(VkDevice device, const PhysicalDevice &physicalDevice
 	}
 }
 
-DeviceBuffer::DeviceBuffer(DeviceBuffer && other)
-    : m_Device(other.m_Device), m_Buffer(std::exchange(other.m_Buffer, VK_NULL_HANDLE)), m_Memory(std::exchange(other.m_Memory, VK_NULL_HANDLE)), 
-	m_CreateInfo(std::move(other.m_CreateInfo)), m_MappedBuffer(std::move(other.m_MappedBuffer))
+DeviceBuffer::DeviceBuffer(DeviceBuffer &&other)
+    : m_Device(other.m_Device), m_Buffer(std::exchange(other.m_Buffer, VK_NULL_HANDLE)),
+      m_Memory(std::exchange(other.m_Memory, VK_NULL_HANDLE)), m_CreateInfo(std::move(other.m_CreateInfo)),
+      m_MappedBuffer(std::move(other.m_MappedBuffer))
 {
+}
 
+DeviceBuffer &DeviceBuffer::operator=(DeviceBuffer &&other)
+{
+    m_Device = other.m_Device;
+    m_Buffer = std::exchange(other.m_Buffer, VK_NULL_HANDLE);
+    m_Memory = std::exchange(other.m_Memory, VK_NULL_HANDLE);
+    m_CreateInfo = std::move(other.m_CreateInfo);
+    m_MappedBuffer = std::move(other.m_MappedBuffer);
+    return *this;
 }
 
 DeviceBuffer::~DeviceBuffer()

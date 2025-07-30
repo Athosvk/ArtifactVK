@@ -24,8 +24,9 @@ const InstanceCreateInfo DefaultCreateInfo()
 App::App()
     : m_Window(WindowCreateInfo{800, 600, "ArtifactVK"}),
       m_VulkanInstance(m_Window.CreateVulkanInstance(DefaultCreateInfo())),
-      m_MainPass(m_VulkanInstance.GetActiveDevice().CreateRenderPass()),
-      m_SwapchainFramebuffers(m_VulkanInstance.GetActiveDevice().CreateSwapchainFramebuffers(m_MainPass)),
+      m_DepthAttachment(m_VulkanInstance.GetActiveDevice().CreateSapchainDepthAttachment()),
+      m_MainPass(m_VulkanInstance.GetActiveDevice().CreateRenderPass(m_DepthAttachment)),
+      m_SwapchainFramebuffers(m_VulkanInstance.GetActiveDevice().CreateSwapchainFramebuffers(m_MainPass, &m_DepthAttachment)),
       m_DescriptorSetLayout(BuildDescriptorSetLayout(m_VulkanInstance.GetActiveDevice())),
       m_PerFrameState(CreatePerFrameState(m_VulkanInstance.GetActiveDevice())),
       m_RenderFullscreen(LoadShaderPipeline(m_VulkanInstance.GetActiveDevice(), m_MainPass)),
@@ -71,10 +72,15 @@ void App::RunRenderLoop()
     }
 }
 
-Texture& App::LoadImage()
+Texture2D& App::LoadImage()
 {
     Image image("textures/texture.jpg");
     return m_VulkanInstance.GetActiveDevice().CreateTexture(image.GetTextureCreateDesc());
+}
+
+DepthAttachment &App::CreateSapchainDepthAttachment()
+{
+    return m_VulkanInstance.GetActiveDevice().CreateSapchainDepthAttachment();
 }
 
 UniformConstants App::GetUniforms()
@@ -134,7 +140,8 @@ std::vector<std::reference_wrapper<Semaphore>> App::CreateSemaphorePerInFlightFr
 std::vector<PerFrameState> App::CreatePerFrameState(VulkanDevice &vulkanDevice)
 {
     std::vector<PerFrameState> perFrameState;
-    auto commandBuffers = vulkanDevice.CreateGraphicsCommandBufferPool().CreateCommandBuffers(MAX_FRAMES_IN_FLIGHT, m_VulkanInstance.GetActiveDevice().GetGraphicsQueue());
+    auto commandBuffers = vulkanDevice.GetGraphicsCommandBufferPool().CreateCommandBuffers(
+        MAX_FRAMES_IN_FLIGHT, m_VulkanInstance.GetActiveDevice().GetGraphicsQueue());
 
     perFrameState.reserve(MAX_FRAMES_IN_FLIGHT);
     
@@ -155,18 +162,55 @@ std::vector<PerFrameState> App::CreatePerFrameState(VulkanDevice &vulkanDevice)
     return perFrameState;
 }
 
-constexpr std::vector<Vertex> App::GetVertices()
-{
-    return {{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
-            {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
-            {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
-            {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}};
+constexpr std::vector<Vertex> App::GetVertices() {
+
+    return {// Front face
+            Vertex {{-0.5f, -0.5f, 0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
+            Vertex {{0.5f, -0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
+            Vertex {{0.5f, 0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
+            Vertex {{-0.5f, 0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}},
+
+            // Back face
+            Vertex {{-0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
+            Vertex {{0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
+            Vertex {{0.5f, 0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
+            Vertex {{-0.5f, 0.5f, -0.5f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}},
+
+            // Left face
+            Vertex {{-0.5f, -0.5f, -0.5f}, {1.0f, 0.5f, 0.0f}, {1.0f, 0.0f}},
+            Vertex {{-0.5f, -0.5f, 0.5f}, {0.5f, 1.0f, 0.0f}, {0.0f, 0.0f}},
+            Vertex {{-0.5f, 0.5f, 0.5f}, {0.5f, 0.5f, 1.0f}, {0.0f, 1.0f}},
+            Vertex {{-0.5f, 0.5f, -0.5f}, {1.0f, 1.0f, 0.5f}, {1.0f, 1.0f}},
+
+            // Right face
+            Vertex {{0.5f, -0.5f, 0.5f}, {1.0f, 0.5f, 0.0f}, {1.0f, 0.0f}},
+            Vertex {{0.5f, -0.5f, -0.5f}, {0.5f, 1.0f, 0.0f}, {0.0f, 0.0f}},
+            Vertex {{0.5f, 0.5f, -0.5f}, {0.5f, 0.5f, 1.0f}, {0.0f, 1.0f}},
+            Vertex {{0.5f, 0.5f, 0.5f}, {1.0f, 1.0f, 0.5f}, {1.0f, 1.0f}},
+
+            // Top face
+            Vertex {{-0.5f, 0.5f, 0.5f}, {0.8f, 0.2f, 0.6f}, {1.0f, 0.0f}},
+            Vertex {{0.5f, 0.5f, 0.5f}, {0.2f, 0.8f, 0.6f}, {0.0f, 0.0f}},
+            Vertex {{0.5f, 0.5f, -0.5f}, {0.2f, 0.2f, 0.9f}, {0.0f, 1.0f}},
+            Vertex {{-0.5f, 0.5f, -0.5f}, {0.9f, 0.9f, 0.9f}, {1.0f, 1.0f}},
+
+            // Bottom face
+            Vertex {{-0.5f, -0.5f, -0.5f}, {0.2f, 0.2f, 0.2f}, {1.0f, 0.0f}},
+            Vertex {{0.5f, -0.5f, -0.5f}, {0.5f, 0.2f, 0.2f}, {0.0f, 0.0f}},
+            Vertex {{0.5f, -0.5f, 0.5f}, {0.2f, 0.5f, 0.2f}, {0.0f, 1.0f}},
+            Vertex {{-0.5f, -0.5f, 0.5f}, {0.2f, 0.2f, 0.5f},{1.0f, 1.0f}}
+    };
 }
 
 constexpr std::vector<uint16_t> App::GetIndices()
 {
     return {
-        0, 1, 2, 2, 3, 0
+        0,  1,  2,  2,  3,  0,  // Front
+        4, 5, 6, 6, 7, 4,       // Back
+        8, 9, 10, 10, 11, 8,    // Left
+        12, 13, 14, 14, 15, 12, // Right
+        16, 17, 18, 18, 19, 16, // Top
+        20, 21, 22, 22, 23, 20, // Bottom
     };
 }
 
@@ -189,7 +233,7 @@ constexpr std::array<VkVertexInputAttributeDescription, 3> Vertex::GetAttributeD
     VkVertexInputAttributeDescription positionAttribute;
     positionAttribute.binding = 0;
     positionAttribute.location = 0;
-    positionAttribute.format = VkFormat::VK_FORMAT_R32G32_SFLOAT;
+    positionAttribute.format = VkFormat::VK_FORMAT_R32G32B32_SFLOAT;
     positionAttribute.offset = offsetof(Vertex, Position);
 
     VkVertexInputAttributeDescription colorAttribute;

@@ -78,16 +78,17 @@ VkAttachmentDescription Swapchain::AttachmentDescription() const
     return attachmentDescription;
 }
 
-SwapchainFramebuffer Swapchain::CreateFramebuffersFor(const RenderPass &renderPass) const
+SwapchainFramebuffer Swapchain::CreateFramebuffersFor(const RenderPass &renderPass, DepthAttachment* depthAttachment) const
 {
     std::vector<Framebuffer> framebuffers;
     framebuffers.reserve(m_ImageViews.size());
     for (const auto& imageView : m_ImageViews) 
     {
         framebuffers.emplace_back(
-            Framebuffer(m_Device, FramebufferCreateInfo{renderPass, imageView, GetViewportDescription()}));
+            Framebuffer(m_Device, FramebufferCreateInfo{renderPass, imageView, depthAttachment->GetView(), 
+                GetViewportDescription()}));
     }
-    return SwapchainFramebuffer(*this, std::move(framebuffers), renderPass);
+    return SwapchainFramebuffer(*this, std::move(framebuffers), renderPass, depthAttachment);
 }
 
 uint32_t Swapchain::CurrentIndex() const
@@ -138,11 +139,18 @@ SwapchainState Swapchain::Present(std::span<Semaphore> waitSempahores)
 
 void Swapchain::Recreate(std::vector<std::unique_ptr<SwapchainFramebuffer>>& oldFramebuffers, VkExtent2D newExtents)
 {
+    // TODO: This functionality is probably overkill. Framework should/can assume
+    // there's only a single render pass that ever renders to the final buffer.
+    // All other render passes should blit to intermediate images.
     std::vector<const RenderPass *> renderPasses;
+    // TODO: There should only be one depth attachment here
+    std::vector<DepthAttachment*> depthAttachments;
     renderPasses.reserve(oldFramebuffers.size());
+    depthAttachments.reserve(oldFramebuffers.size());
     for (const auto &framebuffer : oldFramebuffers)
     {
         renderPasses.emplace_back(&framebuffer->GetRenderPass());
+        depthAttachments.emplace_back(framebuffer->GeDepthAttachment());
     }
     Destroy();
     
@@ -152,7 +160,7 @@ void Swapchain::Recreate(std::vector<std::unique_ptr<SwapchainFramebuffer>>& old
 
     for (size_t i = 0; i < renderPasses.size(); i++) 
     {
-        (*oldFramebuffers[i]) = CreateFramebuffersFor(*renderPasses[i]);
+        (*oldFramebuffers[i]) = CreateFramebuffersFor(*renderPasses[i], depthAttachments[i]);
     }
 }
 
@@ -266,8 +274,10 @@ SwapchainState Swapchain::MapResultToState(VkResult result) const
     }
 }
 
-SwapchainFramebuffer::SwapchainFramebuffer(const Swapchain& swapchain, std::vector<Framebuffer>&& swapchainFramebuffers, const RenderPass& renderPass) : 
-    m_Swapchain(swapchain), m_Framebuffers(std::move(swapchainFramebuffers)), m_Renderpass(renderPass)
+SwapchainFramebuffer::SwapchainFramebuffer(const Swapchain &swapchain, std::vector<Framebuffer> &&swapchainFramebuffers,
+                                           const RenderPass &renderPass, DepthAttachment *depthAttachment)
+    : m_Swapchain(swapchain), m_Framebuffers(std::move(swapchainFramebuffers)), m_Renderpass(renderPass),
+      m_DepthAttachment(depthAttachment)
 {
 }
 
@@ -279,4 +289,9 @@ const Framebuffer &SwapchainFramebuffer::GetCurrent() const
 const RenderPass &SwapchainFramebuffer::GetRenderPass() const
 {
     return m_Renderpass;
+}
+
+DepthAttachment *SwapchainFramebuffer::GeDepthAttachment() const
+{
+    return m_DepthAttachment;
 }

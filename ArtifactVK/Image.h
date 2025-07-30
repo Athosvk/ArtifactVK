@@ -14,7 +14,7 @@ public:
 	int GetWidth() const;
 	int GetHeight() const;
     unsigned char *GetPixels() const;
-    TextureCreateInfo GetTextureCreateDesc() const;
+    Texture2DCreateInfo GetTextureCreateDesc() const;
   private:
     std::unique_ptr<stbi_uc, void(*)(void*)> m_Data;
 	int m_Width;

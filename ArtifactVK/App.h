@@ -21,6 +21,8 @@ class VertexBuffer;
 class IndexBuffer;
 class UniformBuffer;
 class DescriptorSetLayout;
+class Texture2D;
+class DepthAttachment;
 
 const uint32_t MAX_FRAMES_IN_FLIGHT = 2;
 
@@ -35,7 +37,7 @@ struct PerFrameState
 
 struct Vertex
 {
-    glm::vec2 Position;
+    glm::vec3 Position;
     glm::vec3 Color;
     glm::vec2 UV;
 
@@ -59,7 +61,8 @@ class App
     void RunRenderLoop();
 
   private:
-    Texture& LoadImage();
+    Texture2D& LoadImage();
+    DepthAttachment& CreateSapchainDepthAttachment();
     UniformConstants GetUniforms();
     RasterPipeline LoadShaderPipeline(VulkanDevice &vulkanDevice, const RenderPass& renderPass) const;
     void RecordFrame(PerFrameState& state);
@@ -71,6 +74,7 @@ class App
 
     Window m_Window;
     VulkanInstance m_VulkanInstance;
+    DepthAttachment &m_DepthAttachment;
     RenderPass m_MainPass;
     const SwapchainFramebuffer& m_SwapchainFramebuffers;
     const DescriptorSetLayout &m_DescriptorSetLayout;
@@ -80,5 +84,5 @@ class App
     Swapchain &m_Swapchain;
     VertexBuffer &m_VertexBuffer;
     IndexBuffer &m_IndexBuffer;
-    Texture& m_Texture;
+    Texture2D& m_Texture;
 };

@@ -8,7 +8,8 @@ class RenderPass;
 struct FramebufferCreateInfo
 {
     const RenderPass &RenderPass;
-    VkImageView ImageView;
+    VkImageView ColorOutputView;
+    VkImageView DepthAttachmentView;
     Viewport Viewport;
 };
 

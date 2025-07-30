@@ -12,6 +12,7 @@ class PhysicalDevice;
 class RenderPass;
 class Semaphore;
 class Swapchain;
+class DepthAttachment;
 
 struct SwapchainCreateInfo
 {
@@ -24,15 +25,20 @@ struct SwapchainCreateInfo
 class SwapchainFramebuffer
 {
   public:
-    SwapchainFramebuffer(const Swapchain& swapchain, std::vector<Framebuffer>&& m_SwapchainFramebuffers, const RenderPass& renderPass);
+    SwapchainFramebuffer(const Swapchain& swapchain, std::vector<Framebuffer>&& swapchainFramebuffers, 
+        const RenderPass& renderPass, DepthAttachment* depthAttachment);
     SwapchainFramebuffer(const SwapchainFramebuffer&) = delete;
     SwapchainFramebuffer(SwapchainFramebuffer&&) = default;
 
+    SwapchainFramebuffer &operator=(const SwapchainFramebuffer &&other) = delete;
     SwapchainFramebuffer &operator=(SwapchainFramebuffer &&other) = default;
 
-    const Framebuffer& GetCurrent() const;
+    const Framebuffer &GetCurrent() const;
     const RenderPass &GetRenderPass() const;
+    DepthAttachment *GeDepthAttachment() const;
+
   private:
+    DepthAttachment* m_DepthAttachment;
     // TODO: Make this a weak ptr for validation reasons?
     std::reference_wrapper<const Swapchain> m_Swapchain;
     std::vector<Framebuffer> m_Framebuffers;
@@ -56,7 +62,7 @@ class Swapchain
 
     Viewport GetViewportDescription() const;
     VkAttachmentDescription AttachmentDescription() const;
-    SwapchainFramebuffer CreateFramebuffersFor(const RenderPass &renderPass) const;
+    SwapchainFramebuffer CreateFramebuffersFor(const RenderPass &renderPass, DepthAttachment* depthAttachment) const;
     uint32_t CurrentIndex() const;
     
     // Callers should check that the SwapchainState != SwapchainState::OutOfDate
@@ -65,7 +71,7 @@ class Swapchain
     // Callers should check that the SwapchainState != SwapchainState::OutOfDate
     [[nodiscard]] 
         SwapchainState Present(std::span<Semaphore> waitSemaphores);
-    void Recreate(std::vector<std::unique_ptr<SwapchainFramebuffer>>& oldFramebuffers, VkExtent2D newExtents);
+    void Recreate(std::vector<std::unique_ptr<SwapchainFramebuffer>> &oldFramebuffers, VkExtent2D newExtents);
     SwapchainState GetCurrentState() const;
   private:
     void Create(const SwapchainCreateInfo& createInfo, const VkSurfaceKHR& surface, VkDevice device, const PhysicalDevice& vulkanDevice, VkSwapchainKHR oldSwapchain);

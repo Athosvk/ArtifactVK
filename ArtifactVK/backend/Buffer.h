@@ -31,8 +31,10 @@ class DeviceBuffer
 {
 public:
 	DeviceBuffer(VkDevice device, const PhysicalDevice& physicalDevice, CreateBufferInfo bufferInfo);
-	DeviceBuffer(const DeviceBuffer &buffer) = delete;
+	DeviceBuffer(const DeviceBuffer &) = delete;
 	DeviceBuffer(DeviceBuffer &&buffer);
+	DeviceBuffer& operator=(const DeviceBuffer &) = delete;
+	DeviceBuffer& operator=(DeviceBuffer &&other);
 	~DeviceBuffer();
 
     VkBuffer Get() const;
