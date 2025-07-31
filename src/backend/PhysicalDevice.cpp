@@ -46,7 +46,7 @@ std::vector<EDeviceExtension> PhysicalDevice::FilterAvailableExtensions(
     return desiredAvailableExtensions;
 }
 
-VulkanDevice PhysicalDevice::CreateLogicalDevice(const std::vector<std::string> &validationLayers,
+VulkanDevice PhysicalDevice::CreateLogicalDevice(const std::vector<const char*> &validationLayers,
                                                  std::vector<EDeviceExtension> extensions, GLFWwindow &window,
                                                  const VulkanInstance &instance)
 {

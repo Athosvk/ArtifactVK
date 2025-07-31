@@ -19,9 +19,9 @@
 #define NDEBUG 0
 #endif // !NDEBUG
 
-std::vector<std::string> ValidationLayer::GetLayerNames() const
+std::vector<const char*> ValidationLayer::GetLayerNames() const
 {
-    std::vector<std::string> names;
+    std::vector<const char*> names;
     names.reserve(_mm_popcnt_u32((uint32_t)Layers));
     for (EValidationLayer availableLayer : AvailableValidationLayers())
     {

@@ -297,7 +297,7 @@ RasterPipeline VulkanDevice::CreateRasterPipeline(RasterPipelineBuilder &&pipeli
 
 VulkanDevice::VulkanDevice(PhysicalDevice &physicalDevice, VkPhysicalDevice physicalDeviceHandle,
                         const VulkanInstance& instance,
-                        const std::vector<std::string> &validationLayers, std::vector<EDeviceExtension> extensions,
+                        const std::vector<const char*> &validationLayers, std::vector<EDeviceExtension> extensions,
                         const DeviceExtensionMapping &deviceExtensionMapping, GLFWwindow& window)
     : m_Instance(instance), m_PhysicalDevice(physicalDevice), m_Window(window)
 {
@@ -316,13 +316,7 @@ VulkanDevice::VulkanDevice(PhysicalDevice &physicalDevice, VkPhysicalDevice phys
     {
         deviceCreateInfo.enabledLayerCount = (uint32_t)validationLayers.size();
         
-        std::vector<const char *> layerNameMapping;
-        layerNameMapping.reserve(validationLayers.size());
-        for (const auto& validationLayer : validationLayers)
-        {
-            layerNameMapping.emplace_back(validationLayer.c_str());
-        }
-        deviceCreateInfo.ppEnabledLayerNames = layerNameMapping.data();
+        deviceCreateInfo.ppEnabledLayerNames = validationLayers.data();
     }
     else
     {

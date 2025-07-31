@@ -331,7 +331,8 @@ Texture2D::Texture2D(VkDevice device, const PhysicalDevice &physicalDevice, cons
     Queue destinationQueue) : 
     m_Device(device),
     m_StagingBuffer(CreateStagingBuffer(textureCreateInfo.BufferSize(), physicalDevice, device)),
-    m_Texture(Texture(device, physicalDevice, TextureCreateInfo{ textureCreateInfo.Width, textureCreateInfo.Height, VkFormat::VK_FORMAT_R8G8B8A8_SRGB }))
+    m_Texture(Texture(device, physicalDevice, TextureCreateInfo{ textureCreateInfo.Width, textureCreateInfo.Height, VkFormat::VK_FORMAT_R8G8B8A8_SRGB })),
+    m_Sampler(CreateTextureSampler(device, physicalDevice))
 {
     m_StagingBuffer.UploadData(textureCreateInfo.Data);
 
@@ -344,7 +345,6 @@ Texture2D::Texture2D(VkDevice device, const PhysicalDevice &physicalDevice, cons
     m_PendingAcquireBarrier = m_Texture.TransitionLayout(VkImageLayout::VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                      VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, transferCommandBuffer, destinationQueue);
     m_PendingTransferFence = &transferCommandBuffer.End();
-    CreateTextureSampler(device, physicalDevice);
 }
 
 Texture2D::Texture2D(Texture2D && other) : 
@@ -413,7 +413,7 @@ std::optional<ImageMemoryBarrier> Texture2D::TakePendingAcquire()
     return std::move(m_PendingAcquireBarrier);
 }
 
-void Texture2D::CreateTextureSampler(VkDevice device, const PhysicalDevice &physicalDevice)
+VkSampler Texture2D::CreateTextureSampler(VkDevice device, const PhysicalDevice &physicalDevice)
 {
     VkSamplerCreateInfo samplerInfo{};
     samplerInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
@@ -434,10 +434,12 @@ void Texture2D::CreateTextureSampler(VkDevice device, const PhysicalDevice &phys
     samplerInfo.minLod = 0.0f;
     samplerInfo.maxLod = 0.0f;
 
-    if (vkCreateSampler(device, &samplerInfo, nullptr, &m_Sampler) != VkResult::VK_SUCCESS)
+    VkSampler sampler;
+    if (vkCreateSampler(device, &samplerInfo, nullptr, &sampler) != VkResult::VK_SUCCESS)
     {
         throw std::runtime_error("Could not create sampler for texture");
     }
+    return sampler;
 }
 
 DeviceBuffer Texture2D::CreateStagingBuffer(size_t size, const PhysicalDevice &physicalDevice, VkDevice device) const
