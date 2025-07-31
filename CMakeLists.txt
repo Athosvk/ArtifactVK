@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.8)
 
 project(ArtifactVK)
 
@@ -13,19 +13,21 @@ add_subdirectory(src)
 add_library(glfw STATIC IMPORTED)
 # TODO: Select correct runtime for glfw3 based on selection above
 set_target_properties(glfw PROPERTIES
-    IMPORTED_LOCATION "${CMAKE_CURRENT_SOURCE_DIR}/external/GLFW/glfw-3.4.bin.WIN64/lib-vc2022/glfw3.lib"
-    INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}/external/GLFW/glfw-3.4.bin.WIN64/include"
+    IMPORTED_LOCATION "${CMAKE_CURRENT_SOURCE_DIR}/external/glfw/glfw-3.4.bin.WIN64/lib-vc2022/glfw3.lib"
+    INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}/external/glfw/glfw-3.4.bin.WIN64/include"
 )
 
 add_executable(ArtifactVK ${SOURCE} ${HEADERS})
 target_include_directories(ArtifactVK 
 							PRIVATE include
-							PUBLIC external/GLFW/glfw-3.4.bin.WIN64/include
+							PUBLIC external/glfw/glfw-3.4.bin.WIN64/include
 							PUBLIC external)
 target_link_libraries(ArtifactVK 
 						PRIVATE Vulkan::Vulkan 
 						PRIVATE glfw)
 set_property(TARGET ArtifactVK PROPERTY CXX_STANDARD 20)
+set_property(TARGET ArtifactVK PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/ArtifactVK")
+
 
 if (MSVC)
     target_compile_options(ArtifactVK PRIVATE /MP)
