@@ -1,18 +1,42 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.15)
 
 project(ArtifactVK)
 
+find_package(Vulkan REQUIRED FATAL_ERROR)
+
 set(SOURCE)
 set(HEADERS)
+set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL" CACHE STRING "" FORCE)
 
 add_subdirectory(src)
 
-message(STATUS "Collected source files:")
-foreach(src ${SOURCE})
-    message(STATUS "  ${src}")
-endforeach()
-
+add_library(glfw STATIC IMPORTED)
+# TODO: Select correct runtime for glfw3 based on selection above
+set_target_properties(glfw PROPERTIES
+    IMPORTED_LOCATION "${CMAKE_CURRENT_SOURCE_DIR}/external/GLFW/glfw-3.4.bin.WIN64/lib-vc2022/glfw3.lib"
+    INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}/external/GLFW/glfw-3.4.bin.WIN64/include"
+)
 
 add_executable(ArtifactVK ${SOURCE} ${HEADERS})
-target_include_directories(ArtifactVK PRIVATE include)
-target_include_directories(ArtifactVK PUBLIC external)
+target_include_directories(ArtifactVK 
+							PRIVATE include
+							PUBLIC external/GLFW/glfw-3.4.bin.WIN64/include
+							PUBLIC external)
+target_link_libraries(ArtifactVK 
+						PRIVATE Vulkan::Vulkan 
+						PRIVATE glfw)
+set_property(TARGET ArtifactVK PROPERTY CXX_STANDARD 20)
+
+if (MSVC)
+    target_compile_options(ArtifactVK PRIVATE /MP)
+	target_compile_definitions(ArtifactVK PRIVATE 
+		$<$<CONFIG:Debug>:_DEBUG;_ITERATOR_DEBUG_LEVEL=2;_CRT_SECURE_NO_WARNINGS>
+	)
+
+	target_compile_options(ArtifactVK PRIVATE 
+		$<$<CONFIG:Debug>:/RTC1>
+	)
+endif()
+
+
+target_link_libraries(ArtifactVK PRIVATE glfw)
