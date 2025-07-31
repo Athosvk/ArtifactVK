@@ -111,7 +111,7 @@ public:
     std::optional<ImageMemoryBarrier> TakePendingAcquire();
     VkDescriptorImageInfo GetDescriptorInfo();
   private:
-    void CreateTextureSampler(VkDevice device, const PhysicalDevice& physicalDevice);
+    VkSampler CreateTextureSampler(VkDevice device, const PhysicalDevice& physicalDevice);
     DeviceBuffer CreateStagingBuffer(size_t size, const PhysicalDevice &physicalDevice, VkDevice device) const;
     void WaitTransfer();
 
@@ -120,6 +120,6 @@ public:
     Texture m_Texture;
 
     std::optional<ImageMemoryBarrier> m_PendingAcquireBarrier;
-    Fence* m_PendingTransferFence;
+    Fence* m_PendingTransferFence = nullptr;
     VkSampler m_Sampler;
 };

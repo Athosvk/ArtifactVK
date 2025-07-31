@@ -71,6 +71,9 @@ class VulkanInstance
     PhysicalDevice CreatePhysicalDevice(const VulkanSurface &targetSurface,
                                       std::span<const EDeviceExtension> deviceExtensions) const;
 
+    // Ugly hack to just store the validation layers here
+    // TODO: Don't have this be init order dependent
+    std::vector<const char *> m_ValidationLayers;
     VkInstance m_VkInstance;
     ExtensionFunctionMapping m_ExtensionMapper;
     DeviceExtensionMapping m_DeviceExtensionMapper;
@@ -80,5 +83,4 @@ class VulkanInstance
     // has a dependency on m_Surface
     ManualScope<PhysicalDevice> m_ActivePhysicalDevice;
     ManualScope<VulkanDevice> m_ActiveDevice;
-    std::vector<const char *> m_ValidationLayers;
 };

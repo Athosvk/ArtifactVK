@@ -53,7 +53,7 @@ template <typename T> class ManualScope
     }
 
   private:
-    bool m_Initialized;
+    bool m_Initialized = false;
     std::optional<T> m_Inner;
 };
 

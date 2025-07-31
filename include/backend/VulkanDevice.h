@@ -37,7 +37,7 @@ class VulkanDevice
   public:
     VulkanDevice(PhysicalDevice &physicalDevice, VkPhysicalDevice physicalDeviceHandle,
                         const VulkanInstance& instance,
-                        const std::vector<std::string> &validationLayers, std::vector<EDeviceExtension> extensions,
+                        const std::vector<const char*> &validationLayers, std::vector<EDeviceExtension> extensions,
                         const DeviceExtensionMapping &deviceExtensionMapping, GLFWwindow& window);
     VulkanDevice(const VulkanDevice &other) = delete;
     VulkanDevice(VulkanDevice &&other);

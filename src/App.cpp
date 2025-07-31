@@ -108,7 +108,7 @@ UniformConstants App::GetUniforms()
 
 RasterPipeline App::LoadShaderPipeline(VulkanDevice &vulkanDevice, const RenderPass &renderPass) const
 {
-    auto builder = RasterPipelineBuilder("spirv/shaders/triangle.vert.spv", "spirv/shaders/triangle.frag.spv");
+    auto builder = RasterPipelineBuilder("shaders/triangle.vert.spv", "shaders/triangle.frag.spv");
     builder.SetVertexBindingDescription(Vertex::GetVertexBindingDescription());
 
     // TODO: Have nicer outer bindings for it (i.e. less directly translated from Vulkan)_

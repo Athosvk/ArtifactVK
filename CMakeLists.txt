@@ -9,6 +9,8 @@ set(HEADERS)
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL" CACHE STRING "" FORCE)
 
 add_subdirectory(src)
+add_subdirectory(shaders)
+add_subdirectory(textures)
 
 add_library(glfw STATIC IMPORTED)
 # TODO: Select correct runtime for glfw3 based on selection above
@@ -26,7 +28,7 @@ target_link_libraries(ArtifactVK
 						PRIVATE Vulkan::Vulkan 
 						PRIVATE glfw)
 set_property(TARGET ArtifactVK PROPERTY CXX_STANDARD 20)
-set_property(TARGET ArtifactVK PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/ArtifactVK")
+set_property(TARGET ArtifactVK PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_BINARY_DIR}")
 
 
 if (MSVC)
@@ -40,5 +42,4 @@ if (MSVC)
 	)
 endif()
 
-
-target_link_libraries(ArtifactVK PRIVATE glfw)
+add_dependencies(ArtifactVK Shaders SetupTextures)

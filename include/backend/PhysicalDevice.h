@@ -32,7 +32,7 @@ class PhysicalDevice
     const VkPhysicalDeviceProperties& GetProperties() const;
     const VkPhysicalDeviceFeatures& GetFeatures() const;
     std::vector<EDeviceExtension> FilterAvailableExtensions(std::span<const EDeviceExtension> desiredExtensions) const;
-    VulkanDevice CreateLogicalDevice(const std::vector<std::string> &validationLayers,
+    VulkanDevice CreateLogicalDevice(const std::vector<const char*> &validationLayers,
                                                  std::vector<EDeviceExtension> extensions, GLFWwindow &window,
                                                  const VulkanInstance &instance);
 

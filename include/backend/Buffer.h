@@ -78,5 +78,5 @@ private:
     CreateBufferInfo m_CreateInfo;
     std::optional<void *> m_MappedBuffer;
     std::optional<BufferMemoryBarrier> m_PendingAcquireBarrier;
-    Fence *m_PendingReleaseFence;
+    Fence *m_PendingReleaseFence = nullptr;
 };
