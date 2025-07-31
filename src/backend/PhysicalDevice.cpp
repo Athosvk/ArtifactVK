@@ -1,4 +1,4 @@
-#include "PhysicalDevice.h"
+#include <backend/PhysicalDevice.h>
 
 PhysicalDevice::PhysicalDevice(VkPhysicalDevice physicalDevice,
                            std::optional<std::reference_wrapper<const VulkanSurface>> targetSurface,
@@ -46,7 +46,7 @@ std::vector<EDeviceExtension> PhysicalDevice::FilterAvailableExtensions(
     return desiredAvailableExtensions;
 }
 
-VulkanDevice PhysicalDevice::CreateLogicalDevice(const std::vector<const char *> &validationLayers,
+VulkanDevice PhysicalDevice::CreateLogicalDevice(const std::vector<std::string> &validationLayers,
                                                  std::vector<EDeviceExtension> extensions, GLFWwindow &window,
                                                  const VulkanInstance &instance)
 {

@@ -1,4 +1,4 @@
-#include "App.h"
+#include <App.h>
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
@@ -13,6 +13,11 @@
 
 const InstanceCreateInfo DefaultCreateInfo()
 {
+    {
+        std::vector<int> i = {};
+        std::vector<int> b = std::move(i);
+
+    }
     InstanceCreateInfo createInfo;
     createInfo.Name = "ArtifactVK";
     createInfo.ValidationLayers =

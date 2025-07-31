@@ -1,7 +1,7 @@
 #define VK_USE_PLATFORM_WIN32_KHR
 #define GLFW_INCLUDE_VULKAN
 #define GLFW_EXPOSE_NATIVE_WIN32
-#include "VulkanInstance.h"
+#include <backend/VulkanInstance.h>
 
 #include <GLFW/glfw3.h>
 #include <GLFW/glfw3native.h>
@@ -19,9 +19,9 @@
 #define NDEBUG 0
 #endif // !NDEBUG
 
-std::vector<const char *> ValidationLayer::GetLayerNames() const
+std::vector<std::string> ValidationLayer::GetLayerNames() const
 {
-    std::vector<const char *> names;
+    std::vector<std::string> names;
     names.reserve(_mm_popcnt_u32((uint32_t)Layers));
     for (EValidationLayer availableLayer : AvailableValidationLayers())
     {

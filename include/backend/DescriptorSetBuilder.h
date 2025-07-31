@@ -4,7 +4,7 @@
 
 #include <vulkan/vulkan.hpp>
 
-#include "Barrier.h"
+#include <backend/Barrier.h>
 
 class UniformBuffer;
 class Texture2D;

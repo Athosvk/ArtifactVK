@@ -1,4 +1,4 @@
-#include "Barrier.h"
+#include <backend/Barrier.h>
 
 BarrierArray::BarrierArray(BufferMemoryBarrier &&barrier)
     : SourceStageMask(barrier.SourceStageMask), DestinationStageMask(barrier.DestinationStageMask),
