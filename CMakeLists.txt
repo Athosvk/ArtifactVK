@@ -10,7 +10,6 @@ set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL" CACHE 
 
 add_subdirectory(src)
 add_subdirectory(shaders)
-add_subdirectory(textures)
 
 add_library(glfw STATIC IMPORTED)
 # TODO: Select correct runtime for glfw3 based on selection above
@@ -42,4 +41,15 @@ if (MSVC)
 	)
 endif()
 
-add_dependencies(ArtifactVK Shaders SetupTextures)
+set(SRC "${CMAKE_SOURCE_DIR}/textures")
+set(DST "${CMAKE_BINARY_DIR}")
+
+add_custom_target(link_or_copy_textures ALL
+    COMMAND ${CMAKE_COMMAND} 
+        -D SRC=${SRC}
+        -D DST=${DST}
+		-P ${CMAKE_SOURCE_DIR}/cmake/link_assets.cmake
+    COMMENT "Linking or copying textures directory"
+)
+
+add_dependencies(ArtifactVK Shaders link_or_copy_textures)
