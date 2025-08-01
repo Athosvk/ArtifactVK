@@ -6,6 +6,8 @@
 # Compiled shaders
 spirv/
 
+build/
+
 # Image files
 *.ppm
 

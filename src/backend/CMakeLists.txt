@@ -1,0 +1,63 @@
+set(SOURCE ${SOURCE}
+	src/backend/Barrier.cpp
+	src/backend/Buffer.cpp
+	src/backend/CommandBufferPool.cpp
+	src/backend/DebugMarker.cpp
+	src/backend/DescriptorPool.cpp
+	src/backend/DescriptorSetBuilder.cpp
+	src/backend/DeviceExtensionMapping.cpp
+	src/backend/ExtensionFunctionMapping.cpp
+	src/backend/Fence.cpp
+	src/backend/Framebuffer.cpp
+	src/backend/IndexBuffer.cpp
+	src/backend/PhysicalDevice.cpp
+	src/backend/Pipeline.cpp
+	src/backend/Queue.cpp
+	src/backend/RenderPass.cpp
+	src/backend/Semaphore.cpp
+	src/backend/ShaderModule.cpp
+	src/backend/Swapchain.cpp
+	src/backend/Texture.cpp
+	src/backend/UniformBuffer.cpp
+	src/backend/VertexBuffer.cpp
+	src/backend/Viewport.cpp
+	src/backend/VulkanDebugMessenger.cpp
+	src/backend/VulkanDevice.cpp
+	src/backend/VulkanInstance.cpp
+	src/backend/VulkanSurface.cpp
+	src/backend/Window.cpp
+	PARENT_SCOPE
+)
+
+set(HEADERS ${HEADERS}
+	include/backend/Barrier.h
+	include/backend/Buffer.h
+	include/backend/CommandBufferPool.h
+	include/backend/DebugMarker.h
+	include/backend/DescriptorPool.h
+	include/backend/DescriptorSetBuilder.h
+	include/backend/DeviceExtensionMapping.h
+	include/backend/ExtensionFunctionMapping.h
+	include/backend/Fence.h
+	include/backend/Framebuffer.h
+	include/backend/IndexBuffer.h
+	include/backend/PhysicalDevice.h
+	include/backend/Pipeline.h
+	include/backend/Queue.h
+	include/backend/RenderPass.h
+	include/backend/Semaphore.h
+	include/backend/ShaderModule.h
+	include/backend/Swapchain.h
+	include/backend/Texture.h
+	include/backend/UniformBuffer.h
+	include/backend/VertexBuffer.h
+	include/backend/Viewport.h
+	include/backend/VulkanDebugMessenger.h
+	include/backend/VulkanDevice.h
+	include/backend/VulkanInstance.h
+	include/backend/VulkanSurface.h
+	include/backend/Window.h
+	PARENT_SCOPE
+)
+
+
