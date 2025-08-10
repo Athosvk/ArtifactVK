@@ -5,6 +5,16 @@ ArtifactVK is meant to be a continuation of the Artifact-based engine and tools,
 Right now it's a simple app that's able to load models in a spec-compliant manner (no validation errors), with the use of dedicated transfer queues when available for uploading
 of persistent buffers (index/vertex buffer). Window and swapchain management is handled for you.
 
+## Building
+As of recent, this project uses CMake. To build:
+1. Run `cmake build/` (i.e. prefer to `mkdir build` beforehand. In-source build has _not_ been tested).
+2. Run `cmake --build build`.
+3. Run the application
+
+Note that as a step in the build process, currently the `textures` directory will be linked from the output directory. This allows running with the source dir as the working directory _or_ running directly from the output directory.
+> [!IMPORTANT]
+> If it's not possible to create a link, the `textures` directory will be copied to the executable output directory. On Windows, this is typical as creating such a link requires administrator privileges.
+
 ## Usage
 ### Loading Raster Pipelines
 
@@ -58,6 +68,9 @@ m_VulkanInstance.GetActiveDevice().Present(std::span{&state.RenderFinished, 1});
 
 
 ## Samples
-![image](content/textured_sample.gif)
 
-![image](content/cube.png =450x450)
+<p align="center">
+<img src="content/textured_sample.gif" width="600">
+<img src="content/cube.png" width="600">
+</p>
+
