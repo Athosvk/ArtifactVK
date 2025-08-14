@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.8)
 
 project(ArtifactVK)
 
-find_package(Vulkan REQUIRED FATAL_ERROR)
+find_package(Vulkan REQUIRED)
 
 set(SOURCE)
 set(HEADERS)
