@@ -4,9 +4,6 @@ endif()
 
 message(STATUS "Setting up assets directory from ${SRC} to ${DST}")
 
-# Remove destination first to avoid leftover files
-file(REMOVE_RECURSE "${DST}")
-
 # Try to create a symlink to the whole directory
 execute_process(
     COMMAND "${CMAKE_COMMAND}" -E create_symlink "${SRC}" "${DST}"
