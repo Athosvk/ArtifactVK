@@ -215,7 +215,7 @@ Fence& CommandBuffer::End(std::span<Semaphore> waitSemaphores, std::span<Semapho
     return *m_InFlight;
 }
 
-Fence& CommandBuffer::End()
+Fence &CommandBuffer::End()
 {
     return End(std::span<Semaphore>(), std::span<Semaphore>());
 }

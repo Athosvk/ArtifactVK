@@ -4,9 +4,7 @@
 #include <set>
 #include <span>
 #include <vulkan/vulkan.h>
-#include <optional>
 #include <filesystem>
-#include <span>
 #include <typeinfo>
 
 #include "DeviceExtensionMapping.h"
@@ -24,7 +22,7 @@
 #include "Buffer.h"
 #include "Texture.h"
 #include "DescriptorSetBuilder.h"
-#include "QueryPool.h"
+#include "TimerPool.h"
 
 class PhysicalDevice;
 struct GLFWwindow;
@@ -104,9 +102,10 @@ class VulkanDevice
     std::optional<Queue> m_PresentQueue;
     std::optional<Queue> m_TransferQueue;
     std::optional<Swapchain> m_Swapchain = std::nullopt;
+    std::optional<TimerPool> m_TimestampPool;
     std::unique_ptr<CommandBufferPool> m_GraphicsCommandBufferPool;
     std::unique_ptr<CommandBufferPool> m_TransferCommandBufferPool = nullptr;
-    std::optional<QueryPool> m_TimestampQueryPool;
+    std::optional<TimerPool> m_TimestampQueryPool;
     // TODO: Don't hold the semaphores here (unless for pooling).
     // Let objects logically decide if they need to provide one.
     std::vector<std::unique_ptr<Semaphore>> m_Semaphores;

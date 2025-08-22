@@ -20,10 +20,6 @@ int main()
 {
     // TODO: Move to app init?
     glfwInit();
-    {
-        std::vector<int> i;
-        std::vector<int> b = std::move(i);
-    }
     App app;
     app.RunRenderLoop();
     return 0;
