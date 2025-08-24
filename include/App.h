@@ -9,13 +9,13 @@
 
 #include <array>
 
-#include "backend/VulkanInstance.h"
-#include "backend/Window.h"
-#include "backend/Pipeline.h"
-#include "backend/RenderPass.h"
-#include "backend/Swapchain.h"
-#include "backend/DescriptorSetBuilder.h"
-#include "Image.h"
+#include <backend/VulkanInstance.h>
+#include <backend/Window.h>
+#include <backend/Pipeline.h>
+#include <backend/RenderPass.h>
+#include <backend/Swapchain.h>
+#include <backend/DescriptorSetBuilder.h>
+#include <Image.h>
 
 class VertexBuffer;
 class IndexBuffer;
@@ -33,6 +33,7 @@ struct PerFrameState
     CommandBuffer &CommandBuffer;
     UniformBuffer &UniformBuffer;
     DescriptorSet DescriptorSet;
+    TimerPool& TimerPool;
 };
 
 struct Vertex

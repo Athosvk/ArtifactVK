@@ -23,6 +23,7 @@ class ExtensionFunctionMapping;
 class VulkanInstance;
 class BindSet;
 class Texture2D;
+class TimerPool;
 
 struct CommandBufferPoolCreateInfo
 {
@@ -59,6 +60,9 @@ class CommandBuffer
     void InsertBarrier(const ImageMemoryBarrier &barrier) const;
     void InsertBarriers(const BarrierArray &barriers) const;
     Queue GetQueue() const;
+    void ResetTimerPool(TimerPool &timerPool) const;
+    // TODO: Remove, temporarily pub only for Timers
+    VkCommandBuffer Get() const;
   private:
     void BindVertexBuffer(VertexBuffer &vertexBuffer);
     void BindIndexBuffer(IndexBuffer &indexBuffer);

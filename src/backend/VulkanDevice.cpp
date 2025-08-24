@@ -489,6 +489,11 @@ Queue VulkanDevice::GetTransferQueue() const
     return m_TransferQueue.value();
 }
 
+TimerPool &VulkanDevice::CreateTimerPool()
+{
+    return *m_TimerPools.emplace_back(std::make_unique<TimerPool>(m_Device, m_PhysicalDevice));
+}
+
 void VulkanDevice::AcquireNext(const Semaphore& toSignal)
 {
     // TODO: Ensure semaphores in correct state, or more properly,

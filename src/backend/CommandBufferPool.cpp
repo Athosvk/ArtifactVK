@@ -432,6 +432,11 @@ Queue CommandBuffer::GetQueue() const
     return m_Queue;
 }
 
+void CommandBuffer::ResetTimerPool(TimerPool &timerPool) const
+{
+    timerPool.Reset(m_CommandBuffer);
+}
+
 void CommandBuffer::Reset()
 {
     vkResetCommandBuffer(m_CommandBuffer, 0);
@@ -514,4 +519,9 @@ CommandBuffer &CommandBufferPool::CreateCommandBuffer(Queue queue)
 void CommandBufferPool::SetName(const std::string &name, ExtensionFunctionMapping mapping)
 {
     DebugMarker::SetName(m_Device, mapping, m_CommandBufferPool, name);
+}
+
+VkCommandBuffer CommandBuffer::Get() const
+{
+    return m_CommandBuffer;
 }

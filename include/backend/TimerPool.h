@@ -5,18 +5,20 @@
 #include <string>
 
 #include <backend/Timer.h>
+#include <backend/Buffer.h>
 
-class ResolvedTimerPool
+struct ResolvedTimerPool
 {
-  public:
-  private:
-    std::unordered_map<std::string, std::chrono::nanoseconds> m_Timings;
+    std::unordered_map<std::string, std::chrono::nanoseconds> Timings;
 };
 
+// TODO: Embed this as part of a CommandBuffer directly, as that knows when the
+// command buffer has executed fully and therefore written its timestamps (i.e. 
+// whehter the fence has been signaled).
 class TimerPool
 {
   public:
-    TimerPool(VkDevice device, uint32_t size);
+    TimerPool(VkDevice device, const PhysicalDevice& physicalDevice);
 
     TimerPool(const TimerPool &) = delete;
     TimerPool(TimerPool && other);
@@ -26,14 +28,18 @@ class TimerPool
 
     ~TimerPool();
 
-    Timer BeginScope(VkCommandBuffer commandBuffer);
+    Timer BeginScope(VkCommandBuffer commandBuffer, std::string name);
 
+    void Reset(VkCommandBuffer commandBuffer);
     VkQueryPool GetQueryPool() const;
-
-    ResolvedTimerPool Resolve() &&;
+    ResolvedTimerPool Resolve();
   private:
     uint32_t m_Counter = 0;
     VkDevice m_Device;
     VkQueryPool m_QueryPool;
-    std::unordered_map<std::string, TimestampId> m_LiveTimers;
+    // Index is the beginning of the timestamp
+    std::vector<std::string> m_TimestampIdNames;
+    // For caching purposes. Allows not re-allocating every frame
+    std::vector<uint64_t> m_ResultBuffer;
+    uint64_t m_TimerResolution;
 };

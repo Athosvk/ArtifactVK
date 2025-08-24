@@ -33,6 +33,7 @@ class Window
     VulkanInstance CreateVulkanInstance(const InstanceCreateInfo &createInfo);
     bool IsMinimized() const;
     void WaitForRender();
+    void SetTitle(const std::string &title);
   private:
     void OnWindowResize(WindowResizeEvent resizeEvent);
      

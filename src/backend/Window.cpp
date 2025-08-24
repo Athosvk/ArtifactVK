@@ -73,6 +73,11 @@ void Window::WaitForRender()
     }
 }
 
+void Window::SetTitle(const std::string &title)
+{
+    glfwSetWindowTitle(m_InternalWindow, title.c_str());
+}
+
 void Window::OnWindowResize(WindowResizeEvent resizeEvent)
 {
     if (resizeEvent.NewWidth == 0 || resizeEvent.NewHeight == 0)
