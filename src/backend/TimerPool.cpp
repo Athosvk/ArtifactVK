@@ -89,3 +89,4 @@ ResolvedTimerPool TimerPool::Resolve()
     // TODO: Automatically invoke Reset here?
     return resolvedTimings;
 }
+
