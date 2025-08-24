@@ -28,13 +28,13 @@ VkSurfaceFormatKHR VulkanDevice::SelectSurfaceFormat() const
     auto surfaceProperties = m_PhysicalDevice.GetCachedSurfaceProperties();
     auto iter = std::find_if(surfaceProperties.Formats.begin(), surfaceProperties.Formats.end(), [](const VkSurfaceFormatKHR& format)
         {
-        return format.colorSpace == VkColorSpaceKHR::VK_COLORSPACE_SRGB_NONLINEAR_KHR && format.format ==
-            VkFormat::VK_FORMAT_B8G8R8A8_SRGB; 
+            return format.colorSpace == VkColorSpaceKHR::VK_COLORSPACE_SRGB_NONLINEAR_KHR && format.format ==
+                VkFormat::VK_FORMAT_B8G8R8A8_SRGB;
         });
     if (iter != surfaceProperties.Formats.end())
     {
         return *iter;
-    } 
+    }
     else
     {
         // Prefer the one above, but return something in case that fails.
@@ -65,14 +65,14 @@ VkExtent2D VulkanDevice::SelectSwapchainExtent(GLFWwindow& window, const Surface
             static_cast<uint32_t>(width),
             static_cast<uint32_t>(height),
         };
-        
+
         actualExtent.width = std::clamp(actualExtent.width, surfaceProperties.Capabilities.minImageExtent.width, surfaceProperties.Capabilities.maxImageExtent.width);
         actualExtent.height = std::clamp(actualExtent.height, surfaceProperties.Capabilities.minImageExtent.height, surfaceProperties.Capabilities.maxImageExtent.height);
         return actualExtent;
     }
 }
 
-DeviceBuffer &VulkanDevice::CreateBuffer(const CreateBufferInfo &createInfo)
+DeviceBuffer& VulkanDevice::CreateBuffer(const CreateBufferInfo& createInfo)
 {
     return *m_Buffers.emplace_back(std::make_unique<DeviceBuffer>(m_Device, m_PhysicalDevice, createInfo));
 }
@@ -487,6 +487,11 @@ Queue VulkanDevice::GetTransferQueue() const
 {
     assert(m_TransferQueue.has_value() && "Device has no transfer queue");
     return m_TransferQueue.value();
+}
+
+TimerPool &VulkanDevice::CreateTimerPool()
+{
+    return *m_TimerPools.emplace_back(std::make_unique<TimerPool>(m_Device, m_PhysicalDevice));
 }
 
 void VulkanDevice::AcquireNext(const Semaphore& toSignal)

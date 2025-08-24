@@ -4,9 +4,7 @@
 #include <set>
 #include <span>
 #include <vulkan/vulkan.h>
-#include <optional>
 #include <filesystem>
-#include <span>
 #include <typeinfo>
 
 #include "DeviceExtensionMapping.h"
@@ -24,6 +22,7 @@
 #include "Buffer.h"
 #include "Texture.h"
 #include "DescriptorSetBuilder.h"
+#include "TimerPool.h"
 
 class PhysicalDevice;
 struct GLFWwindow;
@@ -57,6 +56,7 @@ class VulkanDevice
     Semaphore &CreateDeviceSemaphore();
     Queue GetGraphicsQueue() const;
     Queue GetTransferQueue() const;
+    TimerPool &CreateTimerPool();
     void AcquireNext(const Semaphore& toSignal);
     void Present(std::span<Semaphore> waitSemaphores);
     void HandleResizeEvent(const WindowResizeEvent &resizeEvent);
@@ -105,6 +105,7 @@ class VulkanDevice
     std::optional<Swapchain> m_Swapchain = std::nullopt;
     std::unique_ptr<CommandBufferPool> m_GraphicsCommandBufferPool;
     std::unique_ptr<CommandBufferPool> m_TransferCommandBufferPool = nullptr;
+    std::vector<std::unique_ptr<TimerPool>> m_TimerPools;
     // TODO: Don't hold the semaphores here (unless for pooling).
     // Let objects logically decide if they need to provide one.
     std::vector<std::unique_ptr<Semaphore>> m_Semaphores;

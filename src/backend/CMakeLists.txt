@@ -18,6 +18,8 @@ set(SOURCE ${SOURCE}
 	src/backend/ShaderModule.cpp
 	src/backend/Swapchain.cpp
 	src/backend/Texture.cpp
+	src/backend/Timer.cpp
+	src/backend/TimerPool.cpp
 	src/backend/UniformBuffer.cpp
 	src/backend/VertexBuffer.cpp
 	src/backend/Viewport.cpp
@@ -49,6 +51,8 @@ set(HEADERS ${HEADERS}
 	include/backend/ShaderModule.h
 	include/backend/Swapchain.h
 	include/backend/Texture.h
+	include/backend/Timer.h
+	include/backend/TimerPool.h
 	include/backend/UniformBuffer.h
 	include/backend/VertexBuffer.h
 	include/backend/Viewport.h

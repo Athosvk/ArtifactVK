@@ -7,17 +7,11 @@
 #include <chrono>
 #include <glm/gtc/matrix_transform.hpp>
 
-
-#include "backend/ShaderModule.h"
-#include "backend/DebugMarker.h"
+#include <backend/ShaderModule.h>
+#include <backend/DebugMarker.h>
 
 const InstanceCreateInfo DefaultCreateInfo()
 {
-    {
-        std::vector<int> i = {};
-        std::vector<int> b = std::move(i);
-
-    }
     InstanceCreateInfo createInfo;
     createInfo.Name = "ArtifactVK";
     createInfo.ValidationLayers =
@@ -118,18 +112,31 @@ RasterPipeline App::LoadShaderPipeline(VulkanDevice &vulkanDevice, const RenderP
 
 void App::RecordFrame(PerFrameState& state)
 {
-    m_VulkanInstance.GetActiveDevice().AcquireNext(state.ImageAvailable);
+    auto &activeDevice = m_VulkanInstance.GetActiveDevice();
+    activeDevice.AcquireNext(state.ImageAvailable);
     // TODO: Can probably be moved to CommandBuffer->Begin()
     state.CommandBuffer.WaitFence();
+
+    auto previousResults = state.TimerPool.Resolve();
+    std::chrono::duration<double, std::milli> millis = previousResults.Timings["Frame Total"];
+    m_Window.SetTitle(std::format("GPU: {:.5f} ms", millis.count()));
     state.CommandBuffer.Begin();
-    auto uniforms = GetUniforms();
-    state.UniformBuffer.UploadData(GetUniforms());
-    auto bindSet = state.DescriptorSet.BindUniformBuffer(state.UniformBuffer).BindTexture(m_Texture);
-    state.CommandBuffer.DrawIndexed(m_SwapchainFramebuffers.GetCurrent(), m_MainPass, m_RenderFullscreen, m_VertexBuffer, m_IndexBuffer, 
-        std::move(bindSet));
+
+	// TODO: Shouldn't be the user's burden
+	state.CommandBuffer.ResetTimerPool(state.TimerPool);
+    {
+        state.TimerPool.BeginScope(state.CommandBuffer.Get(), "Frame Total");
+
+        auto uniforms = GetUniforms();
+        state.UniformBuffer.UploadData(GetUniforms());
+        auto bindSet = state.DescriptorSet.BindUniformBuffer(state.UniformBuffer).BindTexture(m_Texture);
+        state.TimerPool.BeginScope(state.CommandBuffer.Get(), "Draw");
+        state.CommandBuffer.DrawIndexed(m_SwapchainFramebuffers.GetCurrent(), m_MainPass, m_RenderFullscreen,
+                                        m_VertexBuffer, m_IndexBuffer, std::move(bindSet));
+    }
     state.CommandBuffer.End(std::span{ &state.ImageAvailable, 1 }, std::span{ &state.RenderFinished, 1 });
     
-    m_VulkanInstance.GetActiveDevice().Present(std::span{&state.RenderFinished, 1});
+    activeDevice.Present(std::span{&state.RenderFinished, 1});
 }
 
 std::vector<std::reference_wrapper<Semaphore>> App::CreateSemaphorePerInFlightFrame()
@@ -158,7 +165,7 @@ std::vector<PerFrameState> App::CreatePerFrameState(VulkanDevice &vulkanDevice)
         perFrameState.emplace_back(PerFrameState{vulkanDevice.CreateDeviceSemaphore(),
                                                  vulkanDevice.CreateDeviceSemaphore(), commandBuffers[i],
                                                  uniformBuffer,
-                                                 descriptorSet
+                                                 descriptorSet, vulkanDevice.CreateTimerPool()
             });
         descriptorSet.SetName("Descriptor Set frame index " + std::to_string(i), m_VulkanInstance.GetExtensionFunctionMapping());
         commandBuffers[i].get().SetName("Graphics CMD frame index " + std::to_string(i), m_VulkanInstance.GetExtensionFunctionMapping());
