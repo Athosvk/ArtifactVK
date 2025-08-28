@@ -30,9 +30,8 @@ Model::Model(const std::string &path)
             uint32_t base_vertex_id = static_cast<uint32_t>(index.vertex_index * 3);
 			glm::vec3 position = {attributes.vertices[base_vertex_id], attributes.vertices[base_vertex_id + 1],
 								  attributes.vertices[base_vertex_id + 2]};
-			//glm::vec3 color = {attributes.colors[base_vertex_id], attributes.colors[base_vertex_id + 1], 
-             //   attributes.colors[base_vertex_id + 2]};
-            glm::vec3 color = glm::vec3{1.0f, 1.0f, 1.0f};
+			glm::vec3 color = {attributes.colors[base_vertex_id], attributes.colors[base_vertex_id + 1], 
+                attributes.colors[base_vertex_id + 2]};
 
             int32_t base_uv_id = index.texcoord_index * 2;
             glm::vec2 uv = {0.0f, 0.0f};
