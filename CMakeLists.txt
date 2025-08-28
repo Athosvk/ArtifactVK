@@ -41,7 +41,7 @@ if (MSVC)
 	)
 endif()
 
-set(SRC "${CMAKE_SOURCE_DIR}/textures")
+set(SRC "${CMAKE_SOURCE_DIR}/assets")
 set(DST "${CMAKE_BINARY_DIR}")
 
 add_custom_target(link_or_copy_textures ALL

@@ -4,6 +4,7 @@ set(SOURCE ${SOURCE}
     src/main.cpp
     src/App.cpp
     src/Image.cpp
+    src/Model.cpp
 	PARENT_SCOPE
 )
 

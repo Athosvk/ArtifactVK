@@ -237,7 +237,7 @@ void CommandBuffer::BindIndexBuffer(IndexBuffer &indexBuffer)
     VkDeviceSize offsets[] = {0};
     HandleAcquire(buffer.TakePendingAcquire());
     FlushPendingBarriers();
-    vkCmdBindIndexBuffer(m_CommandBuffer, indexBuffers, 0, VkIndexType::VK_INDEX_TYPE_UINT16);
+    vkCmdBindIndexBuffer(m_CommandBuffer, indexBuffers, 0, VkIndexType::VK_INDEX_TYPE_UINT32);
 }
 
 void CommandBuffer::BindDescriptorSet(BindSet &bindSet, const RasterPipeline& pipeline)
