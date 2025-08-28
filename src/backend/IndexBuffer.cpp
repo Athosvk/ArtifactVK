@@ -6,14 +6,14 @@
 
 IndexBuffer::IndexBuffer(CreateIndexBufferInfo bufferInfo, VkDevice device, const PhysicalDevice& physicalDevice, 
         CommandBuffer& transferCommandBuffer) : 
-    m_StagingBuffer(CreateStagingBuffer(bufferInfo.InitialData.size() * sizeof(uint16_t), device, physicalDevice)),
-      m_IndexBuffer(CreateIndexBuffer(bufferInfo.InitialData.size() * sizeof(uint16_t), device, physicalDevice))
+    m_StagingBuffer(CreateStagingBuffer(bufferInfo.InitialData.size() * sizeof(IndexType), device, physicalDevice)),
+      m_IndexBuffer(CreateIndexBuffer(bufferInfo.InitialData.size() * sizeof(IndexType), device, physicalDevice))
 {
     assert((bufferInfo.DestinationQueue.has_value() ^
                (bufferInfo.SharingMode == VkSharingMode::VK_SHARING_MODE_CONCURRENT)) &&
            "Requires either a target queue or sharing mode to be set to VK_SHARING_MODE_CONCURRENT");
 	m_IndexCount = bufferInfo.InitialData.size();
-    m_StagingBuffer.UploadData(std::span<uint16_t>{bufferInfo.InitialData});
+    m_StagingBuffer.UploadData(std::span<uint32_t>{bufferInfo.InitialData});
     transferCommandBuffer.BeginSingleTake();
 	transferCommandBuffer.Copy(m_StagingBuffer, m_IndexBuffer);
 

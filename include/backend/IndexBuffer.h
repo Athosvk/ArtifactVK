@@ -12,7 +12,7 @@ class PhysicalDevice;
 struct CreateIndexBufferInfo
 {
     // TODO: User configure for uint32_t
-    std::vector<uint16_t> InitialData;
+    std::vector<uint32_t> InitialData;
     VkSharingMode SharingMode = VkSharingMode::VK_SHARING_MODE_EXCLUSIVE;
     std::optional<Queue> DestinationQueue;
 };
@@ -20,6 +20,8 @@ struct CreateIndexBufferInfo
 class IndexBuffer
 {
   public:
+    using IndexType = uint32_t;
+
     IndexBuffer(CreateIndexBufferInfo bufferInfo, VkDevice device, const PhysicalDevice& physicalDevice, 
         // TODO: Optional so that you don't have to opt in to the copying to device local
         CommandBuffer& transferCommandBuffer);

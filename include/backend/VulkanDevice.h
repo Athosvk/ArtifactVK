@@ -72,7 +72,7 @@ class VulkanDevice
         return *m_VertexBuffers.emplace_back(std::make_unique<VertexBuffer>(bufferCreateInfo, m_Device, m_PhysicalDevice, commandBuffer));
     }
 
-    IndexBuffer &CreateIndexBuffer(std::vector<uint16_t> data);
+    IndexBuffer &CreateIndexBuffer(std::vector<uint32_t> data);
 
     template<typename T> 
     UniformBuffer &CreateUniformBuffer()

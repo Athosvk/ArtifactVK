@@ -15,7 +15,10 @@
 #include <backend/RenderPass.h>
 #include <backend/Swapchain.h>
 #include <backend/DescriptorSetBuilder.h>
+
 #include <Image.h>
+#include <Vertex.h>
+#include <Model.h>
 
 class VertexBuffer;
 class IndexBuffer;
@@ -36,17 +39,6 @@ struct PerFrameState
     TimerPool& TimerPool;
 };
 
-struct Vertex
-{
-    glm::vec3 Position;
-    glm::vec3 Color;
-    glm::vec2 UV;
-
-    constexpr static VkVertexInputBindingDescription GetBindingDescription();
-    constexpr static std::array<VkVertexInputAttributeDescription, 3> GetAttributeDescriptions(); 
-    constexpr static VertexBindingDescription GetVertexBindingDescription();
-};
-
 struct UniformConstants {
     glm::mat4 model;
     glm::mat4 view;
@@ -63,16 +55,18 @@ class App
 
   private:
     Texture2D& LoadImage();
+    Model LoadModel();
     DepthAttachment& CreateSapchainDepthAttachment();
     UniformConstants GetUniforms();
     RasterPipeline LoadShaderPipeline(VulkanDevice &vulkanDevice, const RenderPass& renderPass) const;
     void RecordFrame(PerFrameState& state);
     std::vector<std::reference_wrapper<Semaphore>> CreateSemaphorePerInFlightFrame();
     std::vector<PerFrameState> CreatePerFrameState(VulkanDevice &vulkanDevice);
-    constexpr static std::vector<Vertex> GetVertices();
-    constexpr static std::vector<uint16_t> GetIndices();
+    std::vector<Vertex> GetVertices() const;
+    std::vector<uint32_t> GetIndices() const;
     const DescriptorSetLayout& BuildDescriptorSetLayout(VulkanDevice &vulkanDevice) const;
 
+    Model m_Model;
     Window m_Window;
     VulkanInstance m_VulkanInstance;
     DepthAttachment &m_DepthAttachment;

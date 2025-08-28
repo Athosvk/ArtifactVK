@@ -8,6 +8,6 @@ layout(location = 0) out vec4 outColor;
 layout(binding = 1) uniform sampler2D textureSampler;
 
 void main() {
-	outColor = texture(textureSampler, uv * 2);
+	outColor = texture(textureSampler, uv);
 	//outColor = vec4(uv, 0.0, 1.0);
 }

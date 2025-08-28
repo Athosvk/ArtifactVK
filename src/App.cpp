@@ -30,6 +30,7 @@ App::App()
       m_PerFrameState(CreatePerFrameState(m_VulkanInstance.GetActiveDevice())),
       m_RenderFullscreen(LoadShaderPipeline(m_VulkanInstance.GetActiveDevice(), m_MainPass)),
       m_Swapchain(m_VulkanInstance.GetActiveDevice().GetSwapchain()),
+      m_Model(LoadModel()),
       m_VertexBuffer(m_VulkanInstance.GetActiveDevice().CreateVertexBuffer(GetVertices())),
       m_IndexBuffer(m_VulkanInstance.GetActiveDevice().CreateIndexBuffer(GetIndices())), 
       m_Texture(LoadImage())
@@ -73,8 +74,13 @@ void App::RunRenderLoop()
 
 Texture2D& App::LoadImage()
 {
-    Image image("textures/texture.jpg");
+    Image image("assets/textures/viking_room.png");
     return m_VulkanInstance.GetActiveDevice().CreateTexture(image.GetTextureCreateDesc());
+}
+
+Model App::LoadModel()
+{
+    return Model{"assets/viking_room.obj"};
 }
 
 DepthAttachment &App::CreateSapchainDepthAttachment()
@@ -133,6 +139,8 @@ void App::RecordFrame(PerFrameState& state)
         state.TimerPool.BeginScope(state.CommandBuffer.Get(), "Draw");
         state.CommandBuffer.DrawIndexed(m_SwapchainFramebuffers.GetCurrent(), m_MainPass, m_RenderFullscreen,
                                         m_VertexBuffer, m_IndexBuffer, std::move(bindSet));
+        //state.CommandBuffer.Draw(m_SwapchainFramebuffers.GetCurrent(), m_MainPass, m_RenderFullscreen, m_VertexBuffer,
+         //                        std::move(bindSet));
     }
     state.CommandBuffer.End(std::span{ &state.ImageAvailable, 1 }, std::span{ &state.RenderFinished, 1 });
     
@@ -174,9 +182,10 @@ std::vector<PerFrameState> App::CreatePerFrameState(VulkanDevice &vulkanDevice)
     return perFrameState;
 }
 
-constexpr std::vector<Vertex> App::GetVertices() {
+std::vector<Vertex> App::GetVertices() const {
 
-    return {// Front face
+    return m_Model.GetVertices();
+    /* return {// Front face
             Vertex {{-0.5f, -0.5f, 0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
             Vertex {{0.5f, -0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
             Vertex {{0.5f, 0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
@@ -212,11 +221,13 @@ constexpr std::vector<Vertex> App::GetVertices() {
             Vertex {{0.5f, -0.5f, 0.5f}, {0.2f, 0.5f, 0.2f}, {0.0f, 1.0f}},
             Vertex {{-0.5f, -0.5f, 0.5f}, {0.2f, 0.2f, 0.5f},{1.0f, 1.0f}}
     };
+    */
 }
 
-constexpr std::vector<uint16_t> App::GetIndices()
+std::vector<uint32_t> App::GetIndices() const
 {
-    return {
+    return m_Model.GetIndices();
+    /* return {
         0,  1,  2,  2,  3,  0,  // Front
         4, 5, 6, 6, 7, 4,       // Back
         8, 9, 10, 10, 11, 8,    // Left
@@ -224,6 +235,7 @@ constexpr std::vector<uint16_t> App::GetIndices()
         16, 17, 18, 18, 19, 16, // Top
         20, 21, 22, 22, 23, 20, // Bottom
     };
+    */
 }
 
 const DescriptorSetLayout& App::BuildDescriptorSetLayout(VulkanDevice &vulkanDevice) const
@@ -231,41 +243,3 @@ const DescriptorSetLayout& App::BuildDescriptorSetLayout(VulkanDevice &vulkanDev
     return vulkanDevice.CreateDescriptorSetLayout(DescriptorSetBuilder().AddUniformBuffer().AddTexture());
 }
 
-constexpr VkVertexInputBindingDescription Vertex::GetBindingDescription()
-{
-    VkVertexInputBindingDescription bindingDescription;
-    bindingDescription.binding = 0;
-    bindingDescription.stride = sizeof(Vertex);
-    bindingDescription.inputRate = VkVertexInputRate::VK_VERTEX_INPUT_RATE_VERTEX;
-    return bindingDescription;
-}
-
-constexpr std::array<VkVertexInputAttributeDescription, 3> Vertex::GetAttributeDescriptions()
-{
-    VkVertexInputAttributeDescription positionAttribute;
-    positionAttribute.binding = 0;
-    positionAttribute.location = 0;
-    positionAttribute.format = VkFormat::VK_FORMAT_R32G32B32_SFLOAT;
-    positionAttribute.offset = offsetof(Vertex, Position);
-
-    VkVertexInputAttributeDescription colorAttribute;
-    colorAttribute.binding = 0;
-    colorAttribute.location = 1;
-    colorAttribute.format = VkFormat::VK_FORMAT_R32G32B32_SFLOAT;
-    colorAttribute.offset = offsetof(Vertex, Color);
-
-    VkVertexInputAttributeDescription uvAttribute;
-    uvAttribute.binding = 0;
-    uvAttribute.location = 2;
-    uvAttribute.format = VkFormat::VK_FORMAT_R32G32B32_SFLOAT;
-    uvAttribute.offset = offsetof(Vertex, UV);
-    return {positionAttribute, colorAttribute, uvAttribute};
-}
-
-constexpr VertexBindingDescription Vertex::GetVertexBindingDescription()
-{
-    return VertexBindingDescription{
-        GetBindingDescription(),
-        GetAttributeDescriptions()
-    };
-}

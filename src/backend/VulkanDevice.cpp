@@ -532,7 +532,7 @@ ExtensionFunctionMapping VulkanDevice::GetExtensionFunctionMapping() const
     return m_Instance.GetExtensionFunctionMapping();
 }
 
-IndexBuffer &VulkanDevice::CreateIndexBuffer(std::vector<uint16_t> data)
+IndexBuffer &VulkanDevice::CreateIndexBuffer(std::vector<uint32_t> data)
 {
     assert(m_GraphicsQueue.has_value() && "Need a graphics queue");
     CreateIndexBufferInfo info = CreateIndexBufferInfo(data, VkSharingMode::VK_SHARING_MODE_EXCLUSIVE, m_GraphicsQueue);
