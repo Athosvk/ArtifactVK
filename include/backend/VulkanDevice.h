@@ -82,7 +82,7 @@ class VulkanDevice
 
     DeviceBuffer &CreateBuffer(const CreateBufferInfo& createBufferInfo);
     Texture2D &CreateTexture(const Texture2DCreateInfo& createDesc);
-    DepthAttachment &CreateSapchainDepthAttachment();
+    DepthAttachment &CreateSwapchainDepthAttachment();
     // TODO: Store for re-use
     DescriptorSet CreateDescriptorSet(const DescriptorSetLayout& layout);
     const DescriptorSetLayout& CreateDescriptorSetLayout(DescriptorSetBuilder builder);

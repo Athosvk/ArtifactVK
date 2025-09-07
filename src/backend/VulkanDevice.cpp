@@ -87,7 +87,7 @@ Texture2D &VulkanDevice::CreateTexture(const Texture2DCreateInfo &createInfo)
         *m_GraphicsQueue));
 }
 
-DepthAttachment &VulkanDevice::CreateSapchainDepthAttachment()
+DepthAttachment &VulkanDevice::CreateSwapchainDepthAttachment()
 {
     assert(m_GraphicsQueue && "No suitable graphics queue");
 
