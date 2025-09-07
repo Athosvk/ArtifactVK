@@ -83,7 +83,7 @@ Model App::LoadModel()
     return Model{"assets/viking_room.obj"};
 }
 
-DepthAttachment &App::CreateSapchainDepthAttachment()
+DepthAttachment &App::CreateSwapchainDepthAttachment()
 {
     return m_VulkanInstance.GetActiveDevice().CreateSapchainDepthAttachment();
 }

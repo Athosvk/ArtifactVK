@@ -56,7 +56,7 @@ class App
   private:
     Texture2D& LoadImage();
     Model LoadModel();
-    DepthAttachment& CreateSapchainDepthAttachment();
+    DepthAttachment& CreateSwapchainDepthAttachment();
     UniformConstants GetUniforms();
     RasterPipeline LoadShaderPipeline(VulkanDevice &vulkanDevice, const RenderPass& renderPass) const;
     void RecordFrame(PerFrameState& state);
