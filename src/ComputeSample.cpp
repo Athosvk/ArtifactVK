@@ -1,16 +1,10 @@
-#include <App.h>
+#include "ComputeSample.h"
 
-#define GLFW_INCLUDE_VULKAN
-#include <GLFW/glfw3.h>
-#include <vector>
-
-#include <chrono>
+#include <glfw/glfw3.h>
+#include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-#include <backend/ShaderModule.h>
-#include <backend/DebugMarker.h>
-
-const InstanceCreateInfo DefaultCreateInfo()
+InstanceCreateInfo DefaultCreateInfo()
 {
     InstanceCreateInfo createInfo;
     createInfo.Name = "ArtifactVK";
@@ -20,24 +14,20 @@ const InstanceCreateInfo DefaultCreateInfo()
     return createInfo;
 }
 
-App::App()
-    : m_Window(WindowCreateInfo{800, 600, "ArtifactVK"}),
-      m_VulkanInstance(m_Window.CreateVulkanInstance(DefaultCreateInfo())),
-      m_DepthAttachment(m_VulkanInstance.GetActiveDevice().CreateSwapchainDepthAttachment()),
-      m_MainPass(m_VulkanInstance.GetActiveDevice().CreateRenderPass(m_DepthAttachment)),
-      m_SwapchainFramebuffers(m_VulkanInstance.GetActiveDevice().CreateSwapchainFramebuffers(m_MainPass, &m_DepthAttachment)),
-      m_DescriptorSetLayout(BuildDescriptorSetLayout(m_VulkanInstance.GetActiveDevice())),
-      m_PerFrameState(CreatePerFrameState(m_VulkanInstance.GetActiveDevice())),
-      m_RenderFullscreen(LoadShaderPipeline(m_VulkanInstance.GetActiveDevice(), m_MainPass)),
-      m_Swapchain(m_VulkanInstance.GetActiveDevice().GetSwapchain()),
-      m_Model(LoadModel()),
-      m_VertexBuffer(m_VulkanInstance.GetActiveDevice().CreateVertexBuffer(GetVertices())),
-      m_IndexBuffer(m_VulkanInstance.GetActiveDevice().CreateIndexBuffer(GetIndices())), 
-      m_Texture(LoadImage())
+ComputeSample::ComputeSample() : 
+    m_Window(WindowCreateInfo{800, 600, "ComputeSample"}), 
+    m_VulkanInstance(m_Window.CreateVulkanInstance(DefaultCreateInfo())),
+    m_DepthAttachment(m_VulkanInstance.GetActiveDevice().CreateSwapchainDepthAttachment()), 
+    m_MainPass(m_VulkanInstance.GetActiveDevice().CreateRenderPass(m_DepthAttachment)), 
+    m_SwapchainFramebuffers(m_VulkanInstance.GetActiveDevice().CreateSwapchainFramebuffers(m_MainPass, &m_DepthAttachment)),
+      m_DescriptorSetLayout(BuildDescriptorSetLayout(m_VulkanInstance.GetActiveDevice())), 
+    m_PerFrameState(CreatePerFrameState(m_VulkanInstance.GetActiveDevice())),
+    m_RenderFullscreen(LoadShaderPipeline(m_VulkanInstance.GetActiveDevice(), m_MainPass)), 
+    m_Swapchain(m_VulkanInstance.GetActiveDevice().GetSwapchain())
 {
 }
 
-App::~App()
+ComputeSample::~ComputeSample()
 {
     for (auto &perFrameState : m_PerFrameState)
     {
@@ -46,7 +36,7 @@ App::~App()
     glfwTerminate();
 }
 
-void App::RunRenderLoop()
+void ComputeSample::RunRenderLoop()
 {
     while (!m_Window.ShouldClose())
     {
@@ -72,23 +62,12 @@ void App::RunRenderLoop()
     }
 }
 
-Texture2D& App::LoadImage()
-{
-    Image image("assets/textures/viking_room.png");
-    return m_VulkanInstance.GetActiveDevice().CreateTexture(image.GetTextureCreateDesc());
-}
-
-Model App::LoadModel()
-{
-    return Model{"assets/viking_room.obj"};
-}
-
-DepthAttachment &App::CreateSwapchainDepthAttachment()
+DepthAttachment &ComputeSample::CreateSwapchainDepthAttachment()
 {
     return m_VulkanInstance.GetActiveDevice().CreateSwapchainDepthAttachment();
 }
 
-UniformConstants App::GetUniforms()
+UniformConstants ComputeSample::GetUniforms()
 {
     static auto startTime = std::chrono::high_resolution_clock::now();
     auto currentTime = std::chrono::high_resolution_clock::now();
@@ -106,7 +85,7 @@ UniformConstants App::GetUniforms()
     return constants;
 }
 
-RasterPipeline App::LoadShaderPipeline(VulkanDevice &vulkanDevice, const RenderPass &renderPass) const
+RasterPipeline ComputeSample::LoadShaderPipeline(VulkanDevice &vulkanDevice, const RenderPass &renderPass) const
 {
     auto builder = RasterPipelineBuilder("shaders/triangle.vert.spv", "shaders/triangle.frag.spv");
     builder.SetVertexBindingDescription(Vertex::GetVertexBindingDescription());
@@ -116,7 +95,7 @@ RasterPipeline App::LoadShaderPipeline(VulkanDevice &vulkanDevice, const RenderP
     return vulkanDevice.CreateRasterPipeline(std::move(builder), renderPass);
 }
 
-void App::RecordFrame(PerFrameState& state)
+void ComputeSample::RecordFrame(PerFrameState& state)
 {
     auto &activeDevice = m_VulkanInstance.GetActiveDevice();
     activeDevice.AcquireNext(state.ImageAvailable);
@@ -135,10 +114,8 @@ void App::RecordFrame(PerFrameState& state)
 
         auto uniforms = GetUniforms();
         state.UniformBuffer.UploadData(GetUniforms());
-        auto bindSet = state.DescriptorSet.BindUniformBuffer(state.UniformBuffer).BindTexture(m_Texture);
+        auto bindSet = state.DescriptorSet.BindUniformBuffer(state.UniformBuffer);
         state.TimerPool.BeginScope(state.CommandBuffer.Get(), "Draw");
-        state.CommandBuffer.DrawIndexed(m_SwapchainFramebuffers.GetCurrent(), m_MainPass, m_RenderFullscreen,
-                                        m_VertexBuffer, m_IndexBuffer, std::move(bindSet));
         //state.CommandBuffer.Draw(m_SwapchainFramebuffers.GetCurrent(), m_MainPass, m_RenderFullscreen, m_VertexBuffer,
          //                        std::move(bindSet));
     }
@@ -147,7 +124,7 @@ void App::RecordFrame(PerFrameState& state)
     activeDevice.Present(std::span{&state.RenderFinished, 1});
 }
 
-std::vector<std::reference_wrapper<Semaphore>> App::CreateSemaphorePerInFlightFrame()
+std::vector<std::reference_wrapper<Semaphore>> ComputeSample::CreateSemaphorePerInFlightFrame()
 {
     std::vector<std::reference_wrapper<Semaphore>> semaphores;
     for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
@@ -157,7 +134,7 @@ std::vector<std::reference_wrapper<Semaphore>> App::CreateSemaphorePerInFlightFr
     return semaphores;
 }
 
-std::vector<PerFrameState> App::CreatePerFrameState(VulkanDevice &vulkanDevice)
+std::vector<PerFrameState> ComputeSample::CreatePerFrameState(VulkanDevice &vulkanDevice)
 {
     std::vector<PerFrameState> perFrameState;
     auto commandBuffers = vulkanDevice.GetGraphicsCommandBufferPool().CreateCommandBuffers(
@@ -182,63 +159,7 @@ std::vector<PerFrameState> App::CreatePerFrameState(VulkanDevice &vulkanDevice)
     return perFrameState;
 }
 
-std::vector<Vertex> App::GetVertices() const {
-
-    return m_Model.GetVertices();
-    /* return {// Front face
-            Vertex {{-0.5f, -0.5f, 0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
-            Vertex {{0.5f, -0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
-            Vertex {{0.5f, 0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
-            Vertex {{-0.5f, 0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}},
-
-            // Back face
-            Vertex {{-0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
-            Vertex {{0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
-            Vertex {{0.5f, 0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
-            Vertex {{-0.5f, 0.5f, -0.5f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}},
-
-            // Left face
-            Vertex {{-0.5f, -0.5f, -0.5f}, {1.0f, 0.5f, 0.0f}, {1.0f, 0.0f}},
-            Vertex {{-0.5f, -0.5f, 0.5f}, {0.5f, 1.0f, 0.0f}, {0.0f, 0.0f}},
-            Vertex {{-0.5f, 0.5f, 0.5f}, {0.5f, 0.5f, 1.0f}, {0.0f, 1.0f}},
-            Vertex {{-0.5f, 0.5f, -0.5f}, {1.0f, 1.0f, 0.5f}, {1.0f, 1.0f}},
-
-            // Right face
-            Vertex {{0.5f, -0.5f, 0.5f}, {1.0f, 0.5f, 0.0f}, {1.0f, 0.0f}},
-            Vertex {{0.5f, -0.5f, -0.5f}, {0.5f, 1.0f, 0.0f}, {0.0f, 0.0f}},
-            Vertex {{0.5f, 0.5f, -0.5f}, {0.5f, 0.5f, 1.0f}, {0.0f, 1.0f}},
-            Vertex {{0.5f, 0.5f, 0.5f}, {1.0f, 1.0f, 0.5f}, {1.0f, 1.0f}},
-
-            // Top face
-            Vertex {{-0.5f, 0.5f, 0.5f}, {0.8f, 0.2f, 0.6f}, {1.0f, 0.0f}},
-            Vertex {{0.5f, 0.5f, 0.5f}, {0.2f, 0.8f, 0.6f}, {0.0f, 0.0f}},
-            Vertex {{0.5f, 0.5f, -0.5f}, {0.2f, 0.2f, 0.9f}, {0.0f, 1.0f}},
-            Vertex {{-0.5f, 0.5f, -0.5f}, {0.9f, 0.9f, 0.9f}, {1.0f, 1.0f}},
-
-            // Bottom face
-            Vertex {{-0.5f, -0.5f, -0.5f}, {0.2f, 0.2f, 0.2f}, {1.0f, 0.0f}},
-            Vertex {{0.5f, -0.5f, -0.5f}, {0.5f, 0.2f, 0.2f}, {0.0f, 0.0f}},
-            Vertex {{0.5f, -0.5f, 0.5f}, {0.2f, 0.5f, 0.2f}, {0.0f, 1.0f}},
-            Vertex {{-0.5f, -0.5f, 0.5f}, {0.2f, 0.2f, 0.5f},{1.0f, 1.0f}}
-    };
-    */
-}
-
-std::vector<uint32_t> App::GetIndices() const
-{
-    return m_Model.GetIndices();
-    /* return {
-        0,  1,  2,  2,  3,  0,  // Front
-        4, 5, 6, 6, 7, 4,       // Back
-        8, 9, 10, 10, 11, 8,    // Left
-        12, 13, 14, 14, 15, 12, // Right
-        16, 17, 18, 18, 19, 16, // Top
-        20, 21, 22, 22, 23, 20, // Bottom
-    };
-    */
-}
-
-const DescriptorSetLayout& App::BuildDescriptorSetLayout(VulkanDevice &vulkanDevice) const
+const DescriptorSetLayout& ComputeSample::BuildDescriptorSetLayout(VulkanDevice &vulkanDevice) const
 {
     return vulkanDevice.CreateDescriptorSetLayout(DescriptorSetBuilder().AddUniformBuffer().AddTexture());
 }

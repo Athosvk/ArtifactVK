@@ -2,7 +2,9 @@ add_subdirectory(backend)
 
 set(SOURCE ${SOURCE}
     src/main.cpp
-    src/App.cpp
+
+    src/ModelRenderer.cpp
+    src/ComputeSample.cpp
     src/Image.cpp
     src/Model.cpp
 	PARENT_SCOPE
@@ -10,8 +12,10 @@ set(SOURCE ${SOURCE}
 
 # Assumes include directories include .
 set(HEADERS ${HEADERS}
-    include/App.h
+    include/ComputeSample.h
     include/Image.h
+    include/ModelRenderer.h
+    include/Model.h
 	PARENT_SCOPE
 )
 

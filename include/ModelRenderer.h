@@ -45,11 +45,11 @@ struct UniformConstants {
     glm::mat4 projection;
 };
 
-class App
+class ModelRenderer
 {
   public:
-    App();
-    ~App();
+    ModelRenderer();
+    ~ModelRenderer();
 
     void RunRenderLoop();
 

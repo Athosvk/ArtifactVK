@@ -12,7 +12,8 @@
 
 #include <iostream>
 
-#include "App.h"
+//#include "App.h"
+#include "ComputeSample.h"
 
 #include <GLFW/glfw3.h>
 
@@ -23,7 +24,7 @@ int main()
 {
     // TODO: Move to app init?
     glfwInit();
-    App app;
+    ComputeSample app;
     app.RunRenderLoop();
     return 0;
 }
