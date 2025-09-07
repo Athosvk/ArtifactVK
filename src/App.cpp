@@ -23,7 +23,7 @@ const InstanceCreateInfo DefaultCreateInfo()
 App::App()
     : m_Window(WindowCreateInfo{800, 600, "ArtifactVK"}),
       m_VulkanInstance(m_Window.CreateVulkanInstance(DefaultCreateInfo())),
-      m_DepthAttachment(m_VulkanInstance.GetActiveDevice().CreateSapchainDepthAttachment()),
+      m_DepthAttachment(m_VulkanInstance.GetActiveDevice().CreateSwapchainDepthAttachment()),
       m_MainPass(m_VulkanInstance.GetActiveDevice().CreateRenderPass(m_DepthAttachment)),
       m_SwapchainFramebuffers(m_VulkanInstance.GetActiveDevice().CreateSwapchainFramebuffers(m_MainPass, &m_DepthAttachment)),
       m_DescriptorSetLayout(BuildDescriptorSetLayout(m_VulkanInstance.GetActiveDevice())),
@@ -85,7 +85,7 @@ Model App::LoadModel()
 
 DepthAttachment &App::CreateSwapchainDepthAttachment()
 {
-    return m_VulkanInstance.GetActiveDevice().CreateSapchainDepthAttachment();
+    return m_VulkanInstance.GetActiveDevice().CreateSwapchainDepthAttachment();
 }
 
 UniformConstants App::GetUniforms()
