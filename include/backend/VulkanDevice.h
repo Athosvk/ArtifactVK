@@ -47,6 +47,7 @@ class VulkanDevice
     Swapchain& CreateSwapchain(GLFWwindow& window, const VulkanSurface& surface);
     Swapchain &GetSwapchain();
     RasterPipeline CreateRasterPipeline(RasterPipelineBuilder &&pipelineBuilder, const RenderPass& renderPass);
+    // TODO: Remove depth attachment requirement
     RenderPass CreateRenderPass(DepthAttachment& depthAttachment);
     const SwapchainFramebuffer& CreateSwapchainFramebuffers(const RenderPass &renderpass, DepthAttachment* depthAttachment);
     // TODO: Make a getter, just construct it in the constructor 

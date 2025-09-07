@@ -428,6 +428,7 @@ RenderPass VulkanDevice::CreateRenderPass(DepthAttachment& depthAttachment)
                       RenderPassCreateInfo{attachmentDescription, depthAttachment.GetAttachmentDescription()});
 }
 
+// TODO: Merge into window creation?
 const SwapchainFramebuffer& VulkanDevice::CreateSwapchainFramebuffers(const RenderPass &renderpass, DepthAttachment *depthAttachment)
 {
     assert(m_Swapchain.has_value() && "No swapchain to create framebuffers for");
