@@ -4,7 +4,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-InstanceCreateInfo DefaultCreateInfo()
+static InstanceCreateInfo DefaultCreateInfo()
 {
     InstanceCreateInfo createInfo;
     createInfo.Name = "ArtifactVK";

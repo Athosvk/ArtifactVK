@@ -10,7 +10,7 @@
 #include <backend/ShaderModule.h>
 #include <backend/DebugMarker.h>
 
-InstanceCreateInfo DefaultCreateInfo()
+static InstanceCreateInfo DefaultCreateInfo()
 {
     InstanceCreateInfo createInfo;
     createInfo.Name = "ArtifactVK";
